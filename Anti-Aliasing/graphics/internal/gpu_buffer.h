@@ -1,11 +1,12 @@
 #pragma once
 #include <d3d12.h>
 #include <wrl/client.h>
+#include "egx_common.h"
+
 using Microsoft::WRL::ComPtr;
 
 namespace egx
 {
-	class Device;
 	class GPUBuffer
 	{
 	public:
@@ -23,11 +24,17 @@ namespace egx
 		int GetBufferSize() const { return element_size * element_count; };
 
 	protected:
+		// Constructor used for back buffer
+		GPUBuffer(ComPtr<ID3D12Resource> buffer);
+
+	protected:
 		ComPtr<ID3D12Resource> buffer;
+		D3D12_RESOURCE_STATES state;
 		int element_size;
 		int element_count;
 
 	private:
 		friend Device;
+		friend CommandContext;
 	};
 }

@@ -141,10 +141,12 @@
   <ItemGroup>
     <ClInclude Include="graphics\constant_buffer.h" />
     <ClInclude Include="graphics\cpu_buffer.h" />
+    <ClInclude Include="graphics\depth_buffer.h" />
     <ClInclude Include="graphics\index_buffer.h" />
     <ClInclude Include="graphics\internal\descriptor_heap.h" />
     <ClInclude Include="graphics\device.h" />
     <ClInclude Include="graphics\internal\d3dx12.h" />
+    <ClInclude Include="graphics\internal\egx_common.h" />
     <ClInclude Include="graphics\internal\egx_internal.h" />
     <ClInclude Include="graphics\internal\gpu_buffer.h" />
     <ClInclude Include="graphics\command_context.h" />
@@ -156,12 +158,18 @@
     <ClInclude Include="io\mouse_state.h" />
     <ClInclude Include="io\game_clock.h" />
     <ClInclude Include="io\window_state.h" />
+    <ClInclude Include="math\color.h" />
     <ClInclude Include="math\point2d.h" />
     <ClInclude Include="io\console.h" />
+    <ClInclude Include="math\vec2.h" />
+    <ClInclude Include="math\vec3.h" />
+    <ClInclude Include="math\vec4.h" />
     <ClInclude Include="misc\string_helpers.h" />
     <ClInclude Include="window\window.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="graphics\command_context.cpp" />
+    <ClCompile Include="graphics\depth_buffer.cpp" />
     <ClCompile Include="graphics\internal\descriptor_heap.cpp" />
     <ClCompile Include="graphics\device.cpp" />
     <ClCompile Include="graphics\internal\gpu_buffer.cpp" />

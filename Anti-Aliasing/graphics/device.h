@@ -2,26 +2,19 @@
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 
-#include <d3d12.h>
 #include <dxgi1_6.h>
-#include <wrl/client.h>
 #include <vector>
 #include <memory>
 
 #include "internal/descriptor_heap.h"
 #include "../io/input_manager.h"
-
-using Microsoft::WRL::ComPtr;
+#include "internal/egx_common.h"
 
 class Window;
 
 namespace egx
 {
-	class CommandContext;
-	class UploadHeap;
-	class GPUBuffer;
-	class CPUBuffer;
-	class Texture2D;
+	
 
 	class Device
 	{
@@ -34,7 +27,7 @@ namespace egx
 		void ScheduleUpload(CommandContext& context, const CPUBuffer& cpu_buffer, GPUBuffer& gpu_buffer);
 
 		void QueueList(CommandContext& context);
-		void Present();
+		void Present(CommandContext& context);
 
 	private:
 		static const int frame_count = 3;
@@ -47,7 +40,7 @@ namespace egx
 		ComPtr<ID3D12CommandQueue> command_queue;
 		ComPtr<IDXGISwapChain4> swap_chain;
 		
-		std::vector< ComPtr<ID3D12Resource> > back_buffers;
+		std::vector<Texture2D> back_buffers;
 		std::vector<ComPtr<ID3D12CommandAllocator>> command_allocators;
 		
 
@@ -69,11 +62,13 @@ namespace egx
 
 	private:
 		void initializeFence();
+		void getBackBuffers();
 
 	private:
 		friend UploadHeap;
 		friend GPUBuffer;
 		friend Texture2D;
+		friend DepthBuffer;
 
 	};
 }

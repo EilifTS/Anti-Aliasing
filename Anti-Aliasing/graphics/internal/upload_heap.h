@@ -1,7 +1,5 @@
 #pragma once
-#include <d3d12.h>
-#include <wrl/client.h>
-using Microsoft::WRL::ComPtr;
+#include "egx_common.h"
 
 namespace egx
 {
@@ -20,5 +18,7 @@ namespace egx
 		ComPtr<ID3D12Resource> buffer;
 		int buffer_size;
 
+	private:
+		friend CommandContext;
 	};
 }

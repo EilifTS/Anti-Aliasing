@@ -3,6 +3,7 @@
 #include "cpu_buffer.h"
 #include "internal/gpu_buffer.h"
 #include "internal/upload_heap.h"
+#include "texture2d.h"
 #include "../window/window.h"
 #include "command_context.h"
 
@@ -203,24 +204,7 @@ namespace
 		return swap_chain;
 	}
 	
-	std::vector< ComPtr<ID3D12Resource> > getBackBuffers(ComPtr<ID3D12Device5> device, ComPtr<IDXGISwapChain4> swap_chain, egx::DescriptorHeap& rtv_heap, int num_frames)
-	{
-		std::vector< ComPtr<ID3D12Resource> > back_buffers(num_frames);
-		for (int i = 0; i < num_frames; ++i)
-		{
-			ComPtr<ID3D12Resource> backBuffer;
-			THROWIFFAILED(swap_chain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)), "Failed to get backbuffer");
-			auto rtv = rtv_heap.GetNextHandle();
-
-			device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtv);
-
-			back_buffers[i] = backBuffer;
-		}
-
-		eio::Console::Log("Created: Back buffer views");
-
-		return back_buffers;
-	}
+	
 	std::vector< ComPtr<ID3D12CommandAllocator> > createCommandAllocators(ComPtr<ID3D12Device5> device, int frame_count)
 	{
 		std::vector<ComPtr<ID3D12CommandAllocator>> command_allocators(frame_count);
@@ -334,7 +318,7 @@ void egx::Device::ScheduleUpload(CommandContext& context, const CPUBuffer& cpu_b
 
 	auto dest_desc = gpu_buffer.buffer->GetDesc();
 
-	// TODO: Create copy command depending on texture or buffer
+	context.copyFromUploadHeap(gpu_buffer, upload_heap);
 }
 
 void egx::Device::QueueList(CommandContext& context)
@@ -347,7 +331,16 @@ void egx::Device::QueueList(CommandContext& context)
 
 	command_list->Reset(command_allocators[current_frame].Get(), nullptr);
 }
-void egx::Device::Present();
+void egx::Device::Present(CommandContext& context)
+{
+	context.TransitionBuffer(back_buffers[current_frame], GPUBufferState::Present);
+	QueueList(context);
+	THROWIFFAILED(swap_chain->Present(1, 0), "Failed to present frame");
+	PrepareNextFrame();
+	THROWIFFAILED(command_allocators[current_frame]->Reset(), "Failed to reset command allocator");
+	context.command_list->Reset(command_allocators[current_frame].Get(), nullptr);
+	context.current_bb = &back_buffers[current_frame];
+}
 
 void egx::Device::initializeFence()
 {
@@ -362,7 +355,24 @@ void egx::Device::initializeFence()
 		THROWIFFAILED(HRESULT_FROM_WIN32(GetLastError()), "Failed to create fence event");
 }
 
+void egx::Device::getBackBuffers()
+{
+	back_buffers.reserve(frame_count);
 
+	for (int i = 0; i < frame_count; ++i)
+	{
+		ComPtr<ID3D12Resource> back_buffer;
+		THROWIFFAILED(swap_chain->GetBuffer(i, IID_PPV_ARGS(&back_buffer)), "Failed to get backbuffer");
+		//auto rtv = rtv_heap.GetNextHandle();
+
+		//device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtv);
+
+		back_buffers.push_back(Texture2D(back_buffer));
+		back_buffers.back().createRenderTargetViewForBB(*this);
+	}
+
+	eio::Console::Log("Created: Back buffer views");
+}
 
 
 

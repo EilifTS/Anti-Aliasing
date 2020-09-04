@@ -13,6 +13,8 @@ namespace egx
 	class GPUBuffer;
 	class Texture2D;
 	class UploadHeap;
+	class RootSignature;
+	class Sampler;
 
 	enum class GPUBufferState
 	{

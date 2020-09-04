@@ -29,6 +29,7 @@ namespace egx
 		void SetPrimitiveTopology();
 
 		// TODO: Add root signature values
+		void SetRootConstant
 
 		void SetIndexBuffer();
 		void SetVertexBuffer();

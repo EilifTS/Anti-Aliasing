@@ -150,7 +150,9 @@
     <ClInclude Include="graphics\internal\egx_internal.h" />
     <ClInclude Include="graphics\internal\gpu_buffer.h" />
     <ClInclude Include="graphics\command_context.h" />
+    <ClInclude Include="graphics\sampler.h" />
     <ClInclude Include="graphics\internal\upload_heap.h" />
+    <ClInclude Include="graphics\root_signature.h" />
     <ClInclude Include="graphics\texture2d.h" />
     <ClInclude Include="graphics\vertex_buffer.h" />
     <ClInclude Include="io\input_manager.h" />
@@ -174,6 +176,7 @@
     <ClCompile Include="graphics\device.cpp" />
     <ClCompile Include="graphics\internal\gpu_buffer.cpp" />
     <ClCompile Include="graphics\internal\upload_heap.cpp" />
+    <ClCompile Include="graphics\root_signature.cpp" />
     <ClCompile Include="graphics\texture2d.cpp" />
     <ClCompile Include="io\keyboard_state.cpp" />
     <ClCompile Include="io\mouse_state.cpp" />

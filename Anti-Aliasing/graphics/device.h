@@ -69,6 +69,7 @@ namespace egx
 		friend GPUBuffer;
 		friend Texture2D;
 		friend DepthBuffer;
+		friend RootSignature;
 
 	};
 }

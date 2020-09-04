@@ -96,6 +96,12 @@
     <ClInclude Include="math\vec2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="graphics\sampler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="graphics\root_signature.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="io\keyboard_state.cpp">
@@ -135,6 +141,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="graphics\depth_buffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\root_signature.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

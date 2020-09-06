@@ -57,7 +57,7 @@ egx::Texture2D::Texture2D(ComPtr<ID3D12Resource> buffer)
 	: GPUBuffer(buffer), size(), srv(), rtv(), format()
 {
 	auto desc = buffer->GetDesc();
-	element_count = desc.Width * desc.Height * desc.DepthOrArraySize;
+	element_count = (int)desc.Width * desc.Height * desc.DepthOrArraySize;
 	element_size = formatByteSize(desc.Format);
 
 	size = { (int)desc.Width, (int)desc.Height };

@@ -4,7 +4,7 @@
 #include "window/window.h"
 #include "io/console.h"
 #include "graphics/device.h"
-
+#include "graphics/command_context.h"
 
 int WINAPI wWinMain(
 	_In_ HINSTANCE hInstance,
@@ -25,6 +25,7 @@ int WINAPI wWinMain(
 		eio::Console::Log("Window open!");
 
 		egx::Device device(window, input_manager, false);
+		egx::CommandContext context(device);
 
 		// Main game loop
 		while (true)

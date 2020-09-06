@@ -7,6 +7,7 @@ namespace egx
 {
 	// Forward declarations
 	class CommandContext;
+	class ConstantBuffer;
 	class DepthBuffer;
 	class Device;
 	class CPUBuffer;
@@ -15,6 +16,12 @@ namespace egx
 	class UploadHeap;
 	class RootSignature;
 	class Sampler;
+	class Shader;
+	class PipelineState;
+	class InputLayout;
+	class BlendState;
+	class VertexBuffer;
+	class IndexBuffer;
 
 	enum class GPUBufferState
 	{
@@ -31,6 +38,15 @@ namespace egx
 		Present
 	}; 
 	
+	enum class Topology
+	{
+		LineList, PointList, TriangleList
+	};
+	enum class TopologyType
+	{
+		Line, Patch, Point, Triangle, Undefined
+	};
+
 	enum class TextureFormat
 	{
 		UNORM4x8

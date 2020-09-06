@@ -143,6 +143,7 @@
     <ClInclude Include="graphics\cpu_buffer.h" />
     <ClInclude Include="graphics\depth_buffer.h" />
     <ClInclude Include="graphics\index_buffer.h" />
+    <ClInclude Include="graphics\input_layout.h" />
     <ClInclude Include="graphics\internal\descriptor_heap.h" />
     <ClInclude Include="graphics\device.h" />
     <ClInclude Include="graphics\internal\d3dx12.h" />
@@ -150,9 +151,11 @@
     <ClInclude Include="graphics\internal\egx_internal.h" />
     <ClInclude Include="graphics\internal\gpu_buffer.h" />
     <ClInclude Include="graphics\command_context.h" />
+    <ClInclude Include="graphics\pipeline_state.h" />
     <ClInclude Include="graphics\sampler.h" />
     <ClInclude Include="graphics\internal\upload_heap.h" />
     <ClInclude Include="graphics\root_signature.h" />
+    <ClInclude Include="graphics\shader.h" />
     <ClInclude Include="graphics\texture2d.h" />
     <ClInclude Include="graphics\vertex_buffer.h" />
     <ClInclude Include="io\input_manager.h" />
@@ -171,12 +174,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="graphics\command_context.cpp" />
+    <ClCompile Include="graphics\constant_buffer.cpp" />
     <ClCompile Include="graphics\depth_buffer.cpp" />
     <ClCompile Include="graphics\internal\descriptor_heap.cpp" />
     <ClCompile Include="graphics\device.cpp" />
     <ClCompile Include="graphics\internal\gpu_buffer.cpp" />
     <ClCompile Include="graphics\internal\upload_heap.cpp" />
+    <ClCompile Include="graphics\pipeline_state.cpp" />
     <ClCompile Include="graphics\root_signature.cpp" />
+    <ClCompile Include="graphics\shader.cpp" />
     <ClCompile Include="graphics\texture2d.cpp" />
     <ClCompile Include="io\keyboard_state.cpp" />
     <ClCompile Include="io\mouse_state.cpp" />

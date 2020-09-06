@@ -1,20 +1,21 @@
 #pragma once
 #include "internal/egx_common.h"
 #include "../math/color.h"
+#include <memory>
 
 namespace egx
 {
 	class CommandContext
 	{
 	public:
-		CommandContext();
+		CommandContext(Device& dev);
 
 		void ClearRenderTarget(Texture2D& target, const ema::color& color);
 		void ClearDepth(DepthBuffer& buffer, float depth);
 		void ClearStencil(DepthBuffer& buffer);
 		void ClearDepthStencil(DepthBuffer& buffer, float depth);
 
-		void SetRootSignature();
+		void SetPipelineState(PipelineState& pipeline_state);
 
 		void SetRenderTarget(Texture2D& target);
 		void SetRenderTarget(Texture2D& target, DepthBuffer& buffer);
@@ -22,17 +23,20 @@ namespace egx
 		inline void SetBBAsRenderTarget() { SetRenderTarget(*current_bb); };
 		inline void SetBBAsRenderTarget(DepthBuffer& buffer) { SetRenderTarget(*current_bb, buffer); };
 
-		void TransitionBuffer(GPUBuffer& buffer, GPUBufferState new_state);
+		void SetTransitionBuffer(GPUBuffer& buffer, GPUBufferState new_state);
 
-		void SetViewport();
-		void SetScissor();
-		void SetPrimitiveTopology();
+		void SetViewport(const ema::point2D& size);
+		void SetScissor(const ema::point2D& size);
+		void SetPrimitiveTopology(Topology top);
 
 		// TODO: Add root signature values
-		void SetRootConstant
+		void SetRootSignature(RootSignature& root_signature);
+		void SetRootConstant(int root_index, int num_constants, void* constant_data);
+		void SetRootConstantBuffer(int root_index, ConstantBuffer& texture);
+		void SetRootShaderResource(int root_index, Texture2D& texture);
 
-		void SetIndexBuffer();
-		void SetVertexBuffer();
+		void SetVertexBuffer(const VertexBuffer& buffer);
+		void SetIndexBuffer(const IndexBuffer& buffer);
 
 		void Draw();
 		void DrawIndexed();

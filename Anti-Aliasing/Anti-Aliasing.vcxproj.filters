@@ -102,6 +102,15 @@
     <ClInclude Include="graphics\root_signature.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="graphics\pipeline_state.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="graphics\shader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="graphics\input_layout.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="io\keyboard_state.cpp">
@@ -144,6 +153,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="graphics\root_signature.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\constant_buffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\pipeline_state.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

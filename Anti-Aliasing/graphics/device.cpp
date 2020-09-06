@@ -203,8 +203,6 @@ namespace
 
 		return swap_chain;
 	}
-	
-	
 	std::vector< ComPtr<ID3D12CommandAllocator> > createCommandAllocators(ComPtr<ID3D12Device5> device, int frame_count)
 	{
 		std::vector<ComPtr<ID3D12CommandAllocator>> command_allocators(frame_count);
@@ -225,23 +223,6 @@ namespace
 
 		return command_allocators;
 	}
-	ComPtr<ID3D12CommandList> createCommandList(ComPtr<ID3D12Device5> device, ComPtr<ID3D12CommandAllocator> command_allocator)
-	{
-		ComPtr<ID3D12GraphicsCommandList> command_list;
-		THROWIFFAILED(
-			device->CreateCommandList(
-				0, 
-				D3D12_COMMAND_LIST_TYPE_DIRECT, 
-				command_allocator.Get(),
-				nullptr, 
-				IID_PPV_ARGS(&command_list)),
-			"Failed to create command list");
-
-		THROWIFFAILED(command_list->Close(), "Failed to close command list");
-
-		return command_list;
-	}
-
 }
 
 egx::Device::Device(const Window& window, const eio::InputManager& im, bool v_sync)
@@ -263,10 +244,10 @@ egx::Device::Device(const Window& window, const eio::InputManager& im, bool v_sy
 	rtv_heap = std::make_unique<DescriptorHeap>(device, DescriptorType::RenderTarget, max_descriptors_in_heap);
 	dsv_heap = std::make_unique<DescriptorHeap>(device, DescriptorType::DepthStencil, max_descriptors_in_heap);
 
-	back_buffers = getBackBuffers(device, swap_chain, *rtv_heap, frame_count);
+	getBackBuffers();
 	command_allocators = createCommandAllocators(device, frame_count);
-	command_list = createCommandList(device, command_allocator);
-	//D3D12_Resource_desc
+
+	eio::Console::SetColor(15);
 }
 
 void egx::Device::WaitForGPU()
@@ -333,7 +314,7 @@ void egx::Device::QueueList(CommandContext& context)
 }
 void egx::Device::Present(CommandContext& context)
 {
-	context.TransitionBuffer(back_buffers[current_frame], GPUBufferState::Present);
+	context.SetTransitionBuffer(back_buffers[current_frame], GPUBufferState::Present);
 	QueueList(context);
 	THROWIFFAILED(swap_chain->Present(1, 0), "Failed to present frame");
 	PrepareNextFrame();

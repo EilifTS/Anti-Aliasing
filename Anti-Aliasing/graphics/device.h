@@ -1,6 +1,7 @@
 #pragma once
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "d3dcompiler.lib")
 
 #include <dxgi1_6.h>
 #include <vector>
@@ -9,6 +10,8 @@
 #include "internal/descriptor_heap.h"
 #include "../io/input_manager.h"
 #include "internal/egx_common.h"
+#include "internal/upload_heap.h"
+#include "texture2d.h"
 
 class Window;
 
@@ -65,11 +68,14 @@ namespace egx
 		void getBackBuffers();
 
 	private:
+		friend ConstantBuffer;
 		friend UploadHeap;
 		friend GPUBuffer;
 		friend Texture2D;
 		friend DepthBuffer;
 		friend RootSignature;
+		friend PipelineState;
+		friend CommandContext;
 
 	};
 }

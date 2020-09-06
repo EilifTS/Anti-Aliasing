@@ -23,5 +23,8 @@ namespace egx
 		ComPtr<ID3D12RootSignature> root_signature;
 		std::vector<D3D12_ROOT_PARAMETER1> root_parameters;
 		std::vector<D3D12_STATIC_SAMPLER_DESC> samplers;
+
+		friend CommandContext;
+		friend PipelineState;
 	};
 }

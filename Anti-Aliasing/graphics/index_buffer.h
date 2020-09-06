@@ -24,5 +24,7 @@ namespace egx
 
 	private:
 		D3D12_INDEX_BUFFER_VIEW view;
+
+		friend CommandContext;
 	};
 }

@@ -88,7 +88,7 @@ namespace egx
 			case Filter::Point: return D3D12_FILTER_MIN_MAG_MIP_POINT;
 			}
 			return D3D12_FILTER_MIN_MAG_MIP_POINT;
-		}
+		};
 		inline D3D12_TEXTURE_ADDRESS_MODE convertAddressMode(AddressMode address_mode)
 		{
 			switch (address_mode)
@@ -99,7 +99,7 @@ namespace egx
 			case AddressMode::Wrap: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 			}
 			return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		}
-		friend ShaderSignature;
+		};
+		friend RootSignature;
 	};
 }

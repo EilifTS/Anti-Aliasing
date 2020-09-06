@@ -31,6 +31,31 @@ namespace egx
 		return D3D12_RESOURCE_STATE_COMMON;
 	}
 
+	inline D3D12_PRIMITIVE_TOPOLOGY convertTopology(Topology top)
+	{
+		switch (top)
+		{
+		case egx::Topology::LineList: return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+		case egx::Topology::PointList: return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+		case egx::Topology::TriangleList: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		default:
+			throw std::runtime_error("Invalid primitive topology");
+		}
+	}
+	inline D3D12_PRIMITIVE_TOPOLOGY_TYPE convertTopologyType(TopologyType top)
+	{
+		switch (top)
+		{
+		case egx::TopologyType::Line: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+		case egx::TopologyType::Patch: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+		case egx::TopologyType::Point: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+		case egx::TopologyType::Triangle: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		case egx::TopologyType::Undefined: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+		default:
+			throw std::runtime_error("Invalid primitive topology type");
+		}
+	}
+
 	inline DXGI_FORMAT convertFormat(egx::TextureFormat format)
 	{
 		switch (format)

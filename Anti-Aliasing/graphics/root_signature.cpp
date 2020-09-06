@@ -51,7 +51,7 @@ void egx::RootSignature::Finalize(Device& dev)
 
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_desc;
-	root_desc.Init_1_1(root_parameters.size(), root_parameters.data(), samplers.size(), samplers.data(), root_flags);
+	root_desc.Init_1_1((UINT)root_parameters.size(), root_parameters.data(), (UINT)samplers.size(), samplers.data(), root_flags);
 
 	// Serialize the root signature.
 	ComPtr<ID3DBlob> signature_blob;

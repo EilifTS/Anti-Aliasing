@@ -13,7 +13,7 @@ namespace egx
 	class DescriptorHeap
 	{
 	public:
-		DescriptorHeap(ComPtr<ID3D12Device8> device, DescriptorType type, int max_descriptors);
+		DescriptorHeap(ComPtr<ID3D12Device6> device, DescriptorType type, int max_descriptors);
 		D3D12_CPU_DESCRIPTOR_HANDLE GetNextHandle();
 
 	private:

@@ -41,9 +41,9 @@ void egx::PipelineState::SetDepthStencilFormat(DepthFormat format)
 }
 void egx::PipelineState::SetRenderTargetFormat(TextureFormat format)
 {
-	auto f = convertFormat(format);
-	for (int i = 0; i < 8; i++)
-		desc.RTVFormats[i] = f;
+	desc.RTVFormats[0] = convertFormat(format);
+	for (int i = 1; i < 8; i++)
+		desc.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
 }
 
 void egx::PipelineState::SetBlendState(const BlendState& blend_state)

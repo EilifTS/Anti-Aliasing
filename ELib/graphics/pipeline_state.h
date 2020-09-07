@@ -5,6 +5,7 @@ namespace egx
 {
 	class BlendState : public D3D12_BLEND_DESC
 	{
+	public:
 		static inline BlendState NoBlend()
 		{
 			BlendState out;
@@ -33,6 +34,7 @@ namespace egx
 	};
 	class RasterState : public D3D12_RASTERIZER_DESC
 	{
+	public:
 		static inline RasterState Default()
 		{
 			RasterState out;
@@ -47,10 +49,12 @@ namespace egx
 			out.AntialiasedLineEnable = FALSE;
 			out.ForcedSampleCount = 0;
 			out.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+			return out;
 		}
 	};
 	class DepthStencilState : public D3D12_DEPTH_STENCIL_DESC
 	{
+	public:
 		static inline DepthStencilState DepthOn()
 		{
 			DepthStencilState out;
@@ -64,6 +68,22 @@ namespace egx
 			{ D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS };
 			out.FrontFace = defaultStencilOp;
 			out.BackFace = defaultStencilOp;
+			return out;
+		}
+		static inline DepthStencilState DepthOff()
+		{
+			DepthStencilState out;
+			out.DepthEnable = FALSE;
+			out.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+			out.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+			out.StencilEnable = FALSE;
+			out.StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK;
+			out.StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK;
+			const D3D12_DEPTH_STENCILOP_DESC defaultStencilOp =
+			{ D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS };
+			out.FrontFace = defaultStencilOp;
+			out.BackFace = defaultStencilOp;
+			return out;
 		}
 	};
 

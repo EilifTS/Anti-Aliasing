@@ -12,7 +12,7 @@ namespace egx
 				dev,
 				D3D12_RESOURCE_DIMENSION_BUFFER,
 				DXGI_FORMAT_UNKNOWN,
-				index_count * sizeof(unsigned int), 1, 1, 1,
+				index_count, 1, 1, (int)sizeof(unsigned int),
 				D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 				D3D12_RESOURCE_FLAG_NONE),
 			view()

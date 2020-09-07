@@ -5,6 +5,7 @@
 #include "internal/upload_heap.h"
 #include "texture2d.h"
 #include "../window/window.h"
+#include "../misc/string_helpers.h"
 #include "command_context.h"
 
 #include <vector>
@@ -12,8 +13,6 @@
 
 namespace
 {
-
-
 	void enableDebugLayer()
 	{
 #if defined(_DEBUG)
@@ -30,7 +29,8 @@ namespace
 	ComPtr<IDXGIFactory7> createFactory()
 	{
 		// Enumerate graphics adapters
-		ComPtr<IDXGIFactory7> factory;
+		ComPtr<IDXGIFactory2> factory;
+		ComPtr<IDXGIFactory7> factory7;
 		UINT createFactoryFlags = 0;
 
 #if defined(_DEBUG)
@@ -38,7 +38,8 @@ namespace
 #endif
 
 		THROWIFFAILED(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&factory)), "Failed to create DXGIFactory");
-		return factory;
+		factory.As(&factory7);
+		return factory7;
 	}
 	ComPtr<IDXGIAdapter4> getAdapter(ComPtr<IDXGIFactory7> factory)
 	{
@@ -127,15 +128,18 @@ namespace
 
 		return { (int)refreshrate_numerator, (int)refreshrate_denominator };
 	}
-	ComPtr<ID3D12Device8> createDevice(ComPtr<IDXGIAdapter4> adapter)
+	ComPtr<ID3D12Device6> createDevice(ComPtr<IDXGIAdapter4> adapter)
 	{
-		ComPtr<ID3D12Device8> d3d12Device8;
-		THROWIFFAILED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device8)), "Could not create dx12 device");
+		ComPtr<ID3D12Device> d3d12Device;
+		ComPtr<ID3D12Device6> d3d12Device6;
+		THROWIFFAILED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device)), "Could not create dx12 device");
+		d3d12Device.As(&d3d12Device6);
+
 
 		// Enable debug messages in debug mode.
 #if defined(_DEBUG)
 		ComPtr<ID3D12InfoQueue> pInfoQueue;
-		if (SUCCEEDED(d3d12Device8.As(&pInfoQueue)))
+		if (SUCCEEDED(d3d12Device6.As(&pInfoQueue)))
 		{
 			pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
 			pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
@@ -143,7 +147,7 @@ namespace
 		}
 #endif
 		eio::Console::Log("Created: Device");
-		return d3d12Device8;
+		return d3d12Device6;
 	}
 	bool checkTearingSupport(ComPtr<IDXGIFactory7> factory)
 	{
@@ -247,6 +251,8 @@ egx::Device::Device(const Window& window, const eio::InputManager& im, bool v_sy
 	getBackBuffers();
 	command_allocators = createCommandAllocators(device, frame_count);
 
+	initializeFence();
+
 	eio::Console::SetColor(15);
 }
 
@@ -316,11 +322,12 @@ void egx::Device::Present(CommandContext& context)
 {
 	context.SetTransitionBuffer(back_buffers[current_frame], GPUBufferState::Present);
 	QueueList(context);
-	THROWIFFAILED(swap_chain->Present(1, 0), "Failed to present frame");
+	THROWIFFAILED(swap_chain->Present(0, 0), "Failed to present frame");
 	PrepareNextFrame();
 	THROWIFFAILED(command_allocators[current_frame]->Reset(), "Failed to reset command allocator");
+	context.command_list->Close();
 	context.command_list->Reset(command_allocators[current_frame].Get(), nullptr);
-	context.current_bb = &back_buffers[current_frame];
+	context.current_bb = &(back_buffers[current_frame]);
 }
 
 void egx::Device::initializeFence()
@@ -334,6 +341,8 @@ void egx::Device::initializeFence()
 	fence_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 	if (fence_event == nullptr)
 		THROWIFFAILED(HRESULT_FROM_WIN32(GetLastError()), "Failed to create fence event");
+
+	eio::Console::Log("Created: fence");
 }
 
 void egx::Device::getBackBuffers()

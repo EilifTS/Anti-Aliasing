@@ -1,6 +1,5 @@
 #pragma once
 #include <string>
-#include "../misc/string_helpers.h"
 #include "game_clock.h"
 
 #ifdef _DEBUG

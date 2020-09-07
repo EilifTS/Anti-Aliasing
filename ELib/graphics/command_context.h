@@ -20,8 +20,6 @@ namespace egx
 		void SetRenderTarget(Texture2D& target);
 		void SetRenderTarget(Texture2D& target, DepthBuffer& buffer);
 		void SetDepthStencilBuffer(DepthBuffer& buffer);
-		inline void SetBBAsRenderTarget() { SetRenderTarget(*current_bb); };
-		inline void SetBBAsRenderTarget(DepthBuffer& buffer) { SetRenderTarget(*current_bb, buffer); };
 
 		void SetTransitionBuffer(GPUBuffer& buffer, GPUBufferState new_state);
 
@@ -38,8 +36,10 @@ namespace egx
 		void SetVertexBuffer(const VertexBuffer& buffer);
 		void SetIndexBuffer(const IndexBuffer& buffer);
 
-		void Draw();
-		void DrawIndexed();
+		void Draw(int vertex_count);
+		void DrawIndexed(int index_count);
+
+		inline Texture2D& GetCurrentBackBuffer() { return *current_bb; };
 
 	private:
 		void copyFromUploadHeap(GPUBuffer& dest, UploadHeap& src);

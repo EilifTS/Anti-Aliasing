@@ -1,4 +1,5 @@
 #include "console.h"
+#include "../misc/string_helpers.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>

@@ -23,6 +23,9 @@ egx::CommandContext::CommandContext(Device& dev)
 			IID_PPV_ARGS(&command_list)),
 		"Failed to create command list");
 
+	current_bb = &dev.back_buffers[dev.current_frame];
+
+	eio::Console::Log("Created: Command context");
 	//THROWIFFAILED(command_list->Close(), "Failed to close command list");
 
 }
@@ -142,6 +145,15 @@ void egx::CommandContext::SetIndexBuffer(const IndexBuffer& buffer)
 {
 	D3D12_INDEX_BUFFER_VIEW views[] = { buffer.view };
 	command_list->IASetIndexBuffer(views);
+}
+
+void egx::CommandContext::Draw(int vertex_count)
+{
+	command_list->DrawInstanced(vertex_count, 1, 0, 0);
+}
+void egx::CommandContext::DrawIndexed(int index_count)
+{
+	command_list->DrawIndexedInstanced(index_count, 1, 0, 0, 0);
 }
 
 void egx::CommandContext::copyFromUploadHeap(GPUBuffer& dest, UploadHeap& src)

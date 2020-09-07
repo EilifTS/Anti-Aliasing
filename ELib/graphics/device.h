@@ -39,7 +39,7 @@ namespace egx
 
 		ComPtr<IDXGIAdapter4> adapter;			// Graphics card
 		ComPtr<IDXGIOutput> adapter_output;		// Monitor
-		ComPtr<ID3D12Device8> device;
+		ComPtr<ID3D12Device6> device;
 		ComPtr<ID3D12CommandQueue> command_queue;
 		ComPtr<IDXGISwapChain4> swap_chain;
 		

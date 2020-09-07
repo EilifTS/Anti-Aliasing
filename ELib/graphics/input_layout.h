@@ -8,6 +8,7 @@ namespace egx
 {
 	class InputLayout
 	{
+	public:
 		InputLayout()
 			: element_descs(), pos_c(0), col_c(0), nor_c(0), tc_c(0)
 		{

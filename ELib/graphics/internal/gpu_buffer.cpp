@@ -17,7 +17,7 @@ egx::GPUBuffer::GPUBuffer(
 
 	desc.Dimension = dimension;
 	desc.Alignment = 0;
-	desc.Width = width;
+	desc.Width = width * element_size;
 	desc.Height = height;
 	desc.DepthOrArraySize = depth;
 	desc.MipLevels = 1;

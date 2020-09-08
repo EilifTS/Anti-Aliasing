@@ -15,7 +15,7 @@ struct VSOutput
 VSOutput VS( VSInput input )
 {
 	VSOutput output;
-	output.position = float4(input.position + float3(0.0, 0.0, 0.5), 1.0);
+	output.position = float4(input.position*0.03 + float3(0.0, 0.0, 0.5), 1.0);
 	output.color = float4(input.color, 1.0);
 	return output;
 }

@@ -172,6 +172,10 @@ namespace ema
 		{
 			return ((float*)this)[index];
 		}
+		inline float operator[](int index) const
+		{
+			return ((float*)this)[index];
+		}
 
 		inline operator DirectX::XMFLOAT4() const
 		{

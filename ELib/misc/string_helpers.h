@@ -1,4 +1,5 @@
 #pragma once
+#include "../math/mat4.h"
 #include <string>
 #include <sstream>
 #include <iomanip>
@@ -36,4 +37,19 @@ namespace emisc
 		ss << hours << "h " << mins << "m " << seconds << "s";
 		return ss.str();
 	}
+
+	
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ema::mat4& mat)
+{
+	for (int r = 0; r < 4; r++)
+	{
+		for (int c = 0; c < 4; c++)
+		{
+			os << mat[r][c] << " ";
+		}
+		os << std::endl;
+	}
+	return os;
 }

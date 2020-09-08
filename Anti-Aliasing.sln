@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Anti-Aliasing", "Anti-Alias
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ELib", "ELib\ELib.vcxproj", "{93D7823F-7AC0-4B11-9729-ED5FFC42195A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Testing", "Testing\Testing.vcxproj", "{EDD64C29-F221-42D0-90F2-1652C9848CCA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,6 +33,14 @@ Global
 		{93D7823F-7AC0-4B11-9729-ED5FFC42195A}.Release|x64.Build.0 = Release|x64
 		{93D7823F-7AC0-4B11-9729-ED5FFC42195A}.Release|x86.ActiveCfg = Release|Win32
 		{93D7823F-7AC0-4B11-9729-ED5FFC42195A}.Release|x86.Build.0 = Release|Win32
+		{EDD64C29-F221-42D0-90F2-1652C9848CCA}.Debug|x64.ActiveCfg = Debug|x64
+		{EDD64C29-F221-42D0-90F2-1652C9848CCA}.Debug|x64.Build.0 = Debug|x64
+		{EDD64C29-F221-42D0-90F2-1652C9848CCA}.Debug|x86.ActiveCfg = Debug|Win32
+		{EDD64C29-F221-42D0-90F2-1652C9848CCA}.Debug|x86.Build.0 = Debug|Win32
+		{EDD64C29-F221-42D0-90F2-1652C9848CCA}.Release|x64.ActiveCfg = Release|x64
+		{EDD64C29-F221-42D0-90F2-1652C9848CCA}.Release|x64.Build.0 = Release|x64
+		{EDD64C29-F221-42D0-90F2-1652C9848CCA}.Release|x86.ActiveCfg = Release|Win32
+		{EDD64C29-F221-42D0-90F2-1652C9848CCA}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

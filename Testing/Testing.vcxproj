@@ -21,32 +21,32 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{93d7823f-7ac0-4b11-9729-ed5ffc42195a}</ProjectGuid>
-    <RootNamespace>ELib</RootNamespace>
+    <ProjectGuid>{edd64c29-f221-42d0-90f2-1652c9848cca}</ProjectGuid>
+    <RootNamespace>Testing</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -86,14 +86,11 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>
-      </SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -103,14 +100,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>
-      </SubSystem>
+      <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -120,14 +114,12 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>../ELib/</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>
-      </SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -137,75 +129,24 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>../ELib/</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>
-      </SubSystem>
+      <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="graphics\command_context.h" />
-    <ClInclude Include="graphics\constant_buffer.h" />
-    <ClInclude Include="graphics\cpu_buffer.h" />
-    <ClInclude Include="graphics\depth_buffer.h" />
-    <ClInclude Include="graphics\device.h" />
-    <ClInclude Include="graphics\index_buffer.h" />
-    <ClInclude Include="graphics\input_layout.h" />
-    <ClInclude Include="graphics\internal\d3dx12.h" />
-    <ClInclude Include="graphics\internal\descriptor_heap.h" />
-    <ClInclude Include="graphics\internal\egx_common.h" />
-    <ClInclude Include="graphics\internal\egx_internal.h" />
-    <ClInclude Include="graphics\internal\gpu_buffer.h" />
-    <ClInclude Include="graphics\internal\upload_heap.h" />
-    <ClInclude Include="graphics\mesh.h" />
-    <ClInclude Include="graphics\pipeline_state.h" />
-    <ClInclude Include="graphics\root_signature.h" />
-    <ClInclude Include="graphics\sampler.h" />
-    <ClInclude Include="graphics\shader.h" />
-    <ClInclude Include="graphics\texture2d.h" />
-    <ClInclude Include="graphics\vertex_buffer.h" />
-    <ClInclude Include="io\console.h" />
-    <ClInclude Include="io\game_clock.h" />
-    <ClInclude Include="io\input_manager.h" />
-    <ClInclude Include="io\keyboard_state.h" />
-    <ClInclude Include="io\mesh_io.h" />
-    <ClInclude Include="io\mouse_state.h" />
-    <ClInclude Include="io\window_state.h" />
-    <ClInclude Include="math\color.h" />
-    <ClInclude Include="math\mat4.h" />
-    <ClInclude Include="math\point2d.h" />
-    <ClInclude Include="math\vec2.h" />
-    <ClInclude Include="math\vec3.h" />
-    <ClInclude Include="math\vec4.h" />
-    <ClInclude Include="misc\string_helpers.h" />
-    <ClInclude Include="window\window.h" />
+    <ClCompile Include="Testing.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="graphics\command_context.cpp" />
-    <ClCompile Include="graphics\constant_buffer.cpp" />
-    <ClCompile Include="graphics\depth_buffer.cpp" />
-    <ClCompile Include="graphics\device.cpp" />
-    <ClCompile Include="graphics\internal\descriptor_heap.cpp" />
-    <ClCompile Include="graphics\internal\gpu_buffer.cpp" />
-    <ClCompile Include="graphics\internal\upload_heap.cpp" />
-    <ClCompile Include="graphics\mesh.cpp" />
-    <ClCompile Include="graphics\pipeline_state.cpp" />
-    <ClCompile Include="graphics\root_signature.cpp" />
-    <ClCompile Include="graphics\shader.cpp" />
-    <ClCompile Include="graphics\texture2d.cpp" />
-    <ClCompile Include="io\console.cpp" />
-    <ClCompile Include="io\game_clock.cpp" />
-    <ClCompile Include="io\keyboard_state.cpp" />
-    <ClCompile Include="io\mesh_io.cpp" />
-    <ClCompile Include="io\mouse_state.cpp" />
-    <ClCompile Include="window\window.cpp" />
+    <ProjectReference Include="..\ELib\ELib.vcxproj">
+      <Project>{93d7823f-7ac0-4b11-9729-ed5ffc42195a}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

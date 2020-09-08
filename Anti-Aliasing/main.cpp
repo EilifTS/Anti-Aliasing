@@ -58,6 +58,7 @@ int WINAPI wWinMain(
 			}
 			frames++;
 		}
+		device.WaitForGPU();
 	}
 	catch (std::runtime_error& e)
 	{

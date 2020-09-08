@@ -13,6 +13,14 @@ namespace emisc
 		return ss.str();
 	}
 
+	inline int StringToInt(const std::string& s)
+	{
+		std::stringstream ss(s);
+		int out;
+		ss >> out;
+		return out;
+	}
+
 	// Converts time in microseconds to string in hh:mm:ssssssss format
 	inline std::string TimeToString(long long t)
 	{

@@ -164,6 +164,7 @@
     <ClInclude Include="graphics\internal\egx_internal.h" />
     <ClInclude Include="graphics\internal\gpu_buffer.h" />
     <ClInclude Include="graphics\internal\upload_heap.h" />
+    <ClInclude Include="graphics\mesh.h" />
     <ClInclude Include="graphics\pipeline_state.h" />
     <ClInclude Include="graphics\root_signature.h" />
     <ClInclude Include="graphics\sampler.h" />
@@ -174,6 +175,7 @@
     <ClInclude Include="io\game_clock.h" />
     <ClInclude Include="io\input_manager.h" />
     <ClInclude Include="io\keyboard_state.h" />
+    <ClInclude Include="io\mesh_io.h" />
     <ClInclude Include="io\mouse_state.h" />
     <ClInclude Include="io\window_state.h" />
     <ClInclude Include="math\color.h" />
@@ -192,6 +194,7 @@
     <ClCompile Include="graphics\internal\descriptor_heap.cpp" />
     <ClCompile Include="graphics\internal\gpu_buffer.cpp" />
     <ClCompile Include="graphics\internal\upload_heap.cpp" />
+    <ClCompile Include="graphics\mesh.cpp" />
     <ClCompile Include="graphics\pipeline_state.cpp" />
     <ClCompile Include="graphics\root_signature.cpp" />
     <ClCompile Include="graphics\shader.cpp" />
@@ -199,6 +202,7 @@
     <ClCompile Include="io\console.cpp" />
     <ClCompile Include="io\game_clock.cpp" />
     <ClCompile Include="io\keyboard_state.cpp" />
+    <ClCompile Include="io\mesh_io.cpp" />
     <ClCompile Include="io\mouse_state.cpp" />
     <ClCompile Include="window\window.cpp" />
   </ItemGroup>

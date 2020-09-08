@@ -3,6 +3,7 @@
 #include "graphics/shader.h"
 #include "graphics/input_layout.h"
 #include "graphics/cpu_buffer.h"
+#include "io/mesh_io.h"
 
 namespace
 {
@@ -14,22 +15,8 @@ namespace
 }
 
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
-	: vertex_buffer(nullptr)
+	: mesh(eio::LoadMeshFromOBJ(dev, context, "models/good-well.obj", "models/good-well.mtl"))
 {
-	// Create vetex buffer
-	VertexType vertices[] = {
-		{{0.0f, 1.0f, 0.5f}, {1.0f, 0.0f, 0.0f, 1.0f}},
-		{{1.0f, -1.0f, 0.5f}, {0.0f, 1.0f, 0.0f, 1.0f}},
-		{{-1.0f, -1.0f, 0.5f}, {0.0f, 0.0f, 1.0f, 1.0f}},
-	};
-
-	egx::CPUBuffer cpu_vertex_buffer(vertices, (int)sizeof(vertices));
-
-	vertex_buffer = std::make_unique<egx::VertexBuffer>(dev, (int)sizeof(VertexType), (int)_countof(vertices));
-
-	dev.ScheduleUpload(context, cpu_vertex_buffer, *vertex_buffer);
-	context.SetTransitionBuffer(*vertex_buffer, egx::GPUBufferState::VertexBuffer);
-
 	// Create root signature
 	root_sig.Finalize(dev);
 
@@ -39,14 +26,12 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	VS.CompileVertexShader("shaders/test_vs.hlsl");
 	PS.CompilePixelShader("shaders/test_ps.hlsl");
 
-	// Create input layout
-	egx::InputLayout layout;
-	layout.AddPosition(3);
-	layout.AddColor(4);
+	// Get input layout
+	auto input_layout = egx::MeshVertex::GetInputLayout();
 
 	// Create PSO
 	pipeline_state.SetRootSignature(root_sig);
-	pipeline_state.SetInputLayout(layout);
+	pipeline_state.SetInputLayout(input_layout);
 	pipeline_state.SetPrimitiveTopology(egx::TopologyType::Triangle);
 	pipeline_state.SetVertexShader(VS);
 	pipeline_state.SetPixelShader(PS);
@@ -76,12 +61,14 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	// Set PSO
 	context.SetPipelineState(pipeline_state);
 	// Set vertex buffer
-	context.SetVertexBuffer(*vertex_buffer);
+	context.SetVertexBuffer(mesh.GetVertexBuffer());
+	context.SetIndexBuffer(mesh.GetIndexBuffer());
+
 	// Set scissor and viewport
 	context.SetViewport(im.Window().WindowSize());
 	context.SetScissor(im.Window().WindowSize());
 	context.SetPrimitiveTopology(egx::Topology::TriangleList);
 
 	// Draw?
-	context.Draw(vertex_buffer->GetElementCount());
+	context.DrawIndexed(mesh.GetIndexBuffer().GetElementCount());
 }

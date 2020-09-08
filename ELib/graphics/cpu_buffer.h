@@ -5,7 +5,7 @@ namespace egx
 	class CPUBuffer
 	{
 	public:
-		CPUBuffer(void* ptr, int buffer_size)
+		CPUBuffer(const void* ptr, int buffer_size)
 			: ptr(ptr), buffer_size(buffer_size)
 		{}
 
@@ -13,7 +13,7 @@ namespace egx
 		int Size() const { return buffer_size; };
 
 	private:
-		void* ptr;
+		const void* ptr;
 		int buffer_size;
 	};
 }

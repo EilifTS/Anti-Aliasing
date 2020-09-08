@@ -66,6 +66,7 @@ StyleCopReport.xml
 *.ilk
 *.meta
 *.obj
+!Anti-Aliasing/models/*.obj
 *.iobj
 *.pch
 *.pdb

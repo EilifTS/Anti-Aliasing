@@ -111,6 +111,12 @@
     <ClInclude Include="window\window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="graphics\mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="io\mesh_io.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="graphics\internal\descriptor_heap.cpp">
@@ -159,6 +165,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="window\window.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\mesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="io\mesh_io.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

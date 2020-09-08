@@ -8,6 +8,7 @@
 #include "graphics/vertex_buffer.h"
 #include "graphics/root_signature.h"
 #include "graphics/pipeline_state.h"
+#include "graphics/mesh.h"
 
 class App
 {
@@ -19,7 +20,7 @@ public:
 
 private:
 
-	std::unique_ptr<egx::VertexBuffer> vertex_buffer;
+	egx::Mesh mesh;
 	egx::RootSignature root_sig;
 	egx::PipelineState pipeline_state;
 };

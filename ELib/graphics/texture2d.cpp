@@ -11,7 +11,8 @@ egx::Texture2D::Texture2D(Device& dev, TextureFormat format, const ema::point2D&
 		size.x, size.y, 1,
 		formatByteSize(convertFormat(format)),
 		D3D12_TEXTURE_LAYOUT_UNKNOWN,
-		D3D12_RESOURCE_FLAG_NONE
+		D3D12_RESOURCE_FLAG_NONE,
+		ClearValue::ColorBlue
 		)
 {
 	

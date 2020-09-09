@@ -14,7 +14,8 @@ namespace egx
 				DXGI_FORMAT_UNKNOWN,
 				index_count, 1, 1, (int)sizeof(unsigned int),
 				D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-				D3D12_RESOURCE_FLAG_NONE),
+				D3D12_RESOURCE_FLAG_NONE,
+				ClearValue::None),
 			view()
 		{
 			view.Format = DXGI_FORMAT_R32_UINT;

@@ -15,9 +15,16 @@ namespace
 }
 
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
-	: mesh(eio::LoadMeshFromOBJ(dev, context, "models/good-well.obj", "models/good-well.mtl"))
+	: 
+	camera(dev, context, ema::vec2(im.Window().WindowSize()), 0.1f, 100.0f, 3.141592f *0.25f, 10.0f, 0.001f),
+	mesh(eio::LoadMeshFromOBJ(dev, context, "models/good-well.obj", "models/good-well.mtl")),
+	depth_buffer(dev, egx::DepthFormat::D32, im.Window().WindowSize())
 {
+	depth_buffer.CreateDepthStencilView(dev);
+	context.SetTransitionBuffer(depth_buffer, egx::GPUBufferState::DepthWrite);
+
 	// Create root signature
+	root_sig.InitConstantBuffer(0);
 	root_sig.Finalize(dev);
 
 	// Create Shaders
@@ -40,26 +47,33 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 
 	pipeline_state.SetBlendState(egx::BlendState::NoBlend());
 	pipeline_state.SetRasterState(egx::RasterState::Default());
-	pipeline_state.SetDepthStencilState(egx::DepthStencilState::DepthOff());
+	pipeline_state.SetDepthStencilState(egx::DepthStencilState::DepthOn());
 	pipeline_state.Finalize(dev);
 }
 
 void App::Update(eio::InputManager& im)
 {
-
+	camera.Update(im);
 }
 void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 {
+	camera.UpdateBuffer(dev, context);
+
 	auto& render_target = context.GetCurrentBackBuffer();
 
 	context.SetTransitionBuffer(render_target, egx::GPUBufferState::RenderTarget);
-	context.ClearRenderTarget(render_target, { 0.0f, 1.0f, 0.0f, 1.0f });
-	context.SetRenderTarget(render_target);
+	context.ClearRenderTarget(render_target, { 0.117f, 0.565f, 1.0f, 1.0f });
+	context.ClearDepth(depth_buffer, 1.0f);
+	context.SetRenderTarget(render_target, depth_buffer);
 
 	// Set root sig
 	context.SetRootSignature(root_sig);
 	// Set PSO
 	context.SetPipelineState(pipeline_state);
+
+	// Set root values
+	context.SetRootConstantBuffer(0, camera.GetBuffer());
+
 	// Set vertex buffer
 	context.SetVertexBuffer(mesh.GetVertexBuffer());
 	context.SetIndexBuffer(mesh.GetIndexBuffer());

@@ -10,7 +10,7 @@ namespace eio
 	{
 	public:
 		InputManager(const ema::point2D& window_size, bool fullscreen_activated)
-			: keyboard(), mouse(), game_clock(), window(window_size, fullscreen_activated)
+			: keyboard(), mouse(window_size / 2), game_clock(), window(window_size, fullscreen_activated)
 		{
 
 		}
@@ -23,6 +23,13 @@ namespace eio
 		const GameClock& Clock() const { return game_clock; };
 		WindowState& Window() { return window; };
 		const WindowState& Window() const { return window; };
+
+		void ResetOnFrameStart()
+		{
+			game_clock.startFrame();
+			mouse.reset();
+			keyboard.reset();
+		}
 
 	private:
 		KeyboardState keyboard;

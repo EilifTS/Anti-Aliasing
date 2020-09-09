@@ -17,7 +17,8 @@ namespace egx
 			int width, int height, int depth,
 			int element_size,
 			D3D12_TEXTURE_LAYOUT layout, 
-			D3D12_RESOURCE_FLAGS flags);
+			D3D12_RESOURCE_FLAGS flags,
+			ClearValue clear_value);
 
 		int GetElementSize() const { return element_size; };
 		int GetElementCount() const { return element_count; };

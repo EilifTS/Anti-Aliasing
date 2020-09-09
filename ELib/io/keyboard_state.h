@@ -3,6 +3,7 @@
 class Window;
 namespace eio
 {
+	class InputManager;
 	class KeyboardState
 	{
 	public:
@@ -29,6 +30,7 @@ namespace eio
 		void setKeyUp(unsigned char key);
 
 		friend Window;
+		friend InputManager;
 	};
 
 }

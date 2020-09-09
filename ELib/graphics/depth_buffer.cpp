@@ -11,10 +11,10 @@ egx::DepthBuffer::DepthBuffer(Device& dev, DepthFormat format, const ema::point2
 		size.x, size.y, 1,
 		depthFormatByteSize(convertDepthFormat(format)),
 		D3D12_TEXTURE_LAYOUT_UNKNOWN,
-		D3D12_RESOURCE_FLAG_NONE
+		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
+		ClearValue::Depth1
 	)
 {
-
 }
 
 void egx::DepthBuffer::CreateShaderResourceView(Device& dev)

@@ -13,6 +13,7 @@ namespace
 	{
 		int table_index = c / sizeof(unsigned int);
 		int int_index = c % sizeof(unsigned int);
+		table[table_index] &= ~(0x01 << int_index);
 		table[table_index] |= int(v) << int_index;
 	}
 }

@@ -61,6 +61,7 @@ namespace egx
 		switch (format)
 		{
 		case egx::TextureFormat::UNORM4x8: return DXGI_FORMAT_R8G8B8A8_UNORM;
+		case egx::TextureFormat::UNORM4x8SRGB: return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 		default: throw std::runtime_error("Unsupported texture format");
 		}
 		return DXGI_FORMAT_UNKNOWN;

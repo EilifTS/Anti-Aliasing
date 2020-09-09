@@ -49,11 +49,17 @@ namespace egx
 
 	enum class TextureFormat
 	{
-		UNORM4x8
+		UNORM4x8, UNORM4x8SRGB
 	};
 
 	enum class DepthFormat
 	{
 		D16, D24_S8, D32, D32_S32
 	};
+
+	enum class ClearValue
+	{
+		Depth0, Depth1, ColorBlack, ColorBlue, None
+	};
+
 }

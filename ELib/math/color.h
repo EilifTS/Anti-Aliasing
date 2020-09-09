@@ -6,11 +6,16 @@ namespace ema
 {
 	class color
 	{
-	private:
+	public:
 		union
 		{
 			ema::vec4 vec;
-			float r, g, b, a;
+			struct {
+				float r;
+				float g;
+				float b;
+				float a;
+			};
 		};
 
 	public:

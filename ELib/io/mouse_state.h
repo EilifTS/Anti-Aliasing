@@ -4,11 +4,12 @@
 class Window;
 namespace eio
 {
+	class InputManager;
 	enum class MouseButton { Left, Middle, Right };
 	class MouseState
 	{
 	public:
-		MouseState();
+		MouseState(const ema::point2D& lock_pos);
 
 		bool IsButtonDown(MouseButton b) const;
 		bool IsButtonUp(MouseButton b) const;
@@ -32,7 +33,7 @@ namespace eio
 
 		// Reset mouse state before updating current mousestate
 		void reset();
-
+		friend InputManager;
 		friend Window;
 	};
 }

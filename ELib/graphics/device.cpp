@@ -295,8 +295,8 @@ void egx::Device::ScheduleUpload(CommandContext& context, const CPUBuffer& cpu_b
 	assert(cpu_buffer.Size() <= gpu_buffer.GetBufferSize());
 
 	// Create an upload heap for the intermediate step
-	upload_heaps.push_back(UploadHeap(*this, cpu_buffer.Size()));
-	auto& upload_heap = upload_heaps.back();
+	upload_heaps[current_frame].push_back(UploadHeap(*this, gpu_buffer.GetBufferSize()));
+	auto& upload_heap = upload_heaps[current_frame].back();
 
 	void* upload_heap_ptr = upload_heap.Map();
 	memcpy(upload_heap_ptr, cpu_buffer.GetPtr(), (size_t)cpu_buffer.Size());
@@ -328,6 +328,8 @@ void egx::Device::Present(CommandContext& context)
 	context.command_list->Close();
 	context.command_list->Reset(command_allocators[current_frame].Get(), nullptr);
 	context.current_bb = &(back_buffers[current_frame]);
+	upload_heaps[current_frame].clear();
+	
 }
 
 void egx::Device::initializeFence()

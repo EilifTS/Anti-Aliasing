@@ -55,7 +55,7 @@ namespace egx
 		std::unique_ptr<DescriptorHeap> dsv_heap;
 
 		// Upload
-		std::vector<UploadHeap> upload_heaps;
+		std::vector<UploadHeap> upload_heaps[frame_count];
 
 		// Frame buffering
 		int current_frame;

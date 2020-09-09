@@ -1,8 +1,8 @@
 #include "mouse_state.h"
 #include <assert.h>
 
-eio::MouseState::MouseState()
-	: pos(), button_state(), button_last_state(), mouse_scroll_change()
+eio::MouseState::MouseState(const ema::point2D& lock_pos)
+	: pos(lock_pos), last_pos(lock_pos), button_state(), button_last_state(), mouse_scroll_change()
 {
 
 }
@@ -49,7 +49,6 @@ void eio::MouseState::updateMouseButtonState(int button, bool down)
 }
 void eio::MouseState::reset()
 {
-	last_pos = pos;
 	mouse_scroll_change = 0;
 	button_last_state[0] = button_state[0];
 	button_last_state[1] = button_state[1];

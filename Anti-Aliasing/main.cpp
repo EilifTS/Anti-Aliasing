@@ -37,6 +37,8 @@ int WINAPI wWinMain(
 		auto sec_start = input_manager.Clock().GetTime();
 		while (true)
 		{
+			input_manager.ResetOnFrameStart();
+
 			window.HandleWindowMessages();
 			if (window.CloseWindow())
 				break;

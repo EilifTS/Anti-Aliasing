@@ -17,10 +17,32 @@ namespace ema
 			out.matrix = DirectX::XMMatrixIdentity();
 			return out;
 		}
-		static inline mat4 Translation(vec3 offset)
+		static inline mat4 Translation(const vec3& offset)
 		{
 			mat4 out;
 			out.matrix = DirectX::XMMatrixTranslation(offset.x, offset.y, offset.z);
+			return out;
+		}
+		static inline mat4 Projection(float near_plane, float far_plane, float field_of_view, float aspect_ratio)
+		{
+			mat4 out;
+			out.matrix = DirectX::XMMatrixPerspectiveFovLH(field_of_view, aspect_ratio, near_plane, far_plane);
+			return out;
+		}
+		static inline mat4 LookAt(const vec3& position, const vec3& look_at, const vec3& up)
+		{
+			mat4 out;
+			auto position_vector = DirectX::XMLoadFloat4((const DirectX::XMFLOAT4*) & position);
+			auto look_at_vector = DirectX::XMLoadFloat4((const DirectX::XMFLOAT4*) & look_at);
+			auto up_vector = DirectX::XMLoadFloat4((const DirectX::XMFLOAT4*) & up);
+			
+			out.matrix = DirectX::XMMatrixLookAtLH(position_vector, look_at_vector, up_vector);
+			return out;
+		}
+		static inline mat4 RollPitchYaw(const ema::vec3& roll_pitch_yaw)
+		{
+			mat4 out;
+			out.matrix = DirectX::XMMatrixRotationRollPitchYaw(roll_pitch_yaw.y, roll_pitch_yaw.z, roll_pitch_yaw.x);
 			return out;
 		}
 
@@ -74,6 +96,6 @@ inline ema::vec4 operator*(const ema::vec4& lhs, const ema::mat4& rhs)
 	DirectX::XMVECTOR d = DirectX::XMLoadFloat4((const DirectX::XMFLOAT4*) & lhs);
 	auto out = DirectX::XMVector4Transform(d, rhs.GetDXMatrix());
 	ema::vec4 outv;
-	DirectX::XMStoreFloat4A((DirectX::XMFLOAT4A*) & outv, out);
+	DirectX::XMStoreFloat4((DirectX::XMFLOAT4*) & outv, out);
 	return outv;
 };

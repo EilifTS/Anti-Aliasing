@@ -97,6 +97,8 @@ namespace
 			}
 			else if (identifier == "Kd") // Diffuse color
 			{
+				ema::color c;
+				
 				ss >> materials[current_m_name].diffuse_color.x;
 				ss >> materials[current_m_name].diffuse_color.y;
 				ss >> materials[current_m_name].diffuse_color.z;

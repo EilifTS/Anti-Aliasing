@@ -1,6 +1,18 @@
 #include "window.h"
 #include <stdexcept>
 
+namespace
+{
+	void centerMouse(HWND hwnd, const ema::point2D& center_pos)
+	{
+		POINT screen_center;
+		screen_center.x = center_pos.x;
+		screen_center.y = center_pos.y;
+		ClientToScreen(hwnd, &screen_center);
+		SetCursorPos(screen_center.x, screen_center.y);
+	}
+}
+
 Window::Window(HINSTANCE hinstance, HINSTANCE hprevinstance, LPWSTR lpcmdline, int icmdshow, eio::InputManager& input_manager)
 	: close_window(false), rinput_manager(input_manager)
 {
@@ -93,6 +105,8 @@ Window::Window(HINSTANCE hinstance, HINSTANCE hprevinstance, LPWSTR lpcmdline, i
 	GetWindowRect(hwnd, &w);
 	GetClientRect(hwnd, &c);
 
+	centerMouse(hwnd, rinput_manager.Window().WindowSize() / 2);
+
 	ShowWindow(hwnd, icmdshow);
 	SetForegroundWindow(hwnd);
 	SetFocus(hwnd);
@@ -107,9 +121,6 @@ Window::~Window()
 
 void Window::HandleWindowMessages()
 {
-	rinput_manager.Keyboard().reset();
-	rinput_manager.Mouse().reset();
-
 	MSG msg;
 	while (!close_window && PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 	{
@@ -141,8 +152,11 @@ LRESULT CALLBACK Window::MessageHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
 	case WM_MOUSEMOVE:
 	{
 		POINT mp = { LOWORD(lParam), HIWORD(lParam) };
-		//ScreenToClient(hwnd, &mp);
+		
 		rinput_manager.Mouse().updateMousePosition({ (int)mp.x, (int)mp.y });
+
+		centerMouse(hwnd, rinput_manager.Window().WindowSize() / 2);
+		
 		return 0;
 	}
 	case WM_MOUSEWHEEL:

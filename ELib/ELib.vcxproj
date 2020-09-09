@@ -151,6 +151,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="graphics\camera.h" />
     <ClInclude Include="graphics\command_context.h" />
     <ClInclude Include="graphics\constant_buffer.h" />
     <ClInclude Include="graphics\cpu_buffer.h" />
@@ -188,6 +189,7 @@
     <ClInclude Include="window\window.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="graphics\camera.cpp" />
     <ClCompile Include="graphics\command_context.cpp" />
     <ClCompile Include="graphics\constant_buffer.cpp" />
     <ClCompile Include="graphics\depth_buffer.cpp" />

@@ -38,6 +38,7 @@ namespace egx
 		case egx::Topology::LineList: return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
 		case egx::Topology::PointList: return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
 		case egx::Topology::TriangleList: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		case egx::Topology::TriangleStrip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 		default:
 			throw std::runtime_error("Invalid primitive topology");
 		}
@@ -84,25 +85,28 @@ namespace egx
 	{
 		switch (format)
 		{
-		case DXGI_FORMAT_R8G8B8A8_UNORM:
-			return 4;
-		default: throw std::runtime_error("Unsupported texture format");
-		}
-		return 0;
-	}
-	inline int depthFormatByteSize(DXGI_FORMAT format)
-	{
-		switch (format)
-		{
 		case DXGI_FORMAT_D16_UNORM:
 			return 2;
 		case DXGI_FORMAT_D24_UNORM_S8_UINT:
 		case DXGI_FORMAT_D32_FLOAT:
+		case DXGI_FORMAT_R8G8B8A8_UNORM:
 			return 4;
 		case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
 			return 8;
-		default: throw std::runtime_error("Unsupported depth format");
+		default: throw std::runtime_error("Unsupported texture format");
 		}
 		return 0;
+	}
+
+	inline D3D12_SHADER_VISIBILITY convertVisibility(egx::ShaderVisibility vis)
+	{
+		switch (vis)
+		{
+		case egx::ShaderVisibility::All: return D3D12_SHADER_VISIBILITY_ALL;
+		case egx::ShaderVisibility::Vertex: return D3D12_SHADER_VISIBILITY_VERTEX;
+		case egx::ShaderVisibility::Pixel: return D3D12_SHADER_VISIBILITY_PIXEL;
+		default:
+			throw std::runtime_error("Invalid shader visibility");
+		}
 	}
 }

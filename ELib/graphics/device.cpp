@@ -359,7 +359,7 @@ void egx::Device::getBackBuffers()
 
 		//device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtv);
 
-		back_buffers.push_back(Texture2D(back_buffer));
+		back_buffers.push_back(RenderTarget(back_buffer));
 		back_buffers.back().createRenderTargetViewForBB(*this);
 	}
 

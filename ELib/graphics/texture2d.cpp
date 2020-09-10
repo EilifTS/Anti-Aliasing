@@ -3,16 +3,16 @@
 #include "device.h"
 
 egx::Texture2D::Texture2D(Device& dev, TextureFormat format, const ema::point2D& size)
-	: size(size), srv(), rtv(), format(convertFormat(format)),
+	: size(size), srv_cpu(), srv_gpu(), format(convertFormat(format)),
 	GPUBuffer(
 		dev,
 		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 		convertFormat(format),
 		size.x, size.y, 1,
-		formatByteSize(convertFormat(format)),
+		1,
 		D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		D3D12_RESOURCE_FLAG_NONE,
-		ClearValue::ColorBlue
+		ClearValue::None
 		)
 {
 	
@@ -31,48 +31,44 @@ void egx::Texture2D::createShaderResourceView(Device& dev, DXGI_FORMAT format)
 	desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	desc.Texture2D.MipLevels = 1;
 
-	srv = dev.buffer_heap->GetNextHandle();
+	srv_cpu = dev.buffer_heap->GetNextHandle();
 
-	dev.device->CreateShaderResourceView(buffer.Get(), &desc, srv);
+	dev.device->CreateShaderResourceView(buffer.Get(), &desc, srv_cpu);
+	srv_gpu = dev.buffer_heap->GetGPUHandle(srv_cpu);
 }
 
-void egx::Texture2D::CreateRenderTargetView(Device& dev)
+const D3D12_CPU_DESCRIPTOR_HANDLE& egx::Texture2D::getSRVCPU() const
 {
-	D3D12_RENDER_TARGET_VIEW_DESC desc = {};
-	desc.Format = DXGI_FORMAT_UNKNOWN;
-	desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-	
-	rtv = dev.rtv_heap->GetNextHandle();
-
-	dev.device->CreateRenderTargetView(buffer.Get(), &desc, rtv);
+	assert(srv_cpu.ptr != 0);
+	return srv_cpu;
 }
-
-void egx::Texture2D::createRenderTargetViewForBB(Device& dev)
+const D3D12_GPU_DESCRIPTOR_HANDLE& egx::Texture2D::getSRVGPU() const
 {
-	rtv = dev.rtv_heap->GetNextHandle();
-
-	dev.device->CreateRenderTargetView(buffer.Get(), nullptr, rtv);
+	assert(srv_gpu.ptr != 0);
+	return srv_gpu;
 }
 
 egx::Texture2D::Texture2D(ComPtr<ID3D12Resource> buffer)
-	: GPUBuffer(buffer), size(), srv(), rtv(), format()
+	: GPUBuffer(buffer), size(), srv_cpu(), srv_gpu(), format()
 {
-	auto desc = buffer->GetDesc();
-	element_count = (int)desc.Width * desc.Height * desc.DepthOrArraySize;
-	element_size = formatByteSize(desc.Format);
-
-	size = { (int)desc.Width, (int)desc.Height };
-	format = desc.Format;
-	
 }
 
-const D3D12_CPU_DESCRIPTOR_HANDLE& egx::Texture2D::getSRV() const
+egx::Texture2D::Texture2D(Device& dev,
+	DXGI_FORMAT format,
+	const ema::point2D& size,
+	D3D12_RESOURCE_FLAGS flags,
+	ClearValue clear_value)
+	: size(size), srv_cpu(), srv_gpu(), format(format),
+	GPUBuffer(
+		dev,
+		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+		format,
+		size.x, size.y, 1,
+		1,
+		D3D12_TEXTURE_LAYOUT_UNKNOWN,
+		flags,
+		clear_value
+		)
 {
-	assert(srv.ptr != 0);
-	return srv;
-}
-const D3D12_CPU_DESCRIPTOR_HANDLE& egx::Texture2D::getRTV() const
-{
-	assert(rtv.ptr != 0);
-	return rtv;
+
 }

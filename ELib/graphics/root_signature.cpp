@@ -7,22 +7,31 @@ egx::RootSignature::RootSignature()
 {
 
 }
-void egx::RootSignature::InitConstants(int number_of_constants, int shader_register)
+void egx::RootSignature::InitConstants(int number_of_constants, int shader_register, ShaderVisibility visibility)
 {
 	CD3DX12_ROOT_PARAMETER1 param;
-	param.InitAsConstants(number_of_constants, shader_register, 0, D3D12_SHADER_VISIBILITY_ALL);
+	param.InitAsConstants(number_of_constants, shader_register, 0, convertVisibility(visibility));
 	root_parameters.push_back(param);
 }
-void egx::RootSignature::InitConstantBuffer(int shader_register)
+void egx::RootSignature::InitConstantBuffer(int shader_register, ShaderVisibility visibility)
 {
 	CD3DX12_ROOT_PARAMETER1 param;
-	param.InitAsConstantBufferView(shader_register, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+	param.InitAsConstantBufferView(shader_register, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, convertVisibility(visibility));
 	root_parameters.push_back(param);
 }
 void egx::RootSignature::InitShaderResource(int shader_register)
 {
 	CD3DX12_ROOT_PARAMETER1 param;
 	param.InitAsShaderResourceView(shader_register, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+	root_parameters.push_back(param);
+}
+void egx::RootSignature::InitDescriptorTable(int shader_register, ShaderVisibility visibility)
+{
+	CD3DX12_ROOT_PARAMETER1 param;
+	CD3DX12_DESCRIPTOR_RANGE1 range;
+	range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, shader_register, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
+	ranges.push_back(range);
+	param.InitAsDescriptorTable(1, &ranges.back(), convertVisibility(visibility));
 	root_parameters.push_back(param);
 }
 void egx::RootSignature::AddSampler(const Sampler& sampler, int shader_register)
@@ -56,8 +65,19 @@ void egx::RootSignature::Finalize(Device& dev)
 	// Serialize the root signature.
 	ComPtr<ID3DBlob> signature_blob;
 	ComPtr<ID3DBlob> error_blob;
-	THROWIFFAILED(D3DX12SerializeVersionedRootSignature(&root_desc,
-		feature_data.HighestVersion, &signature_blob, &error_blob), "Failed to serialize root signature");
+	if (FAILED(D3DX12SerializeVersionedRootSignature(&root_desc,
+		feature_data.HighestVersion, &signature_blob, &error_blob)))
+	{
+		char* s_errors = (char*)(error_blob->GetBufferPointer());
+		unsigned long long buffer_size = error_blob->GetBufferSize();
+
+		std::string s_errors_string;
+		for (int i = 0; i < buffer_size; i++)
+			s_errors_string += s_errors[i];
+
+		eio::Console::Log("Serialization error: " + s_errors_string);
+		throw std::runtime_error("Failed to serialize root signature");
+	}
 
 	// Create the root signature.
 	THROWIFFAILED(dev.device->CreateRootSignature(0, signature_blob->GetBufferPointer(),

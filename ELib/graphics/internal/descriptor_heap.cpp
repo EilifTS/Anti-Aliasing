@@ -42,8 +42,19 @@ D3D12_CPU_DESCRIPTOR_HANDLE egx::DescriptorHeap::GetNextHandle()
 {
 	assert(num_descriptors != max_descriptors);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE desc_h(descriptor_heap->GetCPUDescriptorHandleForHeapStart());
-
+	
 	desc_h.Offset(num_descriptors, descriptor_size);
 	num_descriptors++;
 	return desc_h;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE egx::DescriptorHeap::GetGPUHandle(D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle)
+{
+	assert(num_descriptors != max_descriptors);
+	D3D12_CPU_DESCRIPTOR_HANDLE desc_h(descriptor_heap->GetCPUDescriptorHandleForHeapStart());
+	SIZE_T offset = cpu_handle.ptr - desc_h.ptr;
+	D3D12_GPU_DESCRIPTOR_HANDLE desc_gpu(descriptor_heap->GetGPUDescriptorHandleForHeapStart());
+	desc_gpu.ptr += offset;
+
+	return desc_gpu;
 }

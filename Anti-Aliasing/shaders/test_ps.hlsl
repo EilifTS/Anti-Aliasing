@@ -31,7 +31,6 @@ float4 PS(PSInput input) : SV_TARGET
 		specular = 0.0;
 
 	color = input.color * (0.5 + 0.5 * diffuse) + 0.5 * specular.xxx;
-	color = pow(color, 1.0 / 2.2);
 
 	return float4(color, 1.0);
 }

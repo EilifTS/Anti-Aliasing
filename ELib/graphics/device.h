@@ -11,14 +11,12 @@
 #include "../io/input_manager.h"
 #include "internal/egx_common.h"
 #include "internal/upload_heap.h"
-#include "texture2d.h"
+#include "render_target.h"
 
 class Window;
 
 namespace egx
 {
-	
-
 	class Device
 	{
 	public:
@@ -32,6 +30,14 @@ namespace egx
 		void QueueList(CommandContext& context);
 		void Present(CommandContext& context);
 
+	public:
+		// Descriptor heaps
+		static const int max_descriptors_in_heap = 16;
+		std::unique_ptr<DescriptorHeap> buffer_heap;
+		std::unique_ptr<DescriptorHeap> sampler_heap;
+		std::unique_ptr<DescriptorHeap> rtv_heap;
+		std::unique_ptr<DescriptorHeap> dsv_heap;
+
 	private:
 		static const int frame_count = 3;
 		bool v_sync;
@@ -43,17 +49,9 @@ namespace egx
 		ComPtr<ID3D12CommandQueue> command_queue;
 		ComPtr<IDXGISwapChain4> swap_chain;
 		
-		std::vector<Texture2D> back_buffers;
+		std::vector<RenderTarget> back_buffers;
 		std::vector<ComPtr<ID3D12CommandAllocator>> command_allocators;
 		
-
-		// Descriptor heaps
-		static const int max_descriptors_in_heap = 16;
-		std::unique_ptr<DescriptorHeap> buffer_heap;
-		std::unique_ptr<DescriptorHeap> sampler_heap;
-		std::unique_ptr<DescriptorHeap> rtv_heap;
-		std::unique_ptr<DescriptorHeap> dsv_heap;
-
 		// Upload
 		std::vector<UploadHeap> upload_heaps[frame_count];
 
@@ -76,6 +74,7 @@ namespace egx
 		friend RootSignature;
 		friend PipelineState;
 		friend CommandContext;
+		friend RenderTarget;
 
 	};
 }

@@ -5,8 +5,13 @@
 
 namespace
 {
-	ComPtr<ID3DBlob> compileShader(const std::string& path, const std::string& entry_point, const std::string& version_target)
+	ComPtr<ID3DBlob> compileShader(const std::string& path, const std::string& entry_point, const std::string& version_target, const std::vector<D3D_SHADER_MACRO>& macro_list)
 	{
+		// Handle macros
+		const D3D_SHADER_MACRO* macros = macro_list.data();
+		if (macro_list.size() == 0)
+			macros = nullptr;
+
 		ComPtr<ID3DBlob> shader_buffer;
 		ComPtr<ID3DBlob> error_message;
 
@@ -21,7 +26,7 @@ namespace
 		if (FAILED(
 			D3DCompileFromFile(
 				w_path.c_str(),
-				NULL,
+				macro_list.data(),
 				D3D_COMPILE_STANDARD_FILE_INCLUDE,
 				entry_point.c_str(),
 				version_target.c_str(),
@@ -52,15 +57,32 @@ namespace
 		}
 		return shader_buffer;
 	}
-
+	 
 }
 
-void egx::Shader::CompileVertexShader(const std::string& path)
+std::vector<D3D_SHADER_MACRO> egx::ShaderMacroList::getD3D() const
 {
-	shader_blob = compileShader(path, "VS", "vs_5_0");
+	std::vector<D3D_SHADER_MACRO> d3d_macros;
+	for (auto& m : macros)
+	{
+		D3D_SHADER_MACRO macro;
+		macro.Name = m.first.c_str();
+		macro.Definition = m.second.c_str();
+		d3d_macros.push_back(macro);
+	}
+
+	D3D_SHADER_MACRO macro{ nullptr, nullptr };
+	d3d_macros.push_back(macro);
+
+	return d3d_macros;
 }
 
-void egx::Shader::CompilePixelShader(const std::string& path)
+void egx::Shader::CompileVertexShader(const std::string& path, const ShaderMacroList& macro_list)
 {
-	shader_blob = compileShader(path, "PS", "ps_5_0");
+	shader_blob = compileShader(path, "VS", "vs_5_0", macro_list.getD3D());
+}
+
+void egx::Shader::CompilePixelShader(const std::string& path, const ShaderMacroList& macro_list)
+{
+	shader_blob = compileShader(path, "PS", "ps_5_0", macro_list.getD3D());
 }

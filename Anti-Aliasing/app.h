@@ -12,6 +12,8 @@
 #include "graphics/camera.h"
 #include "graphics/depth_buffer.h"
 
+#include "aa/fxaa.h"
+
 class App
 {
 public:
@@ -21,10 +23,13 @@ public:
 	void Render(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im);
 
 private:
-
 	egx::FPCamera camera;
 	egx::Mesh mesh;
 	egx::DepthBuffer depth_buffer;
 	egx::RootSignature root_sig;
 	egx::PipelineState pipeline_state;
+
+	egx::RenderTarget target;
+
+	FXAA fxaa;
 };

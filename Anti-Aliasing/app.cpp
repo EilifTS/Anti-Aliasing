@@ -16,10 +16,18 @@ namespace
 
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	: 
-	camera(dev, context, ema::vec2(im.Window().WindowSize()), 0.1f, 100.0f, 3.141592f *0.25f, 10.0f, 0.001f),
+	camera(dev, context, ema::vec2(im.Window().WindowSize()), 0.1f, 100.0f, 3.141592f / 3.0f, 10.0f, 0.001f),
 	mesh(eio::LoadMeshFromOBJ(dev, context, "models/good-well.obj", "models/good-well.mtl")),
-	depth_buffer(dev, egx::DepthFormat::D32, im.Window().WindowSize())
+	depth_buffer(dev, egx::DepthFormat::D32, im.Window().WindowSize()),
+	target(dev, egx::TextureFormat::UNORM4x8, im.Window().WindowSize()),
+	fxaa(dev, im.Window().WindowSize())
 {
+	camera.SetPosition({ 40.0f, 10.0f, 0.0f });
+	camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.5f });
+
+	target.CreateShaderResourceView(dev);
+	target.CreateRenderTargetView(dev);
+
 	depth_buffer.CreateDepthStencilView(dev);
 	context.SetTransitionBuffer(depth_buffer, egx::GPUBufferState::DepthWrite);
 
@@ -54,17 +62,16 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 void App::Update(eio::InputManager& im)
 {
 	camera.Update(im);
+	fxaa.HandleInput(im);
 }
 void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 {
 	camera.UpdateBuffer(dev, context);
 
-	auto& render_target = context.GetCurrentBackBuffer();
-
-	context.SetTransitionBuffer(render_target, egx::GPUBufferState::RenderTarget);
-	context.ClearRenderTarget(render_target, { 0.117f, 0.565f, 1.0f, 1.0f });
+	context.SetTransitionBuffer(target, egx::GPUBufferState::RenderTarget);
+	context.ClearRenderTarget(target, { 0.117f, 0.565f, 1.0f, 1.0f });
 	context.ClearDepth(depth_buffer, 1.0f);
-	context.SetRenderTarget(render_target, depth_buffer);
+	context.SetRenderTarget(target, depth_buffer);
 
 	// Set root sig
 	context.SetRootSignature(root_sig);
@@ -79,10 +86,13 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	context.SetIndexBuffer(mesh.GetIndexBuffer());
 
 	// Set scissor and viewport
-	context.SetViewport(im.Window().WindowSize());
-	context.SetScissor(im.Window().WindowSize());
+	context.SetViewport();
+	context.SetScissor();
 	context.SetPrimitiveTopology(egx::Topology::TriangleList);
 
 	// Draw?
 	context.DrawIndexed(mesh.GetIndexBuffer().GetElementCount());
+
+	auto& back_buffer = context.GetCurrentBackBuffer();
+	fxaa.Apply(dev, context, target, back_buffer);
 }

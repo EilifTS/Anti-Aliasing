@@ -21,14 +21,25 @@
     <ClCompile Include="app.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="aa\fxaa.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="aa\fxaa.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\test_vs.hlsl" />
     <FxCompile Include="shaders\test_ps.hlsl" />
+    <FxCompile Include="shaders\fxaa\fxaa_ps.hlsl" />
+    <FxCompile Include="shaders\fxaa\fxaa_vs.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\fxaa\fxaa_header.hlsli" />
   </ItemGroup>
 </Project>

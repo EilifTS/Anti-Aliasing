@@ -28,7 +28,7 @@ egx::UploadHeap::UploadHeap(Device& dev, int buffer_size)
 		IID_PPV_ARGS(&buffer)),
 		"Failed to create upload heap");
 
-	eio::Console::Log("Created: Upload heap");
+	//eio::Console::Log("Created: Upload heap");
 }
 
 void* egx::UploadHeap::Map()

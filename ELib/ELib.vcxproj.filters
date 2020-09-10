@@ -123,6 +123,12 @@
     <ClInclude Include="graphics\camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="graphics\egx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="graphics\render_target.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="graphics\internal\descriptor_heap.cpp">
@@ -180,6 +186,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="graphics\camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\render_target.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

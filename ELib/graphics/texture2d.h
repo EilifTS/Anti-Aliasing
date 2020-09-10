@@ -14,23 +14,26 @@ namespace egx
 
 		inline void CreateShaderResourceView(Device& dev, TextureFormat format);
 		inline void CreateShaderResourceView(Device& dev) { createShaderResourceView(dev, format); };
-		void CreateRenderTargetView(Device& dev);
 		const ema::point2D& Size() const { return size; };
 
-	private:
-		// Constuctor used for back buffers
-		Texture2D(ComPtr<ID3D12Resource> buffer);
+	protected:
 		void createShaderResourceView(Device& dev, DXGI_FORMAT format);
-		// Used for back buffers
-		void createRenderTargetViewForBB(Device& dev);
 		
+		
+		Texture2D(ComPtr<ID3D12Resource> buffer); // Constuctor used for back buffers
+		Texture2D(Device& dev,
+			DXGI_FORMAT format,
+			const ema::point2D& size,
+			D3D12_RESOURCE_FLAGS flags,
+			ClearValue clear_value); // Constructor used by rt and ds
+
 		// Getters
-		const D3D12_CPU_DESCRIPTOR_HANDLE& getSRV() const;
-		const D3D12_CPU_DESCRIPTOR_HANDLE& getRTV() const;
+		const D3D12_CPU_DESCRIPTOR_HANDLE& getSRVCPU() const;
+		const D3D12_GPU_DESCRIPTOR_HANDLE& getSRVGPU() const;
 		
-	private:
-		D3D12_CPU_DESCRIPTOR_HANDLE srv;
-		D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+	protected:
+		D3D12_CPU_DESCRIPTOR_HANDLE srv_cpu;
+		D3D12_GPU_DESCRIPTOR_HANDLE srv_gpu;
 		DXGI_FORMAT format;
 		ema::point2D size;
 

@@ -26,6 +26,8 @@ namespace egx
 		inline const ema::vec3& Position() const { return position; };
 		inline const ema::vec3& LookAt() const { return look_at; };
 
+		inline void SetPosition(const ema::vec3& new_pos) { position = new_pos; };
+
 	protected:
 		void updateViewMatrix();
 		void updateProjectionMatrix();
@@ -51,6 +53,9 @@ namespace egx
 		FPCamera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane, float field_of_view, float speed, float mouse_speed);
 
 		void Update(const eio::InputManager& im);
+
+		inline void SetRotation(const ema::vec3& new_roll_pitch_yaw) { roll_pitch_yaw = new_roll_pitch_yaw; };
+
 	private:
 		float speed, mouse_speed;
 		ema::vec3 right;

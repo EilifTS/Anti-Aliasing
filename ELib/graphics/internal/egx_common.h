@@ -22,6 +22,8 @@ namespace egx
 	class BlendState;
 	class VertexBuffer;
 	class IndexBuffer;
+	class RenderTarget;
+	class DescriptorHeap;
 
 	enum class GPUBufferState
 	{
@@ -40,7 +42,7 @@ namespace egx
 	
 	enum class Topology
 	{
-		LineList, PointList, TriangleList
+		LineList, PointList, TriangleList, TriangleStrip
 	};
 	enum class TopologyType
 	{
@@ -60,6 +62,11 @@ namespace egx
 	enum class ClearValue
 	{
 		Depth0, Depth1, ColorBlack, ColorBlue, None
+	};
+
+	enum class ShaderVisibility
+	{
+		All, Vertex, Pixel
 	};
 
 }

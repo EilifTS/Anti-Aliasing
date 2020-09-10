@@ -2,6 +2,7 @@
 #include "internal/egx_internal.h"
 #include "internal/gpu_buffer.h"
 #include "texture2d.h"
+#include "render_target.h"
 #include "internal/upload_heap.h"
 #include "depth_buffer.h"
 #include "root_signature.h"
@@ -10,9 +11,10 @@
 #include "vertex_buffer.h"
 #include "index_buffer.h"
 #include "device.h"
+#include "internal/descriptor_heap.h"
 
-egx::CommandContext::CommandContext(Device& dev)
-	: current_bb(nullptr)
+egx::CommandContext::CommandContext(Device& dev, const ema::point2D& window_size)
+	: current_bb(nullptr), window_size(window_size)
 {
 	THROWIFFAILED(
 		dev.device->CreateCommandList(
@@ -30,7 +32,7 @@ egx::CommandContext::CommandContext(Device& dev)
 
 }
 
-void egx::CommandContext::ClearRenderTarget(Texture2D& target, const ema::color& color)
+void egx::CommandContext::ClearRenderTarget(RenderTarget& target, const ema::color& color)
 {
 	command_list->ClearRenderTargetView(target.getRTV(), reinterpret_cast<const float*>(&color), 0, nullptr);
 }
@@ -54,12 +56,12 @@ void egx::CommandContext::SetPipelineState(PipelineState& pipeline_state)
 	command_list->SetPipelineState(pso);
 }
 
-void egx::CommandContext::SetRenderTarget(Texture2D& target)
+void egx::CommandContext::SetRenderTarget(RenderTarget& target)
 {
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvs[] = { target.getRTV() };
 	command_list->OMSetRenderTargets(1, rtvs, FALSE, nullptr);
 }
-void egx::CommandContext::SetRenderTarget(Texture2D& target, DepthBuffer& buffer)
+void egx::CommandContext::SetRenderTarget(RenderTarget& target, DepthBuffer& buffer)
 {
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvs[] = { target.getRTV() };
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvs[] = { buffer.getDSV() };
@@ -117,6 +119,12 @@ void egx::CommandContext::SetPrimitiveTopology(Topology top)
 	command_list->IASetPrimitiveTopology(t);
 }
 
+void egx::CommandContext::SetDescriptorHeap(DescriptorHeap& heap)
+{
+	ID3D12DescriptorHeap* heaps[] = { heap.descriptor_heap.Get() };
+	command_list->SetDescriptorHeaps(1, heaps);
+}
+
 void egx::CommandContext::SetRootSignature(RootSignature& root_signature)
 {
 	auto* root_sig = root_signature.root_signature.Get();
@@ -131,9 +139,9 @@ void egx::CommandContext::SetRootConstantBuffer(int root_index, ConstantBuffer& 
 {
 	command_list->SetGraphicsRootConstantBufferView(root_index, buffer.buffer->GetGPUVirtualAddress());
 }
-void egx::CommandContext::SetRootShaderResource(int root_index, Texture2D& texture)
+void egx::CommandContext::SetRootDescriptorTable(int root_index, Texture2D& first_texture)
 {
-	command_list->SetGraphicsRootShaderResourceView(root_index, texture.buffer->GetGPUVirtualAddress());
+	command_list->SetGraphicsRootDescriptorTable(root_index, first_texture.getSRVGPU());
 }
 
 void egx::CommandContext::SetVertexBuffer(const VertexBuffer& buffer)

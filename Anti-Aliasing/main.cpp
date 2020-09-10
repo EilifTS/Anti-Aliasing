@@ -28,7 +28,7 @@ int WINAPI wWinMain(
 		eio::Console::Log("Window open!");
 
 		egx::Device device(window, input_manager, false);
-		egx::CommandContext context(device);
+		egx::CommandContext context(device, input_manager.Window().WindowSize());
 
 		App app(device, context, input_manager);
 

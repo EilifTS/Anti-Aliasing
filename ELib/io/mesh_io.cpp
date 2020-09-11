@@ -59,13 +59,8 @@ namespace
 	std::vector<std::string> split(const std::string& s, char delimiter)
 	{
 		std::vector<std::string> out;
-		std::stringstream ss(s);
-		const int max_line_length = 256;
-		char line[max_line_length];
-		while (ss.getline(line, max_line_length, delimiter))
-		{
-			out.push_back(std::string(line));
-		}
+		std::istringstream ss(s);
+		
 		return out;
 	}
 
@@ -115,11 +110,21 @@ namespace
 	FaceComponent parseFaceComponent(const std::string& s)
 	{
 		FaceComponent out;
-		auto vals = split(s, '/');
-		out.position_index = emisc::StringToInt(vals[0]) - 1;
-		if (out.position_index == -1)
-			int i = 0;
-		out.normal_index = emisc::StringToInt(vals[2]) - 1;
+
+		// Get the indices
+		std::istringstream ss(s);
+		int indices[3] = { 0,0,0 };
+		std::string line;
+		int i = 0;
+		while (std::getline(ss, line, '/'))
+		{
+			if(i != 1)
+				indices[i] = emisc::StringToInt(line) - 1;
+			i++;
+		}
+
+		out.position_index = indices[0];
+		out.normal_index = indices[2];
 		return out;
 	}
 }

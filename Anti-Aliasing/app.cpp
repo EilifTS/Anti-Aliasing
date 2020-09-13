@@ -17,7 +17,6 @@ namespace
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	: 
 	camera(dev, context, ema::vec2(im.Window().WindowSize()), 0.1f, 1000.0f, 3.141592f / 3.0f, 10.0f, 0.001f),
-	mesh(eio::LoadMeshFromOBJ(dev, context, "models/good-well.obj", "models/good-well.mtl")),
 	depth_buffer(dev, egx::DepthFormat::D32, im.Window().WindowSize()),
 	target(dev, egx::TextureFormat::UNORM4x8, im.Window().WindowSize()),
 	fxaa(dev, im.Window().WindowSize())
@@ -33,6 +32,7 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 
 	// Create root signature
 	root_sig.InitConstantBuffer(0);
+	root_sig.InitConstantBuffer(1);
 	root_sig.Finalize(dev);
 
 	// Create Shaders
@@ -57,6 +57,10 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	pipeline_state.SetRasterState(egx::RasterState::Default());
 	pipeline_state.SetDepthStencilState(egx::DepthStencilState::DepthOn());
 	pipeline_state.Finalize(dev);
+
+	// Load assets
+	meshes = eio::LoadMeshFromOBJ(dev, context, "models/good-well", material_manager);
+	material_manager.LoadMaterialAssets(dev, context);
 }
 
 void App::Update(eio::InputManager& im)
@@ -81,17 +85,26 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	// Set root values
 	context.SetRootConstantBuffer(0, camera.GetBuffer());
 
-	// Set vertex buffer
-	context.SetVertexBuffer(mesh.GetVertexBuffer());
-	context.SetIndexBuffer(mesh.GetIndexBuffer());
+	
 
 	// Set scissor and viewport
 	context.SetViewport();
 	context.SetScissor();
 	context.SetPrimitiveTopology(egx::Topology::TriangleList);
 
-	// Draw?
-	context.DrawIndexed(mesh.GetIndexBuffer().GetElementCount());
+	for (egx::Mesh& mesh : meshes)
+	{
+		// Set vertex buffer
+		context.SetVertexBuffer(mesh.GetVertexBuffer());
+		context.SetIndexBuffer(mesh.GetIndexBuffer());
+
+		// Set material
+		context.SetRootConstantBuffer(1, material_manager.GetMaterial(mesh.GetMaterialIndex()).GetBuffer());
+
+		// Draw
+		context.DrawIndexed(mesh.GetIndexBuffer().GetElementCount());
+	}
+	
 
 	auto& back_buffer = context.GetCurrentBackBuffer();
 	fxaa.Apply(dev, context, target, back_buffer);

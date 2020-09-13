@@ -2,7 +2,6 @@
 #include "../misc/string_helpers.h"
 #include "console.h"
 #include <fstream>
-#include <unordered_map>
 #include <stdexcept>
 #include <sstream>
 #include <algorithm>
@@ -13,6 +12,7 @@ namespace
 	{
 		int position_index;	// Used to store index of position in obj vector
 		int normal_index;	// Used to store index of normal in obj vector
+		int tex_coord_index;// Used to store index of texture coordinate in obj vector
 		int material_index;	// Used to store index of material in material vector
 		int vertex_index;	// Used to store index of vertex when vertices has been created
 	};
@@ -48,6 +48,7 @@ namespace
 	{
 		std::vector<ema::vec3> positions;
 		std::vector<ema::vec3> normals;
+		std::vector<ema::vec2> tex_coords;
 		std::vector<Face> faces;
 	};
 
@@ -64,49 +65,6 @@ namespace
 		return out;
 	}
 
-	std::unordered_map<std::string, egx::Material> parse_materials(const std::string& mtl_name)
-	{
-		std::unordered_map<std::string, egx::Material> materials;
-		std::string current_m_name;
-
-		std::ifstream file(mtl_name);
-		if (file.fail())
-			throw std::runtime_error("Failed to load file " + mtl_name);
-
-		std::string current_material_name;
-		const int max_line_length = 256;
-		char line[max_line_length];
-		while (file.getline(line, max_line_length))
-		{
-			std::stringstream ss(line);
-			std::string identifier;
-			ss >> identifier;
-			if (identifier == "newmtl") // Specular exponent
-			{
-				ss >> current_m_name;
-				materials[current_m_name] = egx::Material();
-			}
-			else if (identifier == "Ns") // Specular exponent
-			{
-				ss >> materials[current_m_name].specular_exponent;
-			}
-			else if (identifier == "Kd") // Diffuse color
-			{
-				ema::color c;
-				
-				ss >> materials[current_m_name].diffuse_color.x;
-				ss >> materials[current_m_name].diffuse_color.y;
-				ss >> materials[current_m_name].diffuse_color.z;
-			}
-			else
-			{
-				// Everything else is not supported
-			}
-		}
-
-		return materials;
-	}
-
 	FaceComponent parseFaceComponent(const std::string& s)
 	{
 		FaceComponent out;
@@ -118,37 +76,79 @@ namespace
 		int i = 0;
 		while (std::getline(ss, line, '/'))
 		{
-			if(i != 1)
-				indices[i] = emisc::StringToInt(line) - 1;
+			indices[i] = emisc::StringToInt(line) - 1;
 			i++;
 		}
 
 		out.position_index = indices[0];
+		out.tex_coord_index = indices[1];
 		out.normal_index = indices[2];
 		return out;
 	}
+
+	void loadMaterials(egx::MaterialManager& mat_manager, const std::string& file_name)
+	{
+		std::ifstream file(file_name);
+		if (file.fail())
+			throw std::runtime_error("Failed to load file " + file_name);
+
+		std::string line;
+		egx::Material current_material("");
+
+		while (std::getline(file, line))
+		{
+			std::stringstream ss(line);
+			std::string identifier;
+			ss >> identifier;
+			if (identifier == "newmtl") // Specular exponent
+			{
+				if (current_material.Name() != "")
+				{
+					mat_manager.AddMaterial(current_material);
+				}
+				std::string material_name;
+				ss >> material_name;
+				current_material = egx::Material(material_name);
+			}
+			else if (identifier == "Ns") // Specular exponent
+			{
+				float new_spec_exp;
+				ss >> new_spec_exp;
+				current_material.SetSpecularExponent(new_spec_exp);
+			}
+			else if (identifier == "Kd") // Diffuse color
+			{
+				ema::vec3 c;
+				ss >> c.x >> c.y >> c.z;
+				current_material.SetDiffuseColor(c);
+			}
+			else
+			{
+				// Everything else is not supported
+			}
+		}
+		mat_manager.AddMaterial(current_material);
+	}
 }
 
-egx::Mesh eio::LoadMeshFromOBJ(egx::Device& dev, egx::CommandContext& context, const std::string& obj_name, const std::string& mtl_name)
+
+
+std::vector<egx::Mesh> eio::LoadMeshFromOBJ(egx::Device& dev, egx::CommandContext& context, const std::string& obj_name, egx::MaterialManager& mat_manager)
 {
 	Console::SetColor(5);
 	Console::Log(obj_name + ": Loading file");
+
+	// Load materials
 	Console::Log(obj_name + ": Parsing materials ");
+	int material_index_start = mat_manager.MaterialCount();
+	loadMaterials(mat_manager, obj_name + ".mtl");
+	int num_materials = mat_manager.MaterialCount() - material_index_start;
 
-	// Initalize materials for indexing
-	auto materials = parse_materials(mtl_name);
-	std::unordered_map<std::string, int> material_index_map;
-	std::vector<egx::Material> material_vector;
-	for (auto m : materials)
-	{
-		material_vector.push_back(m.second);
-		material_index_map[m.first] = (int)material_vector.size() - 1;
-	}
-
+	// Load mesh
 	Console::Log(obj_name + ": Parsing mesh ");
-	std::ifstream file(obj_name);
+	std::ifstream file(obj_name + ".obj");
 	if (file.fail())
-		throw std::runtime_error("Failed to load file " + mtl_name);
+		throw std::runtime_error("Failed to load file " + obj_name + ".obj");
 
 	OBJIntermediate obj;
 	int current_material_index = 0;
@@ -167,6 +167,12 @@ egx::Mesh eio::LoadMeshFromOBJ(egx::Device& dev, egx::CommandContext& context, c
 			ss >> pos.x >> pos.y >> pos.z;
 			obj.positions.push_back(pos);
 		}
+		else if (identifier == "vt")
+		{
+			ema::vec2 tex_coord;
+			ss >> tex_coord.x >> tex_coord.y;
+			obj.tex_coords.push_back(tex_coord);
+		}
 		else if (identifier == "vn")
 		{
 			ema::vec3 normal;
@@ -177,8 +183,7 @@ egx::Mesh eio::LoadMeshFromOBJ(egx::Device& dev, egx::CommandContext& context, c
 		{
 			std::string material_name;
 			ss >> material_name;
-			assert(material_index_map.find(material_name) != material_index_map.end());
-			current_material_index = material_index_map[material_name];
+			current_material_index = mat_manager.GetMaterialIndex(material_name);
 		}
 		else if (identifier == "f")
 		{
@@ -235,7 +240,10 @@ egx::Mesh eio::LoadMeshFromOBJ(egx::Device& dev, egx::CommandContext& context, c
 	}
 	std::sort(face_components.begin(), face_components.end(), compareFaceComponents);
 
-	std::vector<egx::MeshVertex> vertices;
+	// Create meshes
+	std::vector<std::vector<egx::MeshVertex>> vertex_arrays(num_materials);
+	std::vector<std::vector<unsigned long>> index_arrays(num_materials);
+
 	FaceComponent* last_component = nullptr;
 	for (auto comp : face_components)
 	{
@@ -245,29 +253,43 @@ egx::Mesh eio::LoadMeshFromOBJ(egx::Device& dev, egx::CommandContext& context, c
 			egx::MeshVertex vertex;
 			vertex.position = obj.positions[comp->position_index];
 			vertex.normal = obj.normals[comp->normal_index];
-			vertex.color = material_vector[comp->material_index].diffuse_color;
-			vertex.specular_exp = material_vector[comp->material_index].specular_exponent;
-			vertices.push_back(vertex);
+			vertex.tex_coord = obj.tex_coords[comp->tex_coord_index];
+			vertex_arrays[comp->material_index - material_index_start].push_back(vertex);
 		}
 		// Update vertex index in component
-		comp->vertex_index = (int)vertices.size() - 1;
+		comp->vertex_index = (int)vertex_arrays[comp->material_index - material_index_start].size() - 1;
 		last_component = comp;
 	}
 
 	Console::Log(obj_name + ": Creating indices");
-	std::vector<unsigned long> indices;
 	for (Face& face : obj.faces)
 	{
 		for (FaceComponent& comp : face.components)
 		{
-			indices.push_back(comp.vertex_index);
+			index_arrays[comp.material_index - material_index_start].push_back(comp.vertex_index);
 		}
 	}
 
-	Console::Log(obj_name + ": Total vertices: " + emisc::ToString(vertices.size()) + " total indices: " + emisc::ToString(indices.size()));
+	// Create meshes
+	Console::Log(obj_name + ": Creating meshes");
+	std::vector<egx::Mesh> meshes;
+	for (int i = 0; i < num_materials; i++)
+	{
+		meshes.push_back(egx::Mesh(dev, context, obj_name + emisc::ToString(i), vertex_arrays[i], index_arrays[i], i + material_index_start));
+	}
+
+	int vertex_count = 0;
+	int index_count = 0;
+	for (int i = 0; i < num_materials; i++)
+	{
+		vertex_count += (int)vertex_arrays[i].size();
+		index_count += (int)index_arrays[i].size();
+	}
+
+	Console::Log(obj_name + ": Total vertices: " + emisc::ToString(vertex_count) + " total indices: " + emisc::ToString(index_count));
 
 	Console::Log(obj_name + ": Load finished");
 	Console::SetColor(15);
 
-	return egx::Mesh(dev, context, obj_name, vertices, indices);
+	return meshes;
 }

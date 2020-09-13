@@ -12,24 +12,20 @@ namespace egx
 	{
 		ema::vec3 position;
 		ema::vec3 normal;
-		ema::vec3 color;
-		float specular_exp;
+		ema::vec2 tex_coord;
 
 		static InputLayout GetInputLayout()
 		{
 			InputLayout out;
 			out.AddPosition(3);
 			out.AddNormal(3);
-			out.AddColor(3);
-			out.AddTextureCoordinate(1);
+			out.AddTextureCoordinate(2);
+			out.AddIntegers(1);
 			return out;
 		}
 	};
-	struct Material
-	{
-		ema::vec3 diffuse_color;
-		float specular_exponent;
-	};
+
+	
 
 	class Mesh
 	{
@@ -39,15 +35,18 @@ namespace egx
 			CommandContext& context, 
 			const std::string& name, 
 			const std::vector<MeshVertex>& vertices, 
-			const std::vector<unsigned long>& indices
+			const std::vector<unsigned long>& indices,
+			int material_index
 		);
 
 		inline VertexBuffer& GetVertexBuffer() { return vertex_buffer; };
 		inline IndexBuffer& GetIndexBuffer() { return index_buffer; };
+		inline int GetMaterialIndex() const { return material_index; };
 
 	private:
 		VertexBuffer vertex_buffer;
 		IndexBuffer index_buffer;
 		std::string name;
+		int material_index;
 	};
 }

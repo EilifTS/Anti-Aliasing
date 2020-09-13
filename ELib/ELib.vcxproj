@@ -166,6 +166,7 @@
     <ClInclude Include="graphics\internal\egx_internal.h" />
     <ClInclude Include="graphics\internal\gpu_buffer.h" />
     <ClInclude Include="graphics\internal\upload_heap.h" />
+    <ClInclude Include="graphics\materials.h" />
     <ClInclude Include="graphics\mesh.h" />
     <ClInclude Include="graphics\pipeline_state.h" />
     <ClInclude Include="graphics\render_target.h" />
@@ -199,6 +200,7 @@
     <ClCompile Include="graphics\internal\descriptor_heap.cpp" />
     <ClCompile Include="graphics\internal\gpu_buffer.cpp" />
     <ClCompile Include="graphics\internal\upload_heap.cpp" />
+    <ClCompile Include="graphics\materials.cpp" />
     <ClCompile Include="graphics\mesh.cpp" />
     <ClCompile Include="graphics\pipeline_state.cpp" />
     <ClCompile Include="graphics\render_target.cpp" />

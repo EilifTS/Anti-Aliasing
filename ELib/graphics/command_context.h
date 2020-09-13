@@ -33,7 +33,7 @@ namespace egx
 
 		void SetRootSignature(RootSignature& root_signature);
 		void SetRootConstant(int root_index, int num_constants, void* constant_data);
-		void SetRootConstantBuffer(int root_index, ConstantBuffer& texture);
+		void SetRootConstantBuffer(int root_index, const ConstantBuffer& texture);
 		void SetRootDescriptorTable(int root_index, Texture2D& first_texture);
 
 		void SetVertexBuffer(const VertexBuffer& buffer);

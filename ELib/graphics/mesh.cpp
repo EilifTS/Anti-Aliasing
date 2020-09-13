@@ -8,11 +8,14 @@ egx::Mesh::Mesh(
 	CommandContext& context,
 	const std::string& name,
 	const std::vector<MeshVertex>& vertices,
-	const std::vector<unsigned long>& indices
+	const std::vector<unsigned long>& indices,
+	int material_index
 )
 	: name(name), 
 	vertex_buffer(dev, (int)sizeof(MeshVertex), (int)vertices.size()),
-	index_buffer(dev, (int)indices.size())
+	index_buffer(dev, (int)indices.size()),
+	material_index(material_index)
+
 {
 	CPUBuffer cpu_vertex_buffer(vertices.data(), (int)vertices.size() * (int)sizeof(MeshVertex));
 	dev.ScheduleUpload(context, cpu_vertex_buffer, vertex_buffer);

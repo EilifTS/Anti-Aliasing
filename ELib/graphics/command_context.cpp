@@ -135,7 +135,7 @@ void egx::CommandContext::SetRootConstant(int root_index, int num_constants, voi
 {
 	command_list->SetGraphicsRoot32BitConstants(root_index, num_constants, constant_data, 0);
 }
-void egx::CommandContext::SetRootConstantBuffer(int root_index, ConstantBuffer& buffer)
+void egx::CommandContext::SetRootConstantBuffer(int root_index, const ConstantBuffer& buffer)
 {
 	command_list->SetGraphicsRootConstantBufferView(root_index, buffer.buffer->GetGPUVirtualAddress());
 }

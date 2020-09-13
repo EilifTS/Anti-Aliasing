@@ -39,7 +39,9 @@ namespace egx
 			int material_index
 		);
 
+		inline const VertexBuffer& GetVertexBuffer() const { return vertex_buffer; };
 		inline VertexBuffer& GetVertexBuffer() { return vertex_buffer; };
+		inline const IndexBuffer& GetIndexBuffer() const { return index_buffer; };
 		inline IndexBuffer& GetIndexBuffer() { return index_buffer; };
 		inline int GetMaterialIndex() const { return material_index; };
 

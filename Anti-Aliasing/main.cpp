@@ -21,11 +21,10 @@ int WINAPI wWinMain(
 		// 1920x1080 window and no fullscreen
 		eio::InputManager input_manager({1920, 1080}, false);
 
+		Window window(hInstance, hPrevInstance, lpCmdLine, nCmdShow, input_manager);
+
 		eio::Console::InitConsole(&input_manager.Clock());
 		eio::Console::Log("Console open!");
-
-		Window window(hInstance, hPrevInstance, lpCmdLine, nCmdShow, input_manager);
-		eio::Console::Log("Window open!");
 
 		egx::Device device(window, input_manager, false);
 		egx::CommandContext context(device, input_manager.Window().WindowSize());

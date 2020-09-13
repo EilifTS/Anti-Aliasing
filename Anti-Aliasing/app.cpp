@@ -16,7 +16,7 @@ namespace
 
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	: 
-	camera(dev, context, ema::vec2(im.Window().WindowSize()), 0.1f, 1000.0f, 3.141592f / 3.0f, 10.0f, 0.001f),
+	camera(dev, context, ema::vec2(im.Window().WindowSize()), 0.1f, 10000.0f, 3.141592f / 3.0f, 200.0f, 0.001f),
 	depth_buffer(dev, egx::DepthFormat::D32, im.Window().WindowSize()),
 	target(dev, egx::TextureFormat::UNORM4x8, im.Window().WindowSize()),
 	fxaa(dev, im.Window().WindowSize())
@@ -59,7 +59,7 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	pipeline_state.Finalize(dev);
 
 	// Load assets
-	meshes = eio::LoadMeshFromOBJ(dev, context, "models/good-well", material_manager);
+	meshes = eio::LoadMeshFromOBJB(dev, context, "models/sponza", material_manager);
 	material_manager.LoadMaterialAssets(dev, context);
 }
 
@@ -94,15 +94,18 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 
 	for (egx::Mesh& mesh : meshes)
 	{
-		// Set vertex buffer
-		context.SetVertexBuffer(mesh.GetVertexBuffer());
-		context.SetIndexBuffer(mesh.GetIndexBuffer());
+		if (mesh.GetIndexBuffer().GetElementCount() > 0)
+		{
+			// Set vertex buffer
+			context.SetVertexBuffer(mesh.GetVertexBuffer());
+			context.SetIndexBuffer(mesh.GetIndexBuffer());
 
-		// Set material
-		context.SetRootConstantBuffer(1, material_manager.GetMaterial(mesh.GetMaterialIndex()).GetBuffer());
+			// Set material
+			context.SetRootConstantBuffer(1, material_manager.GetMaterial(mesh.GetMaterialIndex()).GetBuffer());
 
-		// Draw
-		context.DrawIndexed(mesh.GetIndexBuffer().GetElementCount());
+			// Draw
+			context.DrawIndexed(mesh.GetIndexBuffer().GetElementCount());
+		}
 	}
 	
 

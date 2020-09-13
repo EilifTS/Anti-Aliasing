@@ -34,6 +34,11 @@ void eio::Console::InitConsole(const GameClock* game_clock)
 	SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), coninfo.dwSize);
 }
 
+void eio::Console::InitConsole2(const GameClock* game_clock)
+{
+	pgame_clock = game_clock;
+}
+
 void eio::Console::SetColor(int c	)
 {
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), c);

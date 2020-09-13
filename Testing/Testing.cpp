@@ -1,6 +1,9 @@
 #include <iostream>
 #include "math/mat4.h"
 #include "misc/string_helpers.h"
+#include "io/mesh_io.h"
+#include "io/game_clock.h"
+#include "io/console.h"
 
 namespace
 {
@@ -19,5 +22,9 @@ namespace
 
 int main()
 {
-    matrixTesting();
+    //matrixTesting();
+    eio::GameClock clock;
+    eio::Console::InitConsole2(&clock);
+
+    eio::ConvertOBJToOBJB("../Anti-Aliasing/models/sponza");
 }

@@ -13,10 +13,12 @@ namespace eio
 	public:
 #ifndef USE_CONSOLE
 		static inline void InitConsole(const GameClock* game_clock) {};
+		static void InitConsole2(const GameClock* game_clock) {};
 		static inline void SetColor(int c) {};
 		static inline void Log(const std::string& s) {};
 #else
 		static void InitConsole(const GameClock* game_clock);
+		static void InitConsole2(const GameClock* game_clock); // Used for pure console apps
 		static void SetColor(int c);
 		static void Log(const std::string& s);
 

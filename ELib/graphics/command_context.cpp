@@ -139,7 +139,7 @@ void egx::CommandContext::SetRootConstantBuffer(int root_index, const ConstantBu
 {
 	command_list->SetGraphicsRootConstantBufferView(root_index, buffer.buffer->GetGPUVirtualAddress());
 }
-void egx::CommandContext::SetRootDescriptorTable(int root_index, Texture2D& first_texture)
+void egx::CommandContext::SetRootDescriptorTable(int root_index, const Texture2D& first_texture)
 {
 	command_list->SetGraphicsRootDescriptorTable(root_index, first_texture.getSRVGPU());
 }
@@ -164,18 +164,14 @@ void egx::CommandContext::DrawIndexed(int index_count)
 	command_list->DrawIndexedInstanced(index_count, 1, 0, 0, 0);
 }
 
-void egx::CommandContext::copyFromUploadHeap(GPUBuffer& dest, UploadHeap& src)
+void egx::CommandContext::copyBufferFromUploadHeap(GPUBuffer& dest, UploadHeap& src)
 {
-	auto desc_dest = dest.buffer->GetDesc();
+	command_list->CopyBufferRegion(dest.buffer.Get(), 0, src.buffer.Get(), 0, dest.GetBufferSize());
+}
 
-	if (desc_dest.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
-	{
-		command_list->CopyBufferRegion(dest.buffer.Get(), 0, src.buffer.Get(), 0, dest.GetBufferSize());
-	}
-	else // Texture
-	{
-		CD3DX12_TEXTURE_COPY_LOCATION dest_loc(dest.buffer.Get(), 0);
-		CD3DX12_TEXTURE_COPY_LOCATION src_loc(src.buffer.Get(), 0);
-		command_list->CopyTextureRegion(&dest_loc, 0, 0, 0, &src_loc, nullptr);
-	}
+void egx::CommandContext::copyTextureFromUploadHeap(GPUBuffer& dest, UploadHeap& src, const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& footprint)
+{
+	CD3DX12_TEXTURE_COPY_LOCATION dest_loc(dest.buffer.Get(), 0);
+	CD3DX12_TEXTURE_COPY_LOCATION src_loc(src.buffer.Get(), footprint);
+	command_list->CopyTextureRegion(&dest_loc, 0, 0, 0, &src_loc, nullptr);
 }

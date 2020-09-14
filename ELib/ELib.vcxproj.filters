@@ -132,6 +132,12 @@
     <ClInclude Include="graphics\materials.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="io\texture_io.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="io\internal\WICTextureLoader12.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="graphics\internal\descriptor_heap.cpp">
@@ -195,6 +201,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="graphics\materials.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="io\texture_io.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="io\internal\WICTextureLoader12.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -90,6 +90,8 @@ namespace egx
 		case DXGI_FORMAT_D24_UNORM_S8_UINT:
 		case DXGI_FORMAT_D32_FLOAT:
 		case DXGI_FORMAT_R8G8B8A8_UNORM:
+		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
 			return 4;
 		case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
 			return 8;
@@ -109,4 +111,16 @@ namespace egx
 			throw std::runtime_error("Invalid shader visibility");
 		}
 	}
+	
+	// Align uLocation to the next multiple of uAlign.
+	static UINT Align(UINT uLocation, UINT uAlign)
+	{
+		if ((0 == uAlign) || (uAlign & (uAlign - 1)))
+		{
+			throw std::runtime_error("non-pow2 alignment");
+		}
+
+		return ((uLocation + (uAlign - 1)) & ~(uAlign - 1));
+	}
+		
 }

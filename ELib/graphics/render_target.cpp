@@ -37,14 +37,9 @@ void egx::RenderTarget::createRenderTargetViewForBB(Device& dev)
 }
 
 egx::RenderTarget::RenderTarget(ComPtr<ID3D12Resource> buffer)
-	: Texture2D(buffer), rtv()
+	: Texture2D(buffer, D3D12_RESOURCE_STATE_PRESENT), rtv()
 {
-	auto desc = buffer->GetDesc();
-	element_count = (int)desc.Width * desc.Height * desc.DepthOrArraySize;
-	element_size = formatByteSize(desc.Format);
-
-	size = { (int)desc.Width, (int)desc.Height };
-	format = desc.Format;
+	
 }
 
 

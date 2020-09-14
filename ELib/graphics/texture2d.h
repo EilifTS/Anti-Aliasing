@@ -20,7 +20,7 @@ namespace egx
 		void createShaderResourceView(Device& dev, DXGI_FORMAT format);
 		
 		
-		Texture2D(ComPtr<ID3D12Resource> buffer); // Constuctor used for back buffers
+		Texture2D(ComPtr<ID3D12Resource> buffer, D3D12_RESOURCE_STATES start_state); // Constuctor used for back buffers and wic loading
 		Texture2D(Device& dev,
 			DXGI_FORMAT format,
 			const ema::point2D& size,
@@ -40,5 +40,6 @@ namespace egx
 	private:
 		friend Device;
 		friend CommandContext;
+		friend std::shared_ptr<egx::Texture2D> eio::LoadTextureFromFile(egx::Device& dev, egx::CommandContext& context, const std::string& file_name);
 	};
 }

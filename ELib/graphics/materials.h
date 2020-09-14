@@ -17,8 +17,11 @@ namespace egx
 
 		inline const std::string& Name() const { return material_name; };
 		inline const ConstantBuffer& GetBuffer() const { return *const_buffer; };
+		inline bool UseDiffuseTexture() const { return diffuse_texture != nullptr; };
+		inline const Texture2D& GetDiffuseTexture() const { return *diffuse_texture; };
 
 		inline void SetDiffuseColor(const ema::vec3& new_value) { diffuse_color = new_value; };
+		inline void SetDiffuseMapName(const std::string& new_name) { diffuse_map_name = new_name; }
 		inline void SetSpecularExponent(float new_value) { specular_exponent = new_value; };
 
 		void LoadAssets(Device& dev, CommandContext& context);
@@ -28,6 +31,7 @@ namespace egx
 		{
 			ema::vec4 diffuse_color;
 			float specular_exponent;
+			bool use_diffuse_texture;
 		};
 
 	private:
@@ -40,6 +44,7 @@ namespace egx
 		std::string normal_map_name;
 
 		std::shared_ptr<egx::ConstantBuffer> const_buffer;
+		std::shared_ptr<egx::Texture2D> diffuse_texture;
 	};
 
 	class MaterialManager

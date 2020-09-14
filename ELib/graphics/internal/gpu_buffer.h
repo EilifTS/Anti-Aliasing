@@ -25,8 +25,8 @@ namespace egx
 		int GetBufferSize() const { return element_size * element_count; };
 
 	protected:
-		// Constructor used for back buffer
-		GPUBuffer(ComPtr<ID3D12Resource> buffer);
+		// Constructor used for back buffer and wic loading
+		GPUBuffer(ComPtr<ID3D12Resource> buffer, D3D12_RESOURCE_STATES start_state);
 
 	protected:
 		ComPtr<ID3D12Resource> buffer;

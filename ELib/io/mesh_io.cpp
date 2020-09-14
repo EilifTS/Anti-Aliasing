@@ -52,11 +52,6 @@ namespace
 		std::vector<Face> faces;
 	};
 
-	enum class LineActions
-	{
-		ReadName, ReadPosition, ReadNormal, ReadFace, ReadMaterial
-	};
-
 	std::vector<std::string> split(const std::string& s, char delimiter)
 	{
 		std::vector<std::string> out;
@@ -121,6 +116,12 @@ namespace
 				ema::vec3 c;
 				ss >> c.x >> c.y >> c.z;
 				current_material.SetDiffuseColor(c);
+			}
+			else if (identifier == "map_Kd")
+			{
+				std::string diffuse_map_file_path;
+				ss >> diffuse_map_file_path;
+				current_material.SetDiffuseMapName(diffuse_map_file_path);
 			}
 			else
 			{

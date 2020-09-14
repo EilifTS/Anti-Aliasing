@@ -34,7 +34,7 @@ namespace egx
 		void SetRootSignature(RootSignature& root_signature);
 		void SetRootConstant(int root_index, int num_constants, void* constant_data);
 		void SetRootConstantBuffer(int root_index, const ConstantBuffer& texture);
-		void SetRootDescriptorTable(int root_index, Texture2D& first_texture);
+		void SetRootDescriptorTable(int root_index, const Texture2D& first_texture);
 
 		void SetVertexBuffer(const VertexBuffer& buffer);
 		void SetIndexBuffer(const IndexBuffer& buffer);
@@ -45,7 +45,8 @@ namespace egx
 		inline RenderTarget& GetCurrentBackBuffer() { return *current_bb; };
 
 	private:
-		void copyFromUploadHeap(GPUBuffer& dest, UploadHeap& src);
+		void copyBufferFromUploadHeap(GPUBuffer& dest, UploadHeap& src);
+		void copyTextureFromUploadHeap(GPUBuffer& dest, UploadHeap& src, const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& footprint);
 
 	private:
 		ComPtr<ID3D12GraphicsCommandList> command_list;

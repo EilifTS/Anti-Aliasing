@@ -1,7 +1,11 @@
 #pragma once
 #include <d3d12.h>
 #include <wrl/client.h>
+#include <memory>
+#include <string>
 using Microsoft::WRL::ComPtr;
+
+
 
 namespace egx
 {
@@ -69,4 +73,9 @@ namespace egx
 		All, Vertex, Pixel
 	};
 
+}
+
+namespace eio
+{
+	extern std::shared_ptr<egx::Texture2D> LoadTextureFromFile(egx::Device& dev, egx::CommandContext& context, const std::string& file_name);
 }

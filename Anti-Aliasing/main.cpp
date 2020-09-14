@@ -9,6 +9,9 @@
 
 #include "app.h"
 
+#pragma comment(lib, "windowscodecs.lib")
+//#include <wrl/wrappers/corewrappers.h>
+
 int WINAPI wWinMain(
 	_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
@@ -18,6 +21,14 @@ int WINAPI wWinMain(
 {
 	try
 	{
+		// Initialize windows runtime
+		//Microsoft::WRL::Wrappers::RoInitializeWrapper initialize(RO_INIT_MULTITHREADED);
+		//if (FAILED(initialize))
+		//{
+		//	throw std::runtime_error("Failed to initialize windows runtime");
+		//	return 1;
+		//}
+
 		// 1920x1080 window and no fullscreen
 		eio::InputManager input_manager({1920, 1080}, false);
 

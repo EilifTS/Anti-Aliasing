@@ -5,7 +5,6 @@
 
 #include <dxgi1_6.h>
 #include <vector>
-#include <memory>
 
 #include "internal/descriptor_heap.h"
 #include "../io/input_manager.h"
@@ -75,6 +74,6 @@ namespace egx
 		friend PipelineState;
 		friend CommandContext;
 		friend RenderTarget;
-
+		friend std::shared_ptr<egx::Texture2D> eio::LoadTextureFromFile(egx::Device& dev, egx::CommandContext& context, const std::string& file_name);
 	};
 }

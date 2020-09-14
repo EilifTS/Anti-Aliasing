@@ -64,9 +64,11 @@ egx::GPUBuffer::GPUBuffer(
 	eio::Console::Log("Created: GPU buffer");
 }
 
-egx::GPUBuffer::GPUBuffer(ComPtr<ID3D12Resource> buffer)
+egx::GPUBuffer::GPUBuffer(ComPtr<ID3D12Resource> buffer, D3D12_RESOURCE_STATES start_state)
 	: buffer(buffer), element_count(0), element_size(0),
-	state(D3D12_RESOURCE_STATE_PRESENT)
+	state(start_state)
 {
-	
+	auto desc = buffer->GetDesc();
+	element_count = (int)desc.Width * desc.Height * desc.DepthOrArraySize;
+	element_size = formatByteSize(desc.Format);
 }

@@ -48,9 +48,13 @@ const D3D12_GPU_DESCRIPTOR_HANDLE& egx::Texture2D::getSRVGPU() const
 	return srv_gpu;
 }
 
-egx::Texture2D::Texture2D(ComPtr<ID3D12Resource> buffer)
-	: GPUBuffer(buffer), size(), srv_cpu(), srv_gpu(), format()
+egx::Texture2D::Texture2D(ComPtr<ID3D12Resource> buffer, D3D12_RESOURCE_STATES start_state)
+	: GPUBuffer(buffer, start_state), size(), srv_cpu(), srv_gpu(), format()
 {
+	auto desc = buffer->GetDesc();
+
+	size = { (int)desc.Width, (int)desc.Height };
+	format = desc.Format;
 }
 
 egx::Texture2D::Texture2D(Device& dev,

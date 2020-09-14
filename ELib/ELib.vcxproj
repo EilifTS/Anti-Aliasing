@@ -178,9 +178,11 @@
     <ClInclude Include="io\console.h" />
     <ClInclude Include="io\game_clock.h" />
     <ClInclude Include="io\input_manager.h" />
+    <ClInclude Include="io\internal\WICTextureLoader12.h" />
     <ClInclude Include="io\keyboard_state.h" />
     <ClInclude Include="io\mesh_io.h" />
     <ClInclude Include="io\mouse_state.h" />
+    <ClInclude Include="io\texture_io.h" />
     <ClInclude Include="io\window_state.h" />
     <ClInclude Include="math\color.h" />
     <ClInclude Include="math\mat4.h" />
@@ -209,9 +211,11 @@
     <ClCompile Include="graphics\texture2d.cpp" />
     <ClCompile Include="io\console.cpp" />
     <ClCompile Include="io\game_clock.cpp" />
+    <ClCompile Include="io\internal\WICTextureLoader12.cpp" />
     <ClCompile Include="io\keyboard_state.cpp" />
     <ClCompile Include="io\mesh_io.cpp" />
     <ClCompile Include="io\mouse_state.cpp" />
+    <ClCompile Include="io\texture_io.cpp" />
     <ClCompile Include="window\window.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

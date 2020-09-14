@@ -294,18 +294,52 @@ void egx::Device::ScheduleUpload(CommandContext& context, const CPUBuffer& cpu_b
 {
 	assert(cpu_buffer.Size() <= gpu_buffer.GetBufferSize());
 
-	// Create an upload heap for the intermediate step
-	upload_heaps[current_frame].push_back(UploadHeap(*this, gpu_buffer.GetBufferSize()));
-	auto& upload_heap = upload_heaps[current_frame].back();
-
-	void* upload_heap_ptr = upload_heap.Map();
-	memcpy(upload_heap_ptr, cpu_buffer.GetPtr(), (size_t)cpu_buffer.Size());
-	upload_heap.Unmap();
-	
-
 	auto dest_desc = gpu_buffer.buffer->GetDesc();
 
-	context.copyFromUploadHeap(gpu_buffer, upload_heap);
+	// Textures
+	if (dest_desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
+	{
+		UINT64 upload_heap_size = 0;
+		D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint;
+
+		device->GetCopyableFootprints(&dest_desc, 0, 1, 0, &footprint, nullptr, nullptr, &upload_heap_size);
+
+		
+		int element_size = gpu_buffer.GetElementSize();
+
+		// Create an upload heap for the intermediate step
+		upload_heaps[current_frame].push_back(UploadHeap(*this, (int)upload_heap_size));
+		auto& upload_heap = upload_heaps[current_frame].back();
+
+		char* cpu_buffer_ptr = (char*)cpu_buffer.GetPtr();
+		char* upload_heap_ptr = (char*)upload_heap.Map();
+
+		// Copy over every row of the texture
+		for (int y = 0; y < (int)dest_desc.Height; y++)
+		{
+			memcpy(
+				upload_heap_ptr + (UINT64)y * footprint.Footprint.RowPitch,
+				cpu_buffer_ptr  + (UINT64)y * element_size * footprint.Footprint.Width,
+				(long long)element_size * footprint.Footprint.Width);
+		}
+
+		upload_heap.Unmap();
+
+		context.copyTextureFromUploadHeap(gpu_buffer, upload_heap, footprint);
+	}
+	else // Buffers
+	{
+		// Create an upload heap for the intermediate step
+		upload_heaps[current_frame].push_back(UploadHeap(*this, gpu_buffer.GetBufferSize()));
+		auto& upload_heap = upload_heaps[current_frame].back();
+
+		void* upload_heap_ptr = upload_heap.Map();
+		memcpy(upload_heap_ptr, cpu_buffer.GetPtr(), (size_t)cpu_buffer.Size());
+		upload_heap.Unmap();
+
+		context.copyBufferFromUploadHeap(gpu_buffer, upload_heap);
+	}
+
 }
 
 void egx::Device::QueueList(CommandContext& context)

@@ -33,6 +33,8 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	// Create root signature
 	root_sig.InitConstantBuffer(0);
 	root_sig.InitConstantBuffer(1);
+	root_sig.InitDescriptorTable(0, egx::ShaderVisibility::Pixel);
+	root_sig.AddSampler(egx::Sampler::LinearWrap(), 0);
 	root_sig.Finalize(dev);
 
 	// Create Shaders
@@ -85,8 +87,6 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	// Set root values
 	context.SetRootConstantBuffer(0, camera.GetBuffer());
 
-	
-
 	// Set scissor and viewport
 	context.SetViewport();
 	context.SetScissor();
@@ -101,7 +101,11 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 			context.SetIndexBuffer(mesh.GetIndexBuffer());
 
 			// Set material
-			context.SetRootConstantBuffer(1, material_manager.GetMaterial(mesh.GetMaterialIndex()).GetBuffer());
+			auto material = material_manager.GetMaterial(mesh.GetMaterialIndex());
+			context.SetRootConstantBuffer(1, material.GetBuffer());
+			context.SetDescriptorHeap(*dev.buffer_heap);
+			if(material.UseDiffuseTexture())
+				context.SetRootDescriptorTable(2, material.GetDiffuseTexture());
 
 			// Draw
 			context.DrawIndexed(mesh.GetIndexBuffer().GetElementCount());

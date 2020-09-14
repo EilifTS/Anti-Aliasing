@@ -46,7 +46,7 @@ namespace egx
 
 	private:
 		void copyBufferFromUploadHeap(GPUBuffer& dest, UploadHeap& src);
-		void copyTextureFromUploadHeap(GPUBuffer& dest, UploadHeap& src, const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& footprint);
+		void copyTextureFromUploadHeap(GPUBuffer& dest, UploadHeap& src, int sub_res, const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& footprint);
 
 	private:
 		ComPtr<ID3D12GraphicsCommandList> command_list;

@@ -169,9 +169,9 @@ void egx::CommandContext::copyBufferFromUploadHeap(GPUBuffer& dest, UploadHeap& 
 	command_list->CopyBufferRegion(dest.buffer.Get(), 0, src.buffer.Get(), 0, dest.GetBufferSize());
 }
 
-void egx::CommandContext::copyTextureFromUploadHeap(GPUBuffer& dest, UploadHeap& src, const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& footprint)
+void egx::CommandContext::copyTextureFromUploadHeap(GPUBuffer& dest, UploadHeap& src, int sub_res, const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& footprint)
 {
-	CD3DX12_TEXTURE_COPY_LOCATION dest_loc(dest.buffer.Get(), 0);
+	CD3DX12_TEXTURE_COPY_LOCATION dest_loc(dest.buffer.Get(), sub_res);
 	CD3DX12_TEXTURE_COPY_LOCATION src_loc(src.buffer.Get(), footprint);
 	command_list->CopyTextureRegion(&dest_loc, 0, 0, 0, &src_loc, nullptr);
 }

@@ -292,7 +292,7 @@ void egx::Device::PrepareNextFrame()
 
 void egx::Device::ScheduleUpload(CommandContext& context, const CPUBuffer& cpu_buffer, GPUBuffer& gpu_buffer)
 {
-	assert(cpu_buffer.Size() <= gpu_buffer.GetBufferSize());
+	//assert(cpu_buffer.Size() <= gpu_buffer.GetBufferSize());
 
 	auto dest_desc = gpu_buffer.buffer->GetDesc();
 
@@ -300,9 +300,10 @@ void egx::Device::ScheduleUpload(CommandContext& context, const CPUBuffer& cpu_b
 	if (dest_desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
 	{
 		UINT64 upload_heap_size = 0;
-		D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint;
 
-		device->GetCopyableFootprints(&dest_desc, 0, 1, 0, &footprint, nullptr, nullptr, &upload_heap_size);
+		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints(dest_desc.MipLevels);
+
+		device->GetCopyableFootprints(&dest_desc, 0, dest_desc.MipLevels, 0, footprints.data(), nullptr, nullptr, &upload_heap_size);
 
 		
 		int element_size = gpu_buffer.GetElementSize();
@@ -315,17 +316,26 @@ void egx::Device::ScheduleUpload(CommandContext& context, const CPUBuffer& cpu_b
 		char* upload_heap_ptr = (char*)upload_heap.Map();
 
 		// Copy over every row of the texture
-		for (int y = 0; y < (int)dest_desc.Height; y++)
+		UINT64 upload_heap_offset = 0;
+		UINT64 cpu_buffer_offset = 0;
+		for (auto& footprint : footprints)
 		{
-			memcpy(
-				upload_heap_ptr + (UINT64)y * footprint.Footprint.RowPitch,
-				cpu_buffer_ptr  + (UINT64)y * element_size * footprint.Footprint.Width,
-				(long long)element_size * footprint.Footprint.Width);
+			upload_heap_offset = footprint.Offset;
+			for (int y = 0; y < (int)footprint.Footprint.Height; y++)
+			{
+				memcpy(
+					upload_heap_ptr + upload_heap_offset + (UINT64)y * footprint.Footprint.RowPitch,
+					cpu_buffer_ptr  + cpu_buffer_offset  + (UINT64)y * element_size * footprint.Footprint.Width,
+					(long long)element_size * footprint.Footprint.Width);
+			}
+			cpu_buffer_offset += footprint.Footprint.Width * footprint.Footprint.Height * element_size;
 		}
+		
 
 		upload_heap.Unmap();
 
-		context.copyTextureFromUploadHeap(gpu_buffer, upload_heap, footprint);
+		for(int i = 0; i < (int)footprints.size(); i++)
+			context.copyTextureFromUploadHeap(gpu_buffer, upload_heap, i, footprints[i]);
 	}
 	else // Buffers
 	{

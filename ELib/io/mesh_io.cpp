@@ -164,6 +164,7 @@ namespace
 			{
 				ema::vec2 tex_coord;
 				ss >> tex_coord.x >> tex_coord.y;
+				tex_coord.y = 1.0f - tex_coord.y; // Flip for right coordinates
 				obj.tex_coords.push_back(tex_coord);
 			}
 			else if (identifier == "vn")

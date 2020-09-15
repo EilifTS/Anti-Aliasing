@@ -26,8 +26,8 @@ FXAA::FXAA(egx::Device& dev, const ema::point2D& window_size)
 	pso.SetPrimitiveTopology(egx::TopologyType::Triangle);
 	pso.SetVertexShader(VS);
 	pso.SetPixelShader(PS);
-	pso.SetDepthStencilFormat(egx::DepthFormat::D32);
-	pso.SetRenderTargetFormat(egx::TextureFormat::UNORM4x8SRGB);
+	pso.SetDepthStencilFormat(egx::TextureFormat::D32);
+	pso.SetRenderTargetFormat(egx::TextureFormat::UNORM8x4SRGB);
 
 	pso.SetBlendState(egx::BlendState::NoBlend());
 	pso.SetRasterState(egx::RasterState::Default());

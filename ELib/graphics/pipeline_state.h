@@ -97,8 +97,12 @@ namespace egx
 		void SetPrimitiveTopology(TopologyType top);
 		void SetVertexShader(Shader& vertex_shader);
 		void SetPixelShader(Shader& pixel_shader);
-		void SetDepthStencilFormat(DepthFormat format);
+		void SetDepthStencilFormat(TextureFormat format);
+
 		void SetRenderTargetFormat(TextureFormat format);
+		void SetRenderTargetFormats(TextureFormat format1, TextureFormat format2);
+		void SetRenderTargetFormats(TextureFormat format1, TextureFormat format2, TextureFormat format3);
+		void SetRenderTargetFormats(TextureFormat format1, TextureFormat format2, TextureFormat format3, TextureFormat format4);
 
 		void SetBlendState(const BlendState& blend_state);
 		void SetRasterState(const RasterState& raster_state);

@@ -19,6 +19,7 @@ namespace egx
 
 		void SetRenderTarget(RenderTarget& target);
 		void SetRenderTarget(RenderTarget& target, DepthBuffer& buffer);
+		void SetRenderTargets(RenderTarget& target1, RenderTarget& target2, DepthBuffer& buffer);
 		void SetDepthStencilBuffer(DepthBuffer& buffer);
 
 		void SetTransitionBuffer(GPUBuffer& buffer, GPUBufferState new_state);

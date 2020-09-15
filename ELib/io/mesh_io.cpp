@@ -268,7 +268,7 @@ namespace
 
 
 
-std::vector<egx::Mesh> eio::LoadMeshFromOBJ(egx::Device& dev, egx::CommandContext& context, const std::string& obj_name, egx::MaterialManager& mat_manager)
+std::vector<std::shared_ptr<egx::Mesh>> eio::LoadMeshFromOBJ(egx::Device& dev, egx::CommandContext& context, const std::string& obj_name, egx::MaterialManager& mat_manager)
 {
 	eio::Console::SetColor(5);
 	eio::Console::Log(obj_name + ": Loading file");
@@ -286,11 +286,11 @@ std::vector<egx::Mesh> eio::LoadMeshFromOBJ(egx::Device& dev, egx::CommandContex
 
 	// Create meshes
 	Console::Log(obj_name + ": Creating meshes");
-	std::vector<egx::Mesh> meshes;
+	std::vector<std::shared_ptr<egx::Mesh>> meshes;
 	for (int i = 0; i < num_materials; i++)
 	{
 		if(index_arrays[i].size() > 0)
-			meshes.push_back(egx::Mesh(dev, context, obj_name + emisc::ToString(i), vertex_arrays[i], index_arrays[i], i + material_index_start));
+			meshes.push_back(std::make_shared<egx::Mesh>(dev, context, obj_name + emisc::ToString(i), vertex_arrays[i], index_arrays[i], mat_manager.GetMaterial(i + material_index_start)));
 	}
 
 	int vertex_count = 0;
@@ -354,7 +354,7 @@ void eio::ConvertOBJToOBJB(const std::string& obj_name)
 	}
 }
 
-std::vector<egx::Mesh> eio::LoadMeshFromOBJB(egx::Device& dev, egx::CommandContext& context, const std::string& obj_name, egx::MaterialManager& mat_manager)
+std::vector<std::shared_ptr<egx::Mesh>> eio::LoadMeshFromOBJB(egx::Device& dev, egx::CommandContext& context, const std::string& obj_name, egx::MaterialManager& mat_manager)
 {
 	Console::Log(obj_name + ": Loading");
 
@@ -393,11 +393,11 @@ std::vector<egx::Mesh> eio::LoadMeshFromOBJB(egx::Device& dev, egx::CommandConte
 
 	// Create meshes
 	Console::Log(obj_name + ": Creating meshes");
-	std::vector<egx::Mesh> meshes;
+	std::vector<std::shared_ptr<egx::Mesh>> meshes;
 	for (int i = 0; i < mesh_count; i++)
 	{
 		if (index_arrays[i].size() > 0)
-			meshes.push_back(egx::Mesh(dev, context, obj_name + emisc::ToString(i), vertex_arrays[i], index_arrays[i], i + material_start_index));
+			meshes.push_back(std::make_shared<egx::Mesh>(dev, context, obj_name + emisc::ToString(i), vertex_arrays[i], index_arrays[i], mat_manager.GetMaterial(i + material_start_index)));
 	}
 
 	int vertex_count = 0;

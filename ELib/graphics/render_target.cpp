@@ -2,14 +2,14 @@
 #include "internal/egx_internal.h"
 #include "device.h"
 
-egx::RenderTarget::RenderTarget(Device& dev, TextureFormat format, const ema::point2D& size)
+egx::RenderTarget::RenderTarget(Device& dev, TextureFormat format, const ema::point2D& size, ClearValue clear_value)
 	: rtv(),
 	Texture2D(
 		dev,
 		convertFormat(format),
 		size,
 		D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
-		ClearValue::ColorBlue
+		clear_value
 	)
 {
 

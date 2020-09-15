@@ -5,14 +5,6 @@ cbuffer CameraBuffer : register(b0)
 	float4 camera_position;
 }
 
-cbuffer MaterialBuffer : register(b1)
-{
-	float4 diffuse_color;
-	float specular_exponent;
-	bool use_diffuse_texture;
-}
-Texture2D material_diffuse_color_texture : register(t0);
-SamplerState linear_wrap : register(s0);
 
 struct PSInput
 {
@@ -24,9 +16,7 @@ struct PSInput
 
 float4 PS(PSInput input) : SV_TARGET
 {
-	float3 color = diffuse_color;
-	if(use_diffuse_texture)
-		color = material_diffuse_color_texture.Sample(linear_wrap, input.uv).rgb;
+	
 
 	float3 normal = normalize(input.normal);
 	float3 light_dir = normalize(float3(1.0, -1.0, 1.0));

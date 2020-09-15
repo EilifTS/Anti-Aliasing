@@ -328,7 +328,7 @@ void egx::Device::ScheduleUpload(CommandContext& context, const CPUBuffer& cpu_b
 					cpu_buffer_ptr  + cpu_buffer_offset  + (UINT64)y * element_size * footprint.Footprint.Width,
 					(long long)element_size * footprint.Footprint.Width);
 			}
-			cpu_buffer_offset += footprint.Footprint.Width * footprint.Footprint.Height * element_size;
+			cpu_buffer_offset += (UINT64)footprint.Footprint.Width * footprint.Footprint.Height * element_size;
 		}
 		
 

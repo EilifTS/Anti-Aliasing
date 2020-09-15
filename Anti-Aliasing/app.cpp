@@ -17,8 +17,9 @@ namespace
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	: 
 	camera(dev, context, ema::vec2(im.Window().WindowSize()), 1.0f, 10000.0f, 3.141592f / 3.0f, 200.0f, 0.001f),
-	depth_buffer(dev, egx::DepthFormat::D32, im.Window().WindowSize()),
-	target(dev, egx::TextureFormat::UNORM4x8, im.Window().WindowSize()),
+	target(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
+	model_manager(),
+	renderer(dev, context, im.Window().WindowSize()),
 	fxaa(dev, im.Window().WindowSize())
 {
 	camera.SetPosition({ 40.0f, 10.0f, 0.0f });
@@ -27,90 +28,23 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	target.CreateShaderResourceView(dev);
 	target.CreateRenderTargetView(dev);
 
-	depth_buffer.CreateDepthStencilView(dev);
-	context.SetTransitionBuffer(depth_buffer, egx::GPUBufferState::DepthWrite);
-
-	// Create root signature
-	root_sig.InitConstantBuffer(0);
-	root_sig.InitConstantBuffer(1);
-	root_sig.InitDescriptorTable(0, egx::ShaderVisibility::Pixel);
-	root_sig.AddSampler(egx::Sampler::LinearWrap(), 0);
-	root_sig.Finalize(dev);
-
-	// Create Shaders
-	egx::Shader VS;
-	egx::Shader PS;
-	VS.CompileVertexShader("shaders/test_vs.hlsl");
-	PS.CompilePixelShader("shaders/test_ps.hlsl");
-
-	// Get input layout
-	auto input_layout = egx::MeshVertex::GetInputLayout();
-
-	// Create PSO
-	pipeline_state.SetRootSignature(root_sig);
-	pipeline_state.SetInputLayout(input_layout);
-	pipeline_state.SetPrimitiveTopology(egx::TopologyType::Triangle);
-	pipeline_state.SetVertexShader(VS);
-	pipeline_state.SetPixelShader(PS);
-	pipeline_state.SetDepthStencilFormat(egx::DepthFormat::D32);
-	pipeline_state.SetRenderTargetFormat(egx::TextureFormat::UNORM4x8);
-
-	pipeline_state.SetBlendState(egx::BlendState::NoBlend());
-	pipeline_state.SetRasterState(egx::RasterState::Default());
-	pipeline_state.SetDepthStencilState(egx::DepthStencilState::DepthOn());
-	pipeline_state.Finalize(dev);
-
 	// Load assets
-	meshes = eio::LoadMeshFromOBJB(dev, context, "models/sponza", material_manager);
-	material_manager.LoadMaterialAssets(dev, context);
+	model_manager.LoadMesh(dev, context, "models/sponza");
+	model_manager.LoadAssets(dev, context);
 }
 
 void App::Update(eio::InputManager& im)
 {
 	camera.Update(im);
+	renderer.UpdateLight(camera);
 	fxaa.HandleInput(im);
 }
 void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 {
 	camera.UpdateBuffer(dev, context);
 
-	context.SetTransitionBuffer(target, egx::GPUBufferState::RenderTarget);
-	context.ClearRenderTarget(target, { 0.117f, 0.565f, 1.0f, 1.0f });
-	context.ClearDepth(depth_buffer, 1.0f);
-	context.SetRenderTarget(target, depth_buffer);
-
-	// Set root sig
-	context.SetRootSignature(root_sig);
-	// Set PSO
-	context.SetPipelineState(pipeline_state);
-
-	// Set root values
-	context.SetRootConstantBuffer(0, camera.GetBuffer());
-
-	// Set scissor and viewport
-	context.SetViewport();
-	context.SetScissor();
-	context.SetPrimitiveTopology(egx::Topology::TriangleList);
-
-	for (egx::Mesh& mesh : meshes)
-	{
-		if (mesh.GetIndexBuffer().GetElementCount() > 0)
-		{
-			// Set vertex buffer
-			context.SetVertexBuffer(mesh.GetVertexBuffer());
-			context.SetIndexBuffer(mesh.GetIndexBuffer());
-
-			// Set material
-			auto material = material_manager.GetMaterial(mesh.GetMaterialIndex());
-			context.SetRootConstantBuffer(1, material.GetBuffer());
-			context.SetDescriptorHeap(*dev.buffer_heap);
-			if(material.UseDiffuseTexture())
-				context.SetRootDescriptorTable(2, material.GetDiffuseTexture());
-
-			// Draw
-			context.DrawIndexed(mesh.GetIndexBuffer().GetElementCount());
-		}
-	}
+	renderer.RenderModels(dev, context, camera, model_manager.GetNormalModels());
+	renderer.RenderLight(dev, context, camera, target);
 	
 
 	auto& back_buffer = context.GetCurrentBackBuffer();

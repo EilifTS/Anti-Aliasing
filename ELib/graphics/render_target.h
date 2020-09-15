@@ -8,7 +8,10 @@ namespace egx
 	class RenderTarget : public Texture2D
 	{
 	public:
-		RenderTarget(Device& dev, TextureFormat format, const ema::point2D& size);
+		inline RenderTarget(Device& dev, TextureFormat format, const ema::point2D& size)
+			: RenderTarget(dev, format, size, ClearValue::ColorBlue)
+		{};
+		RenderTarget(Device& dev, TextureFormat format, const ema::point2D& size, ClearValue clear_value);
 
 		void CreateRenderTargetView(Device& dev);
 

@@ -9,7 +9,7 @@ egx::PipelineState::PipelineState()
 	: desc({})
 {
 	desc.SampleMask = UINT_MAX;
-	desc.NumRenderTargets = 1;
+	desc.NumRenderTargets = 0;
 	desc.SampleDesc.Count = 1;
 }
 
@@ -35,15 +35,45 @@ void egx::PipelineState::SetPixelShader(Shader& pixel_shader)
 {
 	desc.PS = CD3DX12_SHADER_BYTECODE(pixel_shader.shader_blob.Get());
 }
-void egx::PipelineState::SetDepthStencilFormat(DepthFormat format)
+void egx::PipelineState::SetDepthStencilFormat(TextureFormat format)
 {
-	desc.DSVFormat = convertDepthFormat(format);
+	assert(isDepthFormat(format));
+	desc.DSVFormat = convertFormat(format);
 }
+
 void egx::PipelineState::SetRenderTargetFormat(TextureFormat format)
 {
 	desc.RTVFormats[0] = convertFormat(format);
 	for (int i = 1; i < 8; i++)
 		desc.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
+	desc.NumRenderTargets = 1;
+}
+void egx::PipelineState::SetRenderTargetFormats(TextureFormat format1, TextureFormat format2)
+{
+	desc.RTVFormats[0] = convertFormat(format1);
+	desc.RTVFormats[1] = convertFormat(format2);
+	for (int i = 2; i < 8; i++)
+		desc.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
+	desc.NumRenderTargets = 2;
+}
+void egx::PipelineState::SetRenderTargetFormats(TextureFormat format1, TextureFormat format2, TextureFormat format3)
+{
+	desc.RTVFormats[0] = convertFormat(format1);
+	desc.RTVFormats[1] = convertFormat(format2);
+	desc.RTVFormats[2] = convertFormat(format3);
+	for (int i = 3; i < 8; i++)
+		desc.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
+	desc.NumRenderTargets = 3;
+}
+void egx::PipelineState::SetRenderTargetFormats(TextureFormat format1, TextureFormat format2, TextureFormat format3, TextureFormat format4)
+{
+	desc.RTVFormats[0] = convertFormat(format1);
+	desc.RTVFormats[1] = convertFormat(format2);
+	desc.RTVFormats[2] = convertFormat(format3);
+	desc.RTVFormats[3] = convertFormat(format4);
+	for (int i = 4; i < 8; i++)
+		desc.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
+	desc.NumRenderTargets = 4;
 }
 
 void egx::PipelineState::SetBlendState(const BlendState& blend_state)

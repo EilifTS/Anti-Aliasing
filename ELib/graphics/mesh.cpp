@@ -2,6 +2,7 @@
 #include "device.h"
 #include "command_context.h"
 #include "cpu_buffer.h"
+#include "../io/mesh_io.h"
 
 egx::Mesh::Mesh(
 	Device& dev,
@@ -9,12 +10,12 @@ egx::Mesh::Mesh(
 	const std::string& name,
 	const std::vector<MeshVertex>& vertices,
 	const std::vector<unsigned long>& indices,
-	int material_index
+	const Material& material
 )
 	: name(name), 
 	vertex_buffer(dev, (int)sizeof(MeshVertex), (int)vertices.size()),
 	index_buffer(dev, (int)indices.size()),
-	material_index(material_index)
+	material(material)
 
 {
 	CPUBuffer cpu_vertex_buffer(vertices.data(), (int)vertices.size() * (int)sizeof(MeshVertex));
@@ -24,4 +25,27 @@ egx::Mesh::Mesh(
 	CPUBuffer cpu_index_buffer(indices.data(), (int)indices.size() * (int)sizeof(unsigned long));
 	dev.ScheduleUpload(context, cpu_index_buffer, index_buffer);
 	context.SetTransitionBuffer(index_buffer, GPUBufferState::IndexBuffer);
+}
+
+egx::ModelManager::ModelManager()
+{
+
+}
+
+void egx::ModelManager::LoadMesh(Device& dev, CommandContext& context, const std::string& file_path)
+{
+	auto loaded_meshes = eio::LoadMeshFromOBJB(dev, context, file_path, mat_manager);
+	for (auto pmesh : loaded_meshes)
+	{
+		const auto& material = pmesh->GetMaterial();
+		if (material.HasNormalMap())
+			norm_mapped_meshes.push_back(pmesh);
+		else
+			meshes.push_back(pmesh);
+	}
+}
+
+void egx::ModelManager::LoadAssets(Device& dev, CommandContext& context)
+{
+	mat_manager.LoadMaterialAssets(dev, context);
 }

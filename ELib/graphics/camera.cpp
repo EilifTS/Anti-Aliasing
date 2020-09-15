@@ -18,7 +18,7 @@ void egx::Camera::UpdateBuffer(Device& dev, CommandContext& context)
 		CameraBufferType cbt;
 		cbt.view_matrix = view_matrix.Transpose();
 		cbt.projection_matrix = projection_matrix.Transpose();
-		cbt.camera_position = ema::vec4(position, 1.0f);
+		cbt.near_plane_view_space_rectangle = near_plane_vs_rectangle;
 
 		CPUBuffer cpu_buffer(&cbt, (int)sizeof(cbt));
 		context.SetTransitionBuffer(buffer, GPUBufferState::CopyDest);
@@ -36,6 +36,7 @@ void egx::Camera::updateViewMatrix()
 void egx::Camera::updateProjectionMatrix()
 {
 	projection_matrix = ema::mat4::Projection(near_plane, far_plane, field_of_view, AspectRatio());
+	near_plane_vs_rectangle = ema::vec2(AspectRatio() * tanf(0.5f * field_of_view), tanf(0.5f * field_of_view));
 	buffer_updated = false;
 }
 

@@ -9,7 +9,7 @@ namespace egx
 	{
 		ema::mat4 view_matrix;
 		ema::mat4 projection_matrix;
-		ema::vec4 camera_position;
+		ema::vec2 near_plane_view_space_rectangle;
 	};
 
 	class Camera
@@ -25,6 +25,8 @@ namespace egx
 		inline float AspectRatio() const { return window_size.x / window_size.y; };
 		inline const ema::vec3& Position() const { return position; };
 		inline const ema::vec3& LookAt() const { return look_at; };
+		inline const ema::mat4& ViewMatrix() const{ return view_matrix; };
+		inline const ema::mat4& ProjectionMatrix() const{ return projection_matrix; };
 
 		inline void SetPosition(const ema::vec3& new_pos) { position = new_pos; };
 
@@ -34,6 +36,7 @@ namespace egx
 
 	protected:
 		ema::vec2 window_size;
+		ema::vec2 near_plane_vs_rectangle;
 		float near_plane, far_plane, field_of_view;
 
 		ema::vec3 position;

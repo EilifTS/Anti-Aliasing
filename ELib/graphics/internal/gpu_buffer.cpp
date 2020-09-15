@@ -8,12 +8,14 @@ namespace
 	{
 		float black[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		float blue[4] = { 0.117f, 0.565f, 1.0f, 1.0f };
+		float color_0001[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		switch (clear_val)
 		{
 		case egx::ClearValue::Depth0: return CD3DX12_CLEAR_VALUE(format, 0.0f, 0);
 		case egx::ClearValue::Depth1: return CD3DX12_CLEAR_VALUE(format, 1.0f, 0);
 		case egx::ClearValue::ColorBlack: return CD3DX12_CLEAR_VALUE(format, black);
 		case egx::ClearValue::ColorBlue: return CD3DX12_CLEAR_VALUE(format, blue);
+		case egx::ClearValue::Clear0001: return CD3DX12_CLEAR_VALUE(format, color_0001);
 		case egx::ClearValue::None: return CD3DX12_CLEAR_VALUE();
 		default:
 			throw std::runtime_error("Invalid clear value");

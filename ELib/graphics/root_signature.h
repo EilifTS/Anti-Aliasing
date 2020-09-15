@@ -27,7 +27,7 @@ namespace egx
 	private:
 		ComPtr<ID3D12RootSignature> root_signature;
 		std::vector<D3D12_ROOT_PARAMETER1> root_parameters;
-		std::vector<D3D12_DESCRIPTOR_RANGE1> ranges;
+		std::vector<std::shared_ptr<D3D12_DESCRIPTOR_RANGE1>> ranges;
 		std::vector<D3D12_STATIC_SAMPLER_DESC> samplers;
 
 		friend CommandContext;

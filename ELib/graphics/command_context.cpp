@@ -67,6 +67,12 @@ void egx::CommandContext::SetRenderTarget(RenderTarget& target, DepthBuffer& buf
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvs[] = { buffer.getDSV() };
 	command_list->OMSetRenderTargets(1, rtvs, FALSE, dsvs);
 }
+void egx::CommandContext::SetRenderTargets(RenderTarget& target1, RenderTarget& target2, DepthBuffer& buffer)
+{
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvs[] = { target1.getRTV(), target2.getRTV() };
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvs[] = { buffer.getDSV() };
+	command_list->OMSetRenderTargets(2, rtvs, FALSE, dsvs);
+}
 void egx::CommandContext::SetDepthStencilBuffer(DepthBuffer& buffer)
 {
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvs[] = { buffer.getDSV() };

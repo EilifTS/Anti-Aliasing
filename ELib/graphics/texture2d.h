@@ -10,13 +10,12 @@ namespace egx
 	public:
 		Texture2D(Device& dev, TextureFormat format, const ema::point2D& size);
 
-		inline void CreateShaderResourceView(Device& dev, TextureFormat format);
-		inline void CreateShaderResourceView(Device& dev) { createShaderResourceView(dev, format); };
-		const ema::point2D& Size() const { return size; };
+		void CreateShaderResourceView(Device& dev, TextureFormat format);
+		inline void CreateShaderResourceView(Device& dev) { CreateShaderResourceView(dev, format); };
+		inline const ema::point2D& Size() const { return size; };
+		inline TextureFormat Format() const { return format; };
 
 	protected:
-		void createShaderResourceView(Device& dev, DXGI_FORMAT format);
-		
 		
 		Texture2D(ComPtr<ID3D12Resource> buffer, D3D12_RESOURCE_STATES start_state); // Constuctor used for back buffers and wic loading
 		Texture2D(Device& dev,
@@ -32,7 +31,7 @@ namespace egx
 	protected:
 		D3D12_CPU_DESCRIPTOR_HANDLE srv_cpu;
 		D3D12_GPU_DESCRIPTOR_HANDLE srv_gpu;
-		DXGI_FORMAT format;
+		TextureFormat format;
 		ema::point2D size;
 
 	private:

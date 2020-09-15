@@ -8,7 +8,7 @@ namespace egx
 	class DepthBuffer : public Texture2D
 	{
 	public:
-		DepthBuffer(Device& dev, DepthFormat format, const ema::point2D& size);
+		DepthBuffer(Device& dev, TextureFormat format, const ema::point2D& size);
 
 		void CreateDepthStencilView(Device& dev);
 		const ema::point2D& Size() const { return size; };

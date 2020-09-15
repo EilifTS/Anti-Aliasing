@@ -28,10 +28,10 @@ void egx::RootSignature::InitShaderResource(int shader_register)
 void egx::RootSignature::InitDescriptorTable(int shader_register, ShaderVisibility visibility)
 {
 	CD3DX12_ROOT_PARAMETER1 param;
-	CD3DX12_DESCRIPTOR_RANGE1 range;
-	range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, shader_register, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
+	std::shared_ptr<CD3DX12_DESCRIPTOR_RANGE1> range = std::make_shared<CD3DX12_DESCRIPTOR_RANGE1>();
+	range->Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, shader_register, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
 	ranges.push_back(range);
-	param.InitAsDescriptorTable(1, &ranges.back(), convertVisibility(visibility));
+	param.InitAsDescriptorTable(1, ranges.back().get(), convertVisibility(visibility));
 	root_parameters.push_back(param);
 }
 void egx::RootSignature::AddSampler(const Sampler& sampler, int shader_register)

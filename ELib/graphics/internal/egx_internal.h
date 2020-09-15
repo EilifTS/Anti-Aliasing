@@ -57,28 +57,26 @@ namespace egx
 		}
 	}
 
-	inline DXGI_FORMAT convertFormat(egx::TextureFormat format)
+	inline TextureFormat revertFormat(DXGI_FORMAT format)
 	{
-		switch (format)
-		{
-		case egx::TextureFormat::UNORM4x8: return DXGI_FORMAT_R8G8B8A8_UNORM;
-		case egx::TextureFormat::UNORM4x8SRGB: return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-		default: throw std::runtime_error("Unsupported texture format");
-		}
-		return DXGI_FORMAT_UNKNOWN;
+		return (TextureFormat)format;
 	}
 
-	inline DXGI_FORMAT convertDepthFormat(egx::DepthFormat format)
+	inline DXGI_FORMAT convertFormat(egx::TextureFormat format)
+	{
+		return (DXGI_FORMAT)format;
+	}
+	inline bool isDepthFormat(egx::TextureFormat format)
 	{
 		switch (format)
 		{
-		case egx::DepthFormat::D16:			return DXGI_FORMAT_D16_UNORM;
-		case egx::DepthFormat::D24_S8:		return DXGI_FORMAT_D24_UNORM_S8_UINT;
-		case egx::DepthFormat::D32:			return DXGI_FORMAT_D32_FLOAT;
-		case egx::DepthFormat::D32_S32:		return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-		default: throw std::runtime_error("Unsupported depth format");
+		case egx::TextureFormat::D16:
+		case egx::TextureFormat::D24_S8:
+		case egx::TextureFormat::D32:
+		case egx::TextureFormat::D32_S32: 
+			return true;
 		}
-		return DXGI_FORMAT_UNKNOWN;
+		return false;
 	}
 
 	inline int formatByteSize(DXGI_FORMAT format)
@@ -94,7 +92,10 @@ namespace egx
 		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
 			return 4;
 		case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+		case DXGI_FORMAT_R16G16B16A16_FLOAT:
 			return 8;
+		case DXGI_FORMAT_R32G32B32A32_FLOAT:
+			return 16;
 		default: throw std::runtime_error("Unsupported texture format");
 		}
 		return 0;

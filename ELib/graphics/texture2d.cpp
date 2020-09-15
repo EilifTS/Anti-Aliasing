@@ -3,7 +3,7 @@
 #include "device.h"
 
 egx::Texture2D::Texture2D(Device& dev, TextureFormat format, const ema::point2D& size)
-	: size(size), srv_cpu(), srv_gpu(), format(convertFormat(format)),
+	: size(size), srv_cpu(), srv_gpu(), format(format),
 	GPUBuffer(
 		dev,
 		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
@@ -20,16 +20,11 @@ egx::Texture2D::Texture2D(Device& dev, TextureFormat format, const ema::point2D&
 
 void egx::Texture2D::CreateShaderResourceView(Device& dev, TextureFormat format)
 {
-	createShaderResourceView(dev, convertFormat(format));
-}
-
-void egx::Texture2D::createShaderResourceView(Device& dev, DXGI_FORMAT format)
-{
 	auto buffer_desc = buffer->GetDesc();
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
 	desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	desc.Format = format;
+	desc.Format = convertFormat(format);
 	desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	desc.Texture2D.MipLevels = buffer_desc.MipLevels;
 
@@ -56,7 +51,7 @@ egx::Texture2D::Texture2D(ComPtr<ID3D12Resource> buffer, D3D12_RESOURCE_STATES s
 	auto desc = buffer->GetDesc();
 
 	size = { (int)desc.Width, (int)desc.Height };
-	format = desc.Format;
+	format = revertFormat(desc.Format);
 }
 
 egx::Texture2D::Texture2D(Device& dev,
@@ -64,7 +59,7 @@ egx::Texture2D::Texture2D(Device& dev,
 	const ema::point2D& size,
 	D3D12_RESOURCE_FLAGS flags,
 	ClearValue clear_value)
-	: size(size), srv_cpu(), srv_gpu(), format(format),
+	: size(size), srv_cpu(), srv_gpu(), format(revertFormat(format)),
 	GPUBuffer(
 		dev,
 		D3D12_RESOURCE_DIMENSION_TEXTURE2D,

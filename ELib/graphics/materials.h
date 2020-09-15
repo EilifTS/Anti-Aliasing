@@ -19,6 +19,7 @@ namespace egx
 		inline const ConstantBuffer& GetBuffer() const { return *const_buffer; };
 		inline bool UseDiffuseTexture() const { return diffuse_texture != nullptr; };
 		inline const Texture2D& GetDiffuseTexture() const { return *diffuse_texture; };
+		inline bool HasNormalMap() const { return normal_map_name != ""; };
 
 		inline void SetDiffuseColor(const ema::vec3& new_value) { diffuse_color = new_value; };
 		inline void SetDiffuseMapName(const std::string& new_name) { diffuse_map_name = new_name; }

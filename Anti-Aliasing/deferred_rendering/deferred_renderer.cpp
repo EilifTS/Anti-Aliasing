@@ -17,6 +17,7 @@ DeferrdRenderer::DeferrdRenderer(egx::Device& dev, egx::CommandContext& context,
 	context.SetTransitionBuffer(g_buffer.DepthBuffer(), egx::GPUBufferState::DepthWrite);
 
 	initializeModelRenderer(dev, size);
+	initializeModelNMRenderer(dev, size);
 	initializeLightRenderer(dev, size);
 
 }
@@ -62,6 +63,44 @@ void DeferrdRenderer::RenderModels(egx::Device& dev, egx::CommandContext& contex
 			context.SetDescriptorHeap(*dev.buffer_heap);
 			if (material.UseDiffuseTexture())
 				context.SetRootDescriptorTable(2, material.GetDiffuseTexture());
+
+			// Draw
+			context.DrawIndexed(pmesh->GetIndexBuffer().GetElementCount());
+		}
+	}
+
+}
+
+void DeferrdRenderer::RenderModelsNM(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::ModelList& models)
+{
+	// Set root signature and pipeline state
+	context.SetRootSignature(model_nm_rs);
+	context.SetPipelineState(model_nm_ps);
+
+	// Set root values
+	context.SetRootConstantBuffer(0, camera.GetBuffer());
+
+	// Set scissor and viewport
+	context.SetViewport();
+	context.SetScissor();
+	context.SetPrimitiveTopology(egx::Topology::TriangleList);
+
+	for (auto pmesh : models)
+	{
+		if (pmesh->GetIndexBuffer().GetElementCount() > 0)
+		{
+			// Set vertex buffer
+			context.SetVertexBuffer(pmesh->GetVertexBuffer());
+			context.SetIndexBuffer(pmesh->GetIndexBuffer());
+
+			// Set material
+			const auto& material = pmesh->GetMaterial();
+			context.SetRootConstantBuffer(1, material.GetBuffer());
+			context.SetDescriptorHeap(*dev.buffer_heap);
+			if (material.UseDiffuseTexture())
+				context.SetRootDescriptorTable(2, material.GetDiffuseTexture());
+			context.SetRootDescriptorTable(3, material.GetNormalMap());
+
 
 			// Draw
 			context.DrawIndexed(pmesh->GetIndexBuffer().GetElementCount());
@@ -136,6 +175,40 @@ void DeferrdRenderer::initializeModelRenderer(egx::Device& dev, const ema::point
 	model_ps.SetRasterState(egx::RasterState::Default());
 	model_ps.SetDepthStencilState(egx::DepthStencilState::DepthOn());
 	model_ps.Finalize(dev);
+}
+
+void DeferrdRenderer::initializeModelNMRenderer(egx::Device& dev, const ema::point2D& size)
+{
+	// Create root signature
+	model_nm_rs.InitConstantBuffer(0);
+	model_nm_rs.InitConstantBuffer(1);
+	model_nm_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel);
+	model_nm_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel);
+	model_nm_rs.AddSampler(egx::Sampler::LinearWrap(), 0);
+	model_nm_rs.Finalize(dev);
+
+	// Create Shaders
+	egx::Shader VS;
+	egx::Shader PS;
+	VS.CompileVertexShader("shaders/deferred/deferred_model_nm_vs.hlsl");
+	PS.CompilePixelShader("shaders/deferred/deferred_model_nm_ps.hlsl");
+
+	// Get input layout
+	auto input_layout = egx::NormalMappedVertex::GetInputLayout();
+
+	// Create PSO
+	model_nm_ps.SetRootSignature(model_nm_rs);
+	model_nm_ps.SetInputLayout(input_layout);
+	model_nm_ps.SetPrimitiveTopology(egx::TopologyType::Triangle);
+	model_nm_ps.SetVertexShader(VS);
+	model_nm_ps.SetPixelShader(PS);
+	model_nm_ps.SetDepthStencilFormat(g_buffer.DepthBuffer().Format());
+	model_nm_ps.SetRenderTargetFormats(g_buffer.DiffuseBuffer().Format(), g_buffer.NormalBuffer().Format());
+
+	model_nm_ps.SetBlendState(egx::BlendState::NoBlend());
+	model_nm_ps.SetRasterState(egx::RasterState::Default());
+	model_nm_ps.SetDepthStencilState(egx::DepthStencilState::DepthOn());
+	model_nm_ps.Finalize(dev);
 }
 
 void DeferrdRenderer::initializeLightRenderer(egx::Device& dev, const ema::point2D& size)

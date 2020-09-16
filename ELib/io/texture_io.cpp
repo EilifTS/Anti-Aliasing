@@ -76,20 +76,26 @@ namespace
 	}
 }
 
-std::shared_ptr<egx::Texture2D> eio::LoadTextureFromFile(egx::Device& dev, egx::CommandContext& context, const std::string& file_name)
+std::shared_ptr<egx::Texture2D> eio::LoadTextureFromFile(egx::Device& dev, egx::CommandContext& context, const std::string& file_name, bool use_srgb)
 {
 	std::wstring wfile_name(file_name.begin(), file_name.end());
 	ComPtr<ID3D12Resource> texture_buffer;
 	std::unique_ptr<uint8_t[]> data;
 	D3D12_SUBRESOURCE_DATA sub_data;
 
+	unsigned int flags = DirectX::WIC_LOADER_MIP_AUTOGEN;
+	if (use_srgb)
+		flags |= DirectX::WIC_LOADER_FORCE_SRGB;
+	else 
+		flags |= DirectX::WIC_LOADER_IGNORE_SRGB;
+
 	THROWIFFAILED(
-		LoadWICTextureFromFileEx(
+		DirectX::LoadWICTextureFromFileEx(
 			dev.device.Get(), 
 			wfile_name.c_str(), 
 			0,
 			D3D12_RESOURCE_FLAG_NONE,
-			DirectX::WIC_LOADER_MIP_AUTOGEN,
+			flags,
 			&texture_buffer,
 			data,
 			sub_data

@@ -22,8 +22,8 @@ namespace egx
 			InputLayout out;
 			out.AddPosition(3);
 			out.AddNormal(3);
-			out.AddTextureCoordinate(3);
-			out.AddTextureCoordinate(3);
+			out.AddNormal(3);
+			out.AddNormal(3);
 			out.AddTextureCoordinate(2);
 			return out;
 		}
@@ -56,6 +56,14 @@ namespace egx
 			const std::vector<unsigned long>& indices,
 			const Material& material
 		);
+		Mesh(
+			Device& dev,
+			CommandContext& context,
+			const std::string& name,
+			const std::vector<NormalMappedVertex>& vertices,
+			const std::vector<unsigned long>& indices,
+			const Material& material
+		);
 
 		inline const VertexBuffer& GetVertexBuffer() const { return vertex_buffer; };
 		inline VertexBuffer& GetVertexBuffer() { return vertex_buffer; };
@@ -80,6 +88,7 @@ namespace egx
 		void LoadAssets(Device& dev, CommandContext& context);
 
 		inline ModelList& GetNormalModels() { return meshes; };
+		inline ModelList& GetNMModels() { return norm_mapped_meshes; };
 
 	private:
 		MaterialManager mat_manager;

@@ -30,7 +30,8 @@ float4 PS(PSInput input) : SV_TARGET
 	float3 reflection_vector = phong_reflection_vector(light_dir.xyz, normal);
 	float specular = phong_specular_light(reflection_vector, view_dir, specular_exponent);
 
-	color = color * (0.2 + 0.8 * diffuse) +0.2 * specular.xxx;
+	color = color * (0.2 + 0.8 * diffuse) + 0.2 * specular.xxx;
 
+	//return float4(float3(normal.xy, normal.z), 1.0);
 	return float4(color, 1.0);
 }

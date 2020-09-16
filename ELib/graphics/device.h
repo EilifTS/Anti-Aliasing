@@ -31,7 +31,7 @@ namespace egx
 
 	public:
 		// Descriptor heaps
-		static const int max_descriptors_in_heap = 64;
+		static const int max_descriptors_in_heap = 128;
 		std::unique_ptr<DescriptorHeap> buffer_heap;
 		std::unique_ptr<DescriptorHeap> sampler_heap;
 		std::unique_ptr<DescriptorHeap> rtv_heap;
@@ -74,6 +74,6 @@ namespace egx
 		friend PipelineState;
 		friend CommandContext;
 		friend RenderTarget;
-		friend std::shared_ptr<egx::Texture2D> eio::LoadTextureFromFile(egx::Device& dev, egx::CommandContext& context, const std::string& file_name);
+		friend std::shared_ptr<egx::Texture2D> eio::LoadTextureFromFile(egx::Device& dev, egx::CommandContext& context, const std::string& file_name, bool use_srgb);
 	};
 }

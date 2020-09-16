@@ -54,6 +54,8 @@
     <FxCompile Include="shaders\deferred\deferred_model_vs.hlsl" />
     <FxCompile Include="shaders\deferred\deferred_light_vs.hlsl" />
     <FxCompile Include="shaders\deferred\deferred_light_ps.hlsl" />
+    <FxCompile Include="shaders\deferred\deferred_model_nm_ps.hlsl" />
+    <FxCompile Include="shaders\deferred\deferred_model_nm_vs.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fxaa\fxaa_header.hlsli" />

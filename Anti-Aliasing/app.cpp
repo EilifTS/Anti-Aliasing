@@ -22,8 +22,8 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	renderer(dev, context, im.Window().WindowSize()),
 	fxaa(dev, im.Window().WindowSize())
 {
-	camera.SetPosition({ 40.0f, 10.0f, 0.0f });
-	camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.5f });
+	//camera.SetPosition({ 40.0f, 10.0f, 0.0f });
+	//camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.5f });
 
 	target.CreateShaderResourceView(dev);
 	target.CreateRenderTargetView(dev);
@@ -44,6 +44,7 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	camera.UpdateBuffer(dev, context);
 
 	renderer.RenderModels(dev, context, camera, model_manager.GetNormalModels());
+	renderer.RenderModelsNM(dev, context, camera, model_manager.GetNMModels());
 	renderer.RenderLight(dev, context, camera, target);
 	
 

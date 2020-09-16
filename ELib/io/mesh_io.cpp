@@ -16,6 +16,18 @@ namespace
 		int material_index;	// Used to store index of material in material vector
 		int vertex_index;	// Used to store index of vertex when vertices has been created
 	};
+	struct Face
+	{
+		std::vector<FaceComponent> components;
+	};
+	struct OBJIntermediate
+	{
+		std::vector<ema::vec3> positions;
+		std::vector<ema::vec3> normals;
+		std::vector<ema::vec2> tex_coords;
+		std::vector<Face> faces;
+	};
+
 	bool equalFaceComponents(const FaceComponent& c1, const FaceComponent& c2)
 	{
 		return c1.position_index == c2.position_index &&
@@ -38,28 +50,6 @@ namespace
 		}
 		return false;
 	}
-
-	struct Face
-	{
-		std::vector<FaceComponent> components;
-	};
-
-	struct OBJIntermediate
-	{
-		std::vector<ema::vec3> positions;
-		std::vector<ema::vec3> normals;
-		std::vector<ema::vec2> tex_coords;
-		std::vector<Face> faces;
-	};
-
-	std::vector<std::string> split(const std::string& s, char delimiter)
-	{
-		std::vector<std::string> out;
-		std::istringstream ss(s);
-		
-		return out;
-	}
-
 	FaceComponent parseFaceComponent(const std::string& s)
 	{
 		FaceComponent out;
@@ -123,12 +113,81 @@ namespace
 				ss >> diffuse_map_file_path;
 				current_material.SetDiffuseMapName(diffuse_map_file_path);
 			}
+			else if (identifier == "map_bump")
+			{
+				std::string normal_map_file_path;
+				ss >> normal_map_file_path;
+				current_material.SetNormalMapName(normal_map_file_path);
+			}
 			else
 			{
 				// Everything else is not supported
 			}
 		}
 		mat_manager.AddMaterial(current_material);
+	}
+
+	std::vector<egx::NormalMappedVertex> createTangentVectors(const std::vector<egx::MeshVertex>& vertices, const std::vector<unsigned long>& indices)
+	{
+		std::vector<egx::NormalMappedVertex> out(vertices.size());
+
+		for (int i = 0; i < (int)vertices.size(); i++)
+		{
+			const egx::MeshVertex& ov = vertices[i];
+			egx::NormalMappedVertex v;
+			v.position = ov.position;
+			v.normal = ov.normal;
+			v.tex_coord = ov.tex_coord;
+			out[i] = v;
+		}
+
+		for (int i = 0; i < (int)indices.size(); i+=3)
+		{
+			unsigned long index0 = indices[(long long)i + 0];
+			unsigned long index1 = indices[(long long)i + 1];
+			unsigned long index2 = indices[(long long)i + 2];
+
+			const ema::vec3& v0 = vertices[index0].position;
+			const ema::vec3& v1 = vertices[index1].position;
+			const ema::vec3& v2 = vertices[index2].position;
+
+			const ema::vec2& uv0 = vertices[index0].tex_coord;
+			const ema::vec2& uv1 = vertices[index1].tex_coord;
+			const ema::vec2& uv2 = vertices[index2].tex_coord;
+
+			ema::vec3 delta_pos1 = v1 - v0;
+			ema::vec3 delta_pos2 = v2 - v0;
+
+			ema::vec2 delta_uv1 = uv1 - uv0;
+			ema::vec2 delta_uv2 = uv2 - uv0;
+
+			float r = 1.0f / (delta_uv1.x * delta_uv2.y - delta_uv1.y * delta_uv2.x);
+
+			ema::vec3 tangent = ((delta_pos1 * delta_uv2.y - delta_pos2 * delta_uv1.y) * r);
+			ema::vec3 bitangent = ((delta_pos2 * delta_uv1.x - delta_pos1 * delta_uv2.x) * r);
+
+			out[index0].tangent += tangent;
+			out[index1].tangent += tangent;
+			out[index2].tangent += tangent;
+
+			out[index0].bitangent += bitangent;
+			out[index1].bitangent += bitangent;
+			out[index2].bitangent += bitangent;
+		}
+
+		// Orthonormalize tangents
+		for (int i = 0; i < (int)vertices.size(); i++)
+		{
+			ema::vec3& t = out[i].tangent;
+			ema::vec3& b = out[i].bitangent;
+			ema::vec3 n = out[i].normal;
+
+			t = (t - (t.Dot(n)) * n).GetNormalized();
+			b = (b - (b.Dot(n)) * n).GetNormalized();
+			b = (b - (b.Dot(t)) * t).GetNormalized();
+		}
+
+		return std::move(out);
 	}
 
 	void loadMeshFromOBJ(
@@ -264,6 +323,48 @@ namespace
 			}
 		}
 	}
+
+	std::vector<std::shared_ptr<egx::Mesh>> createMeshesFromData(
+		egx::Device& dev, egx::CommandContext& context,
+		const std::string& obj_name,
+		const egx::MaterialManager& mat_manager, int material_start_index,
+		const std::vector<std::vector<egx::MeshVertex>>& vertex_arrays,
+		const std::vector<std::vector<unsigned long>>& index_arrays
+	)
+	{
+		// Create meshes
+		eio::Console::Log(obj_name + ": Creating meshes");
+		std::vector<std::shared_ptr<egx::Mesh>> meshes;
+		for (int i = 0; i < (int)vertex_arrays.size(); i++)
+		{
+			if (index_arrays[i].size() > 0)
+			{
+				auto& material = mat_manager.GetMaterial(i + material_start_index);
+
+				// Create tangent and bitangent vectors if the mesh is normal mapped
+				if (material.HasNormalMap())
+				{
+					auto vertices = createTangentVectors(vertex_arrays[i], index_arrays[i]);
+					meshes.push_back(std::make_shared<egx::Mesh>(dev, context, obj_name + emisc::ToString(i), vertices, index_arrays[i], material));
+				}
+				else
+				{
+					meshes.push_back(std::make_shared<egx::Mesh>(dev, context, obj_name + emisc::ToString(i), vertex_arrays[i], index_arrays[i], material));
+				}
+			}
+		}
+
+		int vertex_count = 0;
+		int index_count = 0;
+		for (int i = 0; i < (int)vertex_arrays.size(); i++)
+		{
+			vertex_count += (int)vertex_arrays[i].size();
+			index_count += (int)index_arrays[i].size();
+		}
+
+		eio::Console::Log(obj_name + ": Total vertices: " + emisc::ToString(vertex_count) + " total indices: " + emisc::ToString(index_count));
+		return meshes;
+	}
 }
 
 
@@ -284,24 +385,7 @@ std::vector<std::shared_ptr<egx::Mesh>> eio::LoadMeshFromOBJ(egx::Device& dev, e
 
 	loadMeshFromOBJ(obj_name, mat_manager, vertex_arrays, index_arrays);
 
-	// Create meshes
-	Console::Log(obj_name + ": Creating meshes");
-	std::vector<std::shared_ptr<egx::Mesh>> meshes;
-	for (int i = 0; i < num_materials; i++)
-	{
-		if(index_arrays[i].size() > 0)
-			meshes.push_back(std::make_shared<egx::Mesh>(dev, context, obj_name + emisc::ToString(i), vertex_arrays[i], index_arrays[i], mat_manager.GetMaterial(i + material_index_start)));
-	}
-
-	int vertex_count = 0;
-	int index_count = 0;
-	for (int i = 0; i < num_materials; i++)
-	{
-		vertex_count += (int)vertex_arrays[i].size();
-		index_count += (int)index_arrays[i].size();
-	}
-
-	Console::Log(obj_name + ": Total vertices: " + emisc::ToString(vertex_count) + " total indices: " + emisc::ToString(index_count));
+	auto meshes = createMeshesFromData(dev, context, obj_name, mat_manager, material_index_start, vertex_arrays, index_arrays);
 
 	Console::Log(obj_name + ": Load finished");
 	Console::SetColor(15);
@@ -391,24 +475,7 @@ std::vector<std::shared_ptr<egx::Mesh>> eio::LoadMeshFromOBJB(egx::Device& dev, 
 		file.read(reinterpret_cast<char*>(index_arrays[i].data()), sizeof(unsigned long) * index_count);
 	}
 
-	// Create meshes
-	Console::Log(obj_name + ": Creating meshes");
-	std::vector<std::shared_ptr<egx::Mesh>> meshes;
-	for (int i = 0; i < mesh_count; i++)
-	{
-		if (index_arrays[i].size() > 0)
-			meshes.push_back(std::make_shared<egx::Mesh>(dev, context, obj_name + emisc::ToString(i), vertex_arrays[i], index_arrays[i], mat_manager.GetMaterial(i + material_start_index)));
-	}
-
-	int vertex_count = 0;
-	int index_count = 0;
-	for (int i = 0; i < mesh_count; i++)
-	{
-		vertex_count += (int)vertex_arrays[i].size();
-		index_count += (int)index_arrays[i].size();
-	}
-
-	Console::Log(obj_name + ": Total vertices: " + emisc::ToString(vertex_count) + " total indices: " + emisc::ToString(index_count));
+	auto meshes = createMeshesFromData(dev, context, obj_name, mat_manager, material_start_index, vertex_arrays, index_arrays);
 
 	Console::Log(obj_name + ": Load finished");
 	Console::SetColor(15);

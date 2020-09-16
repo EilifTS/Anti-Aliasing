@@ -26,6 +26,14 @@ void egx::Material::LoadAssets(Device& dev, CommandContext& context)
 		context.SetTransitionBuffer(*diffuse_texture, GPUBufferState::PixelResource);
 		diffuse_texture->CreateShaderResourceView(dev);
 	}
+
+	// Load normal map
+	if (normal_map_name != "")
+	{
+		normal_map = eio::LoadTextureFromFile(dev, context, normal_map_name, false);
+		context.SetTransitionBuffer(*normal_map, GPUBufferState::PixelResource);
+		normal_map->CreateShaderResourceView(dev);
+	}
 }
 
 void egx::MaterialManager::AddMaterial(const Material& material)

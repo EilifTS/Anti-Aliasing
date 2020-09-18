@@ -1,18 +1,9 @@
 #include "deferred_renderer.h"
 #include "graphics/cpu_buffer.h"
 
-namespace
-{
-	static const ema::vec3 world_light_dir = ema::vec3(1.0f, -1.0f, 1.0f).GetNormalized();
-	struct lightBufferType
-	{
-		ema::vec4 light_dir;
-	};
-}
-
 DeferrdRenderer::DeferrdRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size)
 	: g_buffer(dev, size),
-	light_buffer(dev, (int)sizeof(lightBufferType))
+	light_manager(dev, context)
 {
 	context.SetTransitionBuffer(g_buffer.DepthBuffer(), egx::GPUBufferState::DepthWrite);
 
@@ -23,11 +14,13 @@ DeferrdRenderer::DeferrdRenderer(egx::Device& dev, egx::CommandContext& context,
 
 void DeferrdRenderer::UpdateLight(egx::Camera& camera)
 {
-	light_dir = ema::vec4(world_light_dir, 0.0f) * camera.ViewMatrix();
+	light_manager.Update(camera);
 }
 
 void DeferrdRenderer::RenderModels(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::ModelList& models)
 {
+	light_manager.RenderToShadowMap(dev, context, models);
+
 	context.SetTransitionBuffer(g_buffer.DiffuseBuffer(), egx::GPUBufferState::RenderTarget);
 	context.SetTransitionBuffer(g_buffer.NormalBuffer(), egx::GPUBufferState::RenderTarget);
 
@@ -79,15 +72,11 @@ void DeferrdRenderer::RenderModels(egx::Device& dev, egx::CommandContext& contex
 
 void DeferrdRenderer::RenderLight(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::RenderTarget& target)
 {
-	// Update light buffer
-	egx::CPUBuffer cpu_buffer(&light_dir, (int)sizeof(light_dir));
-	context.SetTransitionBuffer(light_buffer, egx::GPUBufferState::CopyDest);
-	dev.ScheduleUpload(context, cpu_buffer, light_buffer);
-	context.SetTransitionBuffer(light_buffer, egx::GPUBufferState::ConstantBuffer);
-
+	
 	context.SetTransitionBuffer(target, egx::GPUBufferState::RenderTarget);
 	context.SetTransitionBuffer(g_buffer.DiffuseBuffer(), egx::GPUBufferState::PixelResource);
 	context.SetTransitionBuffer(g_buffer.NormalBuffer(), egx::GPUBufferState::PixelResource);
+	context.SetTransitionBuffer(light_manager.GetShadowMap(), egx::GPUBufferState::PixelResource);
 
 	context.ClearRenderTarget(target, { 0.117f, 0.565f, 1.0f, 1.0f });
 	context.SetRenderTarget(target);
@@ -98,10 +87,11 @@ void DeferrdRenderer::RenderLight(egx::Device& dev, egx::CommandContext& context
 
 	// Set root values
 	context.SetRootConstantBuffer(0, camera.GetBuffer());
-	context.SetRootConstantBuffer(1, light_buffer);
+	context.SetRootConstantBuffer(1, light_manager.GetLightBuffer());
 	context.SetDescriptorHeap(*dev.buffer_heap);
 	context.SetRootDescriptorTable(2, g_buffer.DiffuseBuffer());
 	context.SetRootDescriptorTable(3, g_buffer.NormalBuffer());
+	context.SetRootDescriptorTable(4, light_manager.GetShadowMap());
 
 	// Set scissor and viewport
 	context.SetViewport();
@@ -153,9 +143,11 @@ void DeferrdRenderer::initializeLightRenderer(egx::Device& dev, const ema::point
 	// Create root signature
 	light_rs.InitConstantBuffer(0);
 	light_rs.InitConstantBuffer(1);
-	light_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel);
-	light_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel);
+	light_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel); // Diffuse texture
+	light_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel); // Normal texture
+	light_rs.InitDescriptorTable(2, egx::ShaderVisibility::Pixel); // Shadow map
 	light_rs.AddSampler(egx::Sampler::PointClamp(), 0);
+	light_rs.AddSampler(egx::Sampler::ShadowSampler(), 1);
 	light_rs.Finalize(dev);
 
 	// Create Shaders

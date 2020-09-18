@@ -64,6 +64,27 @@ void egx::MaterialManager::AddMaterial(const Material& material)
 	material_index_map[material.Name()] = (int)materials.size() - 1;
 }
 
+void egx::MaterialManager::DisableDiffuseTextures()
+{
+	for (auto& m : materials)
+		m.SetDiffuseMapName("");
+}
+void egx::MaterialManager::DisableNormalMaps()
+{
+	for (auto& m : materials)
+		m.SetNormalMapName("");
+}
+void egx::MaterialManager::DisableSpecularMaps()
+{
+	for (auto& m : materials)
+		m.SetSpecularMapName("");
+}
+void egx::MaterialManager::DisableMaskTextures()
+{
+	for (auto& m : materials)
+		m.SetMaskTextureName("");
+}
+
 void egx::MaterialManager::LoadMaterialAssets(Device& dev, CommandContext& context)
 {
 	for (auto& m : materials)

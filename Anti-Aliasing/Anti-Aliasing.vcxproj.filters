@@ -30,6 +30,9 @@
     <ClCompile Include="deferred_rendering\deferred_renderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="deferred_rendering\light_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.h">
@@ -44,6 +47,9 @@
     <ClInclude Include="deferred_rendering\deferred_renderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="deferred_rendering\light_manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\fxaa\fxaa_ps.hlsl" />
@@ -52,10 +58,13 @@
     <FxCompile Include="shaders\deferred\deferred_light_ps.hlsl" />
     <FxCompile Include="shaders\deferred\deferred_model_nm_ps.hlsl" />
     <FxCompile Include="shaders\deferred\deferred_model_nm_vs.hlsl" />
+    <FxCompile Include="shaders\deferred\shadow_map_vs.hlsl" />
+    <FxCompile Include="shaders\deferred\shadow_map_ps.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fxaa\fxaa_header.hlsli" />
     <None Include="shaders\deferred\g_buffer.hlsli" />
     <None Include="shaders\deferred\phong.hlsli" />
+    <None Include="shaders\deferred\shadow.hlsli" />
   </ItemGroup>
 </Project>

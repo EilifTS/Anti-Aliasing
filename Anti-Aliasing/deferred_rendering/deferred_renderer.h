@@ -2,6 +2,7 @@
 #include "graphics/egx.h"
 #include "g_buffer.h"
 #include "graphics/camera.h"
+#include "light_manager.h"
 
 class DeferrdRenderer
 {
@@ -15,12 +16,11 @@ public:
 
 private:
 	GBuffer g_buffer;
-	
+	LightManager light_manager;
+
 	egx::RootSignature model_rs;
 	egx::PipelineState model_ps;
 
-	ema::vec4 light_dir;
-	egx::ConstantBuffer light_buffer;
 	egx::RootSignature light_rs;
 	egx::PipelineState light_ps;
 

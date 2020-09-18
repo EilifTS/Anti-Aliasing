@@ -97,12 +97,6 @@ void FXAA::HandleInput(const eio::InputManager& im)
 		recompile_shaders = true;
 	}
 
-	for (char c = 0; c < 127; c++)
-	{
-		if (keyboard.IsKeyReleased(c))
-			eio::Console::Log(emisc::ToString(c));
-	}
-
 	
 }
 

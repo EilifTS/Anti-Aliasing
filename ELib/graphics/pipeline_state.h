@@ -51,6 +51,23 @@ namespace egx
 			out.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 			return out;
 		}
+		static inline RasterState ShadowMap(int depth_bias, float slope_scale, float bias_clamp)
+		{
+			RasterState out;
+			out.FillMode = D3D12_FILL_MODE_SOLID;
+			out.CullMode = D3D12_CULL_MODE_BACK;
+			out.FrontCounterClockwise = FALSE;
+			out.DepthBias = depth_bias;
+			out.DepthBiasClamp = bias_clamp;
+			out.SlopeScaledDepthBias = slope_scale;
+			out.DepthClipEnable = TRUE;
+			out.MultisampleEnable = FALSE;
+			out.AntialiasedLineEnable = FALSE;
+			out.ForcedSampleCount = 0;
+			out.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+			return out;
+		}
+
 	};
 	class DepthStencilState : public D3D12_DEPTH_STENCIL_DESC
 	{

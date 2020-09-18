@@ -29,6 +29,12 @@ namespace ema
 			out.matrix = DirectX::XMMatrixPerspectiveFovLH(field_of_view, aspect_ratio, near_plane, far_plane);
 			return out;
 		}
+		static inline mat4 Orthographic(const ema::vec2& dims, float near_plane, float far_plane)
+		{
+			mat4 out;
+			out.matrix = DirectX::XMMatrixOrthographicLH(dims.x, dims.y, near_plane, far_plane);
+			return out;
+		}
 		static inline mat4 LookAt(const vec3& position, const vec3& look_at, const vec3& up)
 		{
 			mat4 out;

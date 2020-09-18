@@ -46,7 +46,10 @@ void egx::PipelineState::SetRenderTargetFormat(TextureFormat format)
 	desc.RTVFormats[0] = convertFormat(format);
 	for (int i = 1; i < 8; i++)
 		desc.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
-	desc.NumRenderTargets = 1;
+	if(format == TextureFormat::UNKNOWN)
+		desc.NumRenderTargets = 0;
+	else
+		desc.NumRenderTargets = 1;
 }
 void egx::PipelineState::SetRenderTargetFormats(TextureFormat format1, TextureFormat format2)
 {

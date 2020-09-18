@@ -50,7 +50,7 @@ GBuffer PS(PSInput input)
 	if (use_normal_map == 1)
 	{
 		float3 normal_sample = material_normal_map_texture.Sample(linear_wrap, input.uv).xyx;
-		normal = float3(normal_sample.xy * 2.0 - 1.0, normal_sample.z);
+		normal = float3((normal_sample.xy * 2.0 - 1.0) * float2(1.0, -1.0), normal_sample.z);
 		normal = normalize(mul(normal, input.tbn));
 	}
 	else

@@ -3,12 +3,12 @@
 #include "command_context.h"
 #include "cpu_buffer.h"
 
-egx::Camera::Camera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane, float field_of_view)
-	: window_size(window_size), near_plane(near_plane), far_plane(far_plane), field_of_view(field_of_view), 
+// Camera
+egx::Camera::Camera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane)
+	: window_size(window_size), near_plane(near_plane), far_plane(far_plane), 
 	view_matrix(ema::mat4::Identity()), projection_matrix(ema::mat4::Identity()),
 	buffer_updated(false), buffer(dev, (int)sizeof(CameraBufferType))
 {
-	updateProjectionMatrix();
 }
 
 void egx::Camera::UpdateBuffer(Device& dev, CommandContext& context)
@@ -28,20 +28,28 @@ void egx::Camera::UpdateBuffer(Device& dev, CommandContext& context)
 	}
 }
 
-void egx::Camera::updateViewMatrix()
+void egx::Camera::UpdateViewMatrix()
 {
 	view_matrix = ema::mat4::LookAt(position, look_at, up);
 	buffer_updated = false;
 }
-void egx::Camera::updateProjectionMatrix()
+
+// Projective Camera
+egx::ProjectiveCamera::ProjectiveCamera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane, float field_of_view)
+	: Camera(dev, context, window_size, near_plane, far_plane), field_of_view(field_of_view)
+{
+	updateProjectionMatrix();
+}
+void egx::ProjectiveCamera::updateProjectionMatrix()
 {
 	projection_matrix = ema::mat4::Projection(near_plane, far_plane, field_of_view, AspectRatio());
 	near_plane_vs_rectangle = ema::vec2(AspectRatio() * tanf(0.5f * field_of_view), tanf(0.5f * field_of_view));
 	buffer_updated = false;
 }
 
+// First person camera
 egx::FPCamera::FPCamera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane, float field_of_view, float speed, float mouse_speed)
-	: Camera(dev, context, window_size, near_plane, far_plane, field_of_view), speed(speed), mouse_speed(mouse_speed), right(), roll_pitch_yaw()
+	: ProjectiveCamera(dev, context, window_size, near_plane, far_plane, field_of_view), speed(speed), mouse_speed(mouse_speed), right(), roll_pitch_yaw()
 {
 	look_at = ema::vec3(0.0f, 0.0f, 1.0f);
 	up = ema::vec3(0.0f, 1.0f, 0.0f);
@@ -79,5 +87,19 @@ void egx::FPCamera::Update(const eio::InputManager& im)
 	right = ema::vec3(right4.x, right4.y, right4.z);
 	up = ema::vec3(up4.x, up4.y, up4.z);
 
-	updateViewMatrix();
+	UpdateViewMatrix();
+}
+
+// Orthographic camera
+egx::OrthographicCamera::OrthographicCamera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane)
+	: Camera(dev, context, window_size, near_plane, far_plane)
+{
+	updateProjectionMatrix();
+}
+
+void egx::OrthographicCamera::updateProjectionMatrix()
+{
+	projection_matrix = ema::mat4::Orthographic(window_size, near_plane, far_plane);
+	near_plane_vs_rectangle = ema::vec2(AspectRatio(), 1.0f); // Not right but not really needed
+	buffer_updated = false;
 }

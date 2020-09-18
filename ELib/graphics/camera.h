@@ -15,8 +15,10 @@ namespace egx
 	class Camera
 	{
 	public:
-		Camera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane, float field_of_view);
+		Camera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane);
 
+
+		void UpdateViewMatrix();
 		void UpdateBuffer(Device& dev, CommandContext& context);
 
 		inline egx::ConstantBuffer& GetBuffer() { return buffer; };
@@ -29,15 +31,16 @@ namespace egx
 		inline const ema::mat4& ProjectionMatrix() const{ return projection_matrix; };
 
 		inline void SetPosition(const ema::vec3& new_pos) { position = new_pos; };
+		inline void SetLookAt(const ema::vec3& new_look_at) { look_at = new_look_at; };
+		inline void SetUp(const ema::vec3& new_up) { up = new_up; };
 
 	protected:
-		void updateViewMatrix();
-		void updateProjectionMatrix();
+		virtual void updateProjectionMatrix() = 0;
 
 	protected:
 		ema::vec2 window_size;
 		ema::vec2 near_plane_vs_rectangle;
-		float near_plane, far_plane, field_of_view;
+		float near_plane, far_plane;
 
 		ema::vec3 position;
 		ema::vec3 look_at;
@@ -50,7 +53,20 @@ namespace egx
 		egx::ConstantBuffer buffer;
 	};
 
-	class FPCamera : public Camera
+	class ProjectiveCamera : public Camera
+	{
+	public:
+		ProjectiveCamera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane, float field_of_view);
+
+	protected:
+		void updateProjectionMatrix();
+
+	protected:
+		float field_of_view;
+
+	};
+
+	class FPCamera : public ProjectiveCamera
 	{
 	public:
 		FPCamera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane, float field_of_view, float speed, float mouse_speed);
@@ -63,5 +79,17 @@ namespace egx
 		float speed, mouse_speed;
 		ema::vec3 right;
 		ema::vec3 roll_pitch_yaw;
+	};
+
+	class OrthographicCamera : public Camera
+	{
+	public:
+		OrthographicCamera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane);
+
+	protected:
+		void updateProjectionMatrix();
+
+	protected:
+
 	};
 }

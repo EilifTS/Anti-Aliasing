@@ -22,14 +22,18 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	renderer(dev, context, im.Window().WindowSize()),
 	fxaa(dev, im.Window().WindowSize())
 {
-	//camera.SetPosition({ 40.0f, 10.0f, 0.0f });
-	//camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.5f });
+	camera.SetPosition({ 1000.0f, 100.0f, 0.0f });
+	camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.5f });
 
 	target.CreateShaderResourceView(dev);
 	target.CreateRenderTargetView(dev);
 
 	// Load assets
 	model_manager.LoadMesh(dev, context, "models/sponza");
+	//model_manager.DisableDiffuseTextures();
+	//model_manager.DisableNormalMaps();
+	//model_manager.DisableSpecularMaps();
+	//model_manager.DisableMaskTextures();
 	model_manager.LoadAssets(dev, context);
 }
 

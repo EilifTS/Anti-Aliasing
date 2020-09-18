@@ -75,6 +75,14 @@ namespace egx
 			s.SetFilter(Filter::Point);
 			return s;
 		}
+		inline static Sampler ShadowSampler()
+		{
+			Sampler s;
+			s.desc.Filter = D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+			s.desc.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+			s.SetAddressMode(AddressMode::Clamp);
+			return s;
+		}
 
 	private:
 		D3D12_STATIC_SAMPLER_DESC desc;

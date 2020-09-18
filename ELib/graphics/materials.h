@@ -75,6 +75,10 @@ namespace egx
 		inline int GetMaterialIndex(const std::string& material_name) const { return material_index_map.at(material_name); };
 		inline const Material& GetMaterial(int material_index) const { return materials.at(material_index); };
 
+		void DisableDiffuseTextures();
+		void DisableNormalMaps();
+		void DisableSpecularMaps();
+		void DisableMaskTextures();
 		void LoadMaterialAssets(Device& dev, CommandContext& context);
 
 	private:

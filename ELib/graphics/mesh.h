@@ -61,6 +61,11 @@ namespace egx
 		void LoadMesh(Device& dev, CommandContext& context, const std::string& file_path);
 		void LoadAssets(Device& dev, CommandContext& context);
 
+		inline void DisableDiffuseTextures() { mat_manager.DisableDiffuseTextures(); };
+		inline void DisableNormalMaps() { mat_manager.DisableNormalMaps(); };
+		inline void DisableSpecularMaps() { mat_manager.DisableSpecularMaps(); };
+		inline void DisableMaskTextures() { mat_manager.DisableMaskTextures(); };
+
 		inline ModelList& GetModels() { return meshes; };
 
 	private:

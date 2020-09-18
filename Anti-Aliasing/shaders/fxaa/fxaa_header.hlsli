@@ -1,12 +1,12 @@
 // Tuning parameters
-//#define EDGE_THRESHOLD (1.0 / 3.0)	// Too little
-//#define EDGE_THRESHOLD (1.0 / 4.0)	// Low quality
-//#define EDGE_THRESHOLD (1.0 / 8.0)	// High quality
-#define EDGE_THRESHOLD (1.0 / 16.0)	// Overkill
 
-#define EDGE_THRESHOLD_MIN (1.0 / 32.0)	// Visible limit
-//#define EDGE_THRESHOLD_MIN (1.0 / 16.0) // High quality
-//#define EDGE_THRESHOLD_MIN (1.0 / 12.0) // Upper limit
+#ifndef EDGE_THRESHOLD
+#define EDGE_THRESHOLD (1.0 / 8.0)
+#endif
+
+#ifndef EDGE_THRESHOLD_MIN
+#define EDGE_THRESHOLD_MIN (1.0 / 32.0)
+#endif
 
 #define TAVERSAL_MAX_STEPS 16
 

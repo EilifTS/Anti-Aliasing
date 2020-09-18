@@ -32,6 +32,7 @@ namespace
 	{
 		return c1.position_index == c2.position_index &&
 			c1.normal_index == c2.normal_index &&
+			c1.tex_coord_index == c2.tex_coord_index &&
 			c1.material_index == c2.material_index;
 	}
 	bool compareFaceComponents(const FaceComponent* c1, const FaceComponent* c2)
@@ -44,8 +45,13 @@ namespace
 				return true;
 			else if (c1->normal_index == c2->normal_index)
 			{
-				if (c1->material_index < c2->material_index)
+				if (c1->tex_coord_index < c2->tex_coord_index)
 					return true;
+				else if (c1->tex_coord_index == c2->tex_coord_index)
+				{
+					if (c1->material_index < c2->material_index)
+						return true;
+				}
 			}
 		}
 		return false;
@@ -119,6 +125,18 @@ namespace
 				ss >> normal_map_file_path;
 				current_material.SetNormalMapName(normal_map_file_path);
 			}
+			else if (identifier == "map_spec")
+			{
+				std::string specular_map_name;
+				ss >> specular_map_name;
+				current_material.SetSpecularMapName(specular_map_name);
+			}
+			else if (identifier == "map_d")
+			{
+				std::string mask_texture_name;
+				ss >> mask_texture_name;
+				current_material.SetMaskTextureName(mask_texture_name);
+			}
 			else
 			{
 				// Everything else is not supported
@@ -127,19 +145,10 @@ namespace
 		mat_manager.AddMaterial(current_material);
 	}
 
-	std::vector<egx::NormalMappedVertex> createTangentVectors(const std::vector<egx::MeshVertex>& vertices, const std::vector<unsigned long>& indices)
+	void createTangentVectors(std::vector<egx::MeshVertex>& vertices, const std::vector<unsigned long>& indices)
 	{
-		std::vector<egx::NormalMappedVertex> out(vertices.size());
-
-		for (int i = 0; i < (int)vertices.size(); i++)
-		{
-			const egx::MeshVertex& ov = vertices[i];
-			egx::NormalMappedVertex v;
-			v.position = ov.position;
-			v.normal = ov.normal;
-			v.tex_coord = ov.tex_coord;
-			out[i] = v;
-		}
+		std::vector<ema::vec3> tangents(vertices.size());
+		std::vector<ema::vec3> bitangents(vertices.size());
 
 		for (int i = 0; i < (int)indices.size(); i+=3)
 		{
@@ -166,28 +175,27 @@ namespace
 			ema::vec3 tangent = ((delta_pos1 * delta_uv2.y - delta_pos2 * delta_uv1.y) * r);
 			ema::vec3 bitangent = ((delta_pos2 * delta_uv1.x - delta_pos1 * delta_uv2.x) * r);
 
-			out[index0].tangent += tangent;
-			out[index1].tangent += tangent;
-			out[index2].tangent += tangent;
+			tangents[index0] += tangent;
+			tangents[index1] += tangent;
+			tangents[index2] += tangent;
 
-			out[index0].bitangent += bitangent;
-			out[index1].bitangent += bitangent;
-			out[index2].bitangent += bitangent;
+			bitangents[index0] += bitangent;
+			bitangents[index1] += bitangent;
+			bitangents[index2] += bitangent;
 		}
 
 		// Orthonormalize tangents
 		for (int i = 0; i < (int)vertices.size(); i++)
 		{
-			ema::vec3& t = out[i].tangent;
-			ema::vec3& b = out[i].bitangent;
-			ema::vec3 n = out[i].normal;
+			ema::vec3& t = tangents[i];
+			ema::vec3& b = bitangents[i];
+			const ema::vec3& n = vertices[i].normal;
 
 			t = (t - (t.Dot(n)) * n).GetNormalized();
-			b = (b - (b.Dot(n)) * n).GetNormalized();
-			b = (b - (b.Dot(t)) * t).GetNormalized();
-		}
+			float w = n.Dot(t.Cross(b)) >= 0.0f ? 1.0f : -1.0f;
 
-		return std::move(out);
+			vertices[i].tangent = ema::vec4(t, w);
+		}
 	}
 
 	void loadMeshFromOBJ(
@@ -322,6 +330,10 @@ namespace
 				index_arrays[comp.material_index].push_back(comp.vertex_index);
 			}
 		}
+
+		// Create tangents
+		for (int i = 0; i < (int)vertex_arrays.size(); i++)
+			createTangentVectors(vertex_arrays[i], index_arrays[i]);
 	}
 
 	std::vector<std::shared_ptr<egx::Mesh>> createMeshesFromData(
@@ -340,17 +352,7 @@ namespace
 			if (index_arrays[i].size() > 0)
 			{
 				auto& material = mat_manager.GetMaterial(i + material_start_index);
-
-				// Create tangent and bitangent vectors if the mesh is normal mapped
-				if (material.HasNormalMap())
-				{
-					auto vertices = createTangentVectors(vertex_arrays[i], index_arrays[i]);
-					meshes.push_back(std::make_shared<egx::Mesh>(dev, context, obj_name + emisc::ToString(i), vertices, index_arrays[i], material));
-				}
-				else
-				{
-					meshes.push_back(std::make_shared<egx::Mesh>(dev, context, obj_name + emisc::ToString(i), vertex_arrays[i], index_arrays[i], material));
-				}
+				meshes.push_back(std::make_shared<egx::Mesh>(dev, context, obj_name + emisc::ToString(i), vertex_arrays[i], index_arrays[i], material));
 			}
 		}
 

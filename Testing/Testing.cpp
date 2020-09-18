@@ -27,4 +27,6 @@ int main()
     eio::Console::InitConsole2(&clock);
 
     eio::ConvertOBJToOBJB("../Anti-Aliasing/models/sponza");
+    eio::ConvertOBJToOBJB("../Anti-Aliasing/models/knight");
+    eio::ConvertOBJToOBJB("../Anti-Aliasing/models/good-well");
 }

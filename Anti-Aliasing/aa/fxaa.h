@@ -22,5 +22,9 @@ private:
 	egx::RootSignature root_sig;
 	egx::PipelineState pso;
 
+
 	egx::ShaderMacroList macro_list;
+	int debug_mode_index;
+	int tuning_edge_threshold_index;
+	int tuning_edge_threshold_min_index;
 };

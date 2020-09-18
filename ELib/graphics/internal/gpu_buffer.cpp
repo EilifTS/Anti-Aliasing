@@ -62,8 +62,6 @@ egx::GPUBuffer::GPUBuffer(
 		pclear_value,
 		IID_PPV_ARGS(&buffer)),
 		"Failed to create GPU buffer");
-
-	eio::Console::Log("Created: GPU buffer");
 }
 
 egx::GPUBuffer::GPUBuffer(ComPtr<ID3D12Resource> buffer, D3D12_RESOURCE_STATES start_state)

@@ -44,7 +44,7 @@ bool eio::KeyboardState::IsKeyPressed(unsigned char key) const
 
 void eio::KeyboardState::reset()
 {
-	memcpy((void*)last_key_states, (void*)key_states, num_characters / sizeof(unsigned int));
+	memcpy((void*)last_key_states, (void*)key_states, num_characters);
 }
 void eio::KeyboardState::setKeyDown(unsigned char key)
 {

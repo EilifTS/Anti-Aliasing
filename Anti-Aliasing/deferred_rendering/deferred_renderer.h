@@ -11,7 +11,6 @@ public:
 	void UpdateLight(egx::Camera& camera);
 
 	void RenderModels(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::ModelList& models);
-	void RenderModelsNM(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::ModelList& models);
 	void RenderLight(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::RenderTarget& target);
 
 private:
@@ -20,9 +19,6 @@ private:
 	egx::RootSignature model_rs;
 	egx::PipelineState model_ps;
 
-	egx::RootSignature model_nm_rs;
-	egx::PipelineState model_nm_ps;
-
 	ema::vec4 light_dir;
 	egx::ConstantBuffer light_buffer;
 	egx::RootSignature light_rs;
@@ -30,6 +26,5 @@ private:
 
 private:
 	void initializeModelRenderer(egx::Device& dev, const ema::point2D& size);
-	void initializeModelNMRenderer(egx::Device& dev, const ema::point2D& size);
 	void initializeLightRenderer(egx::Device& dev, const ema::point2D& size);
 };

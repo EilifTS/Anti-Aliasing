@@ -9,30 +9,11 @@
 
 namespace egx
 {
-	struct NormalMappedVertex
-	{
-		ema::vec3 position;
-		ema::vec3 normal;
-		ema::vec3 tangent;
-		ema::vec3 bitangent;
-		ema::vec2 tex_coord;
-
-		static InputLayout GetInputLayout()
-		{
-			InputLayout out;
-			out.AddPosition(3);
-			out.AddNormal(3);
-			out.AddNormal(3);
-			out.AddNormal(3);
-			out.AddTextureCoordinate(2);
-			return out;
-		}
-	};
-
 	struct MeshVertex
 	{
 		ema::vec3 position;
 		ema::vec3 normal;
+		ema::vec4 tangent;
 		ema::vec2 tex_coord;
 
 		static InputLayout GetInputLayout()
@@ -40,6 +21,7 @@ namespace egx
 			InputLayout out;
 			out.AddPosition(3);
 			out.AddNormal(3);
+			out.AddNormal(4);
 			out.AddTextureCoordinate(2);
 			return out;
 		}
@@ -53,14 +35,6 @@ namespace egx
 			CommandContext& context, 
 			const std::string& name, 
 			const std::vector<MeshVertex>& vertices, 
-			const std::vector<unsigned long>& indices,
-			const Material& material
-		);
-		Mesh(
-			Device& dev,
-			CommandContext& context,
-			const std::string& name,
-			const std::vector<NormalMappedVertex>& vertices,
 			const std::vector<unsigned long>& indices,
 			const Material& material
 		);
@@ -87,14 +61,12 @@ namespace egx
 		void LoadMesh(Device& dev, CommandContext& context, const std::string& file_path);
 		void LoadAssets(Device& dev, CommandContext& context);
 
-		inline ModelList& GetNormalModels() { return meshes; };
-		inline ModelList& GetNMModels() { return norm_mapped_meshes; };
+		inline ModelList& GetModels() { return meshes; };
 
 	private:
 		MaterialManager mat_manager;
 
 		ModelList meshes;
-		ModelList norm_mapped_meshes;
 
 	};
 }

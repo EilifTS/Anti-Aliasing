@@ -1,8 +1,11 @@
 #include "fxaa.h"
+#include "io/console.h"
+#include "misc/string_helpers.h"
 
 FXAA::FXAA(egx::Device& dev, const ema::point2D& window_size)
 	: reciprocal_window_size(1.0f / (float)window_size.x, 1.0f / (float)window_size.y),
-	root_sig(), pso()
+	root_sig(), pso(),
+	debug_mode_index(6), tuning_edge_threshold_index(2), tuning_edge_threshold_min_index(1)
 {
 	// Create root signature
 	root_sig.InitConstants(2, 0, egx::ShaderVisibility::Pixel);
@@ -39,26 +42,67 @@ void FXAA::HandleInput(const eio::InputManager& im)
 {
 	auto& keyboard = im.Keyboard();
 
-	std::string macro_to_set = "";
-
-	if (keyboard.IsKeyReleased('1')) macro_to_set = "DEBUG_NO_FXAA";
-	if (keyboard.IsKeyReleased('2')) macro_to_set = "DEBUG_SHOW_EDGES";
-	if (keyboard.IsKeyReleased('3')) macro_to_set = "DEBUG_SHOW_EDGE_DIRECTION";
-	if (keyboard.IsKeyReleased('4')) macro_to_set = "DEBUG_SHOW_EDGE_SIDE";
-	if (keyboard.IsKeyReleased('5')) macro_to_set = "DEBUG_SHOW_CLOSEST_END";
-	if (keyboard.IsKeyReleased('6')) macro_to_set = "DEBUG_NO_SUBPIXEL_ANTIALIASING";
-	if (keyboard.IsKeyReleased('7'))
+	const static std::string debug_values[] =
 	{
-		macro_list.Clear();
+		"DEBUG_NO_FXAA",
+		"DEBUG_SHOW_EDGES",
+		"DEBUG_SHOW_EDGE_DIRECTION",
+		"DEBUG_SHOW_EDGE_SIDE",
+		"DEBUG_SHOW_CLOSEST_END",
+		"DEBUG_NO_SUBPIXEL_ANTIALIASING"
+	};
+
+	int new_debug_mode_index = debug_mode_index;
+	if (keyboard.IsKeyReleased('1')) new_debug_mode_index = 0;
+	if (keyboard.IsKeyReleased('2')) new_debug_mode_index = 1;
+	if (keyboard.IsKeyReleased('3')) new_debug_mode_index = 2;
+	if (keyboard.IsKeyReleased('4')) new_debug_mode_index = 3;
+	if (keyboard.IsKeyReleased('5')) new_debug_mode_index = 4;
+	if (keyboard.IsKeyReleased('6')) new_debug_mode_index = 5;
+	if (keyboard.IsKeyReleased('7')) new_debug_mode_index = 6;
+	if (new_debug_mode_index != debug_mode_index)
+	{
+		if(debug_mode_index != 6)
+			macro_list.RemoveMacro(debug_values[debug_mode_index]);
+		debug_mode_index = new_debug_mode_index;
+		if(new_debug_mode_index != 6)
+			macro_list.SetMacro(debug_values[debug_mode_index], "1");
 		recompile_shaders = true;
 	}
 	
-	if (macro_to_set != "")
+	
+	const static std::string threshold_values[] = 
+	{ 
+		"1.0 / 3.0",	// Too little
+		"1.0 / 4.0",	// Low quality
+		"1.0 / 8.0",	// High quality
+		"1.0 / 16.0",	// Overkill
+	};
+	const static std::string threshold_min_values[] =
 	{
-		macro_list.Clear();
-		macro_list.SetMacro(macro_to_set, "1");
+		"1.0 / 32.0",	// Visible limit
+		"1.0 / 16.0",	// High quality
+		"1.0 / 12.0",	// Upper limit
+	};
+	if (keyboard.IsKeyReleased('E'))
+	{
+		tuning_edge_threshold_index = (tuning_edge_threshold_index + 1) % (int)_countof(threshold_values);
+		macro_list.SetMacro("EDGE_THRESHOLD", threshold_values[tuning_edge_threshold_index]);
 		recompile_shaders = true;
 	}
+	if (keyboard.IsKeyReleased('R'))
+	{
+		tuning_edge_threshold_min_index = (tuning_edge_threshold_min_index + 1) % (int)_countof(threshold_min_values);
+		macro_list.SetMacro("EDGE_THRESHOLD_MIN", threshold_min_values[tuning_edge_threshold_min_index]);
+		recompile_shaders = true;
+	}
+
+	for (char c = 0; c < 127; c++)
+	{
+		if (keyboard.IsKeyReleased(c))
+			eio::Console::Log(emisc::ToString(c));
+	}
+
 	
 }
 

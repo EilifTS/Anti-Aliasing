@@ -89,6 +89,7 @@ std::shared_ptr<egx::Texture2D> eio::LoadTextureFromFile(egx::Device& dev, egx::
 	else 
 		flags |= DirectX::WIC_LOADER_IGNORE_SRGB;
 
+	eio::Console::Log("Loading texture " + file_name);
 	THROWIFFAILED(
 		DirectX::LoadWICTextureFromFileEx(
 			dev.device.Get(), 
@@ -105,6 +106,7 @@ std::shared_ptr<egx::Texture2D> eio::LoadTextureFromFile(egx::Device& dev, egx::
 
 	std::shared_ptr<egx::Texture2D> texture = std::shared_ptr<egx::Texture2D>(new egx::Texture2D(texture_buffer, D3D12_RESOURCE_STATE_COPY_DEST));
 
+	eio::Console::Log("Generating mipmaps for " + file_name);
 	auto mipped_data = generateMipmaps(data.get(), texture->Size().x, texture->Size().y, texture->GetElementSize());
 
 	egx::CPUBuffer cpu_buffer(mipped_data.data(), (int)mipped_data.size());

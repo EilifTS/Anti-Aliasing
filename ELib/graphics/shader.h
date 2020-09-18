@@ -12,6 +12,7 @@ namespace egx
 
 		inline void Clear() { macros.clear(); };
 		inline void SetMacro(const std::string& name, const std::string& definition) { macros[name] = definition; };
+		inline void RemoveMacro(const std::string& name) { macros.erase(name); };
 
 	private:
 		std::vector<D3D_SHADER_MACRO> getD3D() const;

@@ -46,12 +46,8 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="shaders\test_vs.hlsl" />
-    <FxCompile Include="shaders\test_ps.hlsl" />
     <FxCompile Include="shaders\fxaa\fxaa_ps.hlsl" />
     <FxCompile Include="shaders\fxaa\fxaa_vs.hlsl" />
-    <FxCompile Include="shaders\deferred\deferred_model_ps.hlsl" />
-    <FxCompile Include="shaders\deferred\deferred_model_vs.hlsl" />
     <FxCompile Include="shaders\deferred\deferred_light_vs.hlsl" />
     <FxCompile Include="shaders\deferred\deferred_light_ps.hlsl" />
     <FxCompile Include="shaders\deferred\deferred_model_nm_ps.hlsl" />

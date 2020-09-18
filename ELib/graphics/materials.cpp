@@ -13,14 +13,17 @@ void egx::Material::LoadAssets(Device& dev, CommandContext& context)
 	MaterialConstBufferType mcbt;
 	mcbt.diffuse_color = ema::vec4(diffuse_color, 1.0);
 	mcbt.specular_exponent = specular_exponent;
-	mcbt.use_diffuse_texture = diffuse_map_name != "";
+	mcbt.use_diffuse_texture = (int)HasDiffuseTexture();
+	mcbt.use_normal_map = (int)HasNormalMap();
+	mcbt.use_specular_map = (int)HasSpecularMap();
+	mcbt.use_mask_texture = (int)HasMaskTexture();
 
 	CPUBuffer cpu_buffer(&mcbt, (int)sizeof(mcbt));
 	dev.ScheduleUpload(context, cpu_buffer, *const_buffer);
 	context.SetTransitionBuffer(*const_buffer, GPUBufferState::ConstantBuffer);
 
 	// Load diffuse texture
-	if (diffuse_map_name != "")
+	if (HasDiffuseTexture())
 	{
 		diffuse_texture = eio::LoadTextureFromFile(dev, context, diffuse_map_name);
 		context.SetTransitionBuffer(*diffuse_texture, GPUBufferState::PixelResource);
@@ -28,11 +31,27 @@ void egx::Material::LoadAssets(Device& dev, CommandContext& context)
 	}
 
 	// Load normal map
-	if (normal_map_name != "")
+	if (HasNormalMap())
 	{
 		normal_map = eio::LoadTextureFromFile(dev, context, normal_map_name, false);
 		context.SetTransitionBuffer(*normal_map, GPUBufferState::PixelResource);
 		normal_map->CreateShaderResourceView(dev);
+	}
+
+	// Load specular map
+	if (HasSpecularMap())
+	{
+		specular_map = eio::LoadTextureFromFile(dev, context, specular_map_name, false);
+		context.SetTransitionBuffer(*specular_map, GPUBufferState::PixelResource);
+		specular_map->CreateShaderResourceView(dev);
+	}
+
+	// Load mask texture
+	if (HasMaskTexture())
+	{
+		mask_texture = eio::LoadTextureFromFile(dev, context, mask_texture_name, false);
+		context.SetTransitionBuffer(*mask_texture, GPUBufferState::PixelResource);
+		mask_texture->CreateShaderResourceView(dev);
 	}
 }
 

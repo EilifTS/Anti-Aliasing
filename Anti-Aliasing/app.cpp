@@ -43,11 +43,9 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 {
 	camera.UpdateBuffer(dev, context);
 
-	renderer.RenderModels(dev, context, camera, model_manager.GetNormalModels());
-	renderer.RenderModelsNM(dev, context, camera, model_manager.GetNMModels());
+	renderer.RenderModels(dev, context, camera, model_manager.GetModels());
 	renderer.RenderLight(dev, context, camera, target);
 	
-
 	auto& back_buffer = context.GetCurrentBackBuffer();
 	fxaa.Apply(dev, context, target, back_buffer);
 }

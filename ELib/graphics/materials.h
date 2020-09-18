@@ -18,16 +18,21 @@ namespace egx
 		inline const std::string& Name() const { return material_name; };
 		inline const ConstantBuffer& GetBuffer() const { return *const_buffer; };
 
-		inline bool UseDiffuseTexture() const { return diffuse_map_name != ""; };
-		inline const Texture2D& GetDiffuseTexture() const { return *diffuse_texture; };
-
+		inline bool HasDiffuseTexture() const { return diffuse_map_name != ""; };
 		inline bool HasNormalMap() const { return normal_map_name != ""; };
+		inline bool HasSpecularMap() const { return specular_map_name != ""; };
+		inline bool HasMaskTexture() const { return mask_texture_name != ""; };
+		inline const Texture2D& GetDiffuseTexture() const { return *diffuse_texture; };
 		inline const Texture2D& GetNormalMap() const { return *normal_map; };
+		inline const Texture2D& GetSpecularMap() const { return *specular_map; };
+		inline const Texture2D& GetMaskTexture() const { return *mask_texture; };
 
 		inline void SetDiffuseColor(const ema::vec3& new_value) { diffuse_color = new_value; };
+		inline void SetSpecularExponent(float new_value) { specular_exponent = new_value; };
 		inline void SetDiffuseMapName(const std::string& new_name) { diffuse_map_name = new_name; }
 		inline void SetNormalMapName(const std::string& new_name) { normal_map_name = new_name; }
-		inline void SetSpecularExponent(float new_value) { specular_exponent = new_value; };
+		inline void SetSpecularMapName(const std::string& new_name) { specular_map_name = new_name; }
+		inline void SetMaskTextureName(const std::string& new_name) { mask_texture_name = new_name; }
 
 		void LoadAssets(Device& dev, CommandContext& context);
 
@@ -36,7 +41,10 @@ namespace egx
 		{
 			ema::vec4 diffuse_color;
 			float specular_exponent;
-			bool use_diffuse_texture;
+			int use_diffuse_texture;
+			int use_normal_map;
+			int use_specular_map;
+			int use_mask_texture;
 		};
 
 	private:
@@ -47,10 +55,14 @@ namespace egx
 
 		std::string diffuse_map_name;
 		std::string normal_map_name;
+		std::string specular_map_name;
+		std::string mask_texture_name;
 
 		std::shared_ptr<egx::ConstantBuffer> const_buffer;
 		std::shared_ptr<egx::Texture2D> diffuse_texture;
 		std::shared_ptr<egx::Texture2D> normal_map;
+		std::shared_ptr<egx::Texture2D> specular_map;
+		std::shared_ptr<egx::Texture2D> mask_texture;
 	};
 
 	class MaterialManager

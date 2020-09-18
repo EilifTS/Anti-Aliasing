@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include "materials.h"
+#include "../io/texture_io.h"
 
 namespace egx
 {
@@ -59,7 +60,7 @@ namespace egx
 		ModelManager();
 
 		void LoadMesh(Device& dev, CommandContext& context, const std::string& file_path);
-		void LoadAssets(Device& dev, CommandContext& context);
+		void LoadAssets(Device& dev, CommandContext& context, eio::TextureLoader& texture_loader);
 
 		inline void DisableDiffuseTextures() { mat_manager.DisableDiffuseTextures(); };
 		inline void DisableNormalMaps() { mat_manager.DisableNormalMaps(); };

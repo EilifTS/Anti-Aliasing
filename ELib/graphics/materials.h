@@ -1,4 +1,5 @@
 #pragma once
+#include "../io/texture_io.h"
 #include "internal/egx_common.h"
 #include "constant_buffer.h"
 #include "../math/color.h"
@@ -34,7 +35,7 @@ namespace egx
 		inline void SetSpecularMapName(const std::string& new_name) { specular_map_name = new_name; }
 		inline void SetMaskTextureName(const std::string& new_name) { mask_texture_name = new_name; }
 
-		void LoadAssets(Device& dev, CommandContext& context);
+		void LoadAssets(Device& dev, CommandContext& context, eio::TextureLoader& texture_loader);
 
 	private:
 		struct MaterialConstBufferType
@@ -79,7 +80,7 @@ namespace egx
 		void DisableNormalMaps();
 		void DisableSpecularMaps();
 		void DisableMaskTextures();
-		void LoadMaterialAssets(Device& dev, CommandContext& context);
+		void LoadMaterialAssets(Device& dev, CommandContext& context, eio::TextureLoader& texture_loader);
 
 	private:
 		std::unordered_map<std::string, egx::Material*> material_map;

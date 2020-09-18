@@ -7,6 +7,7 @@
 
 #include "aa/fxaa.h"
 #include "deferred_rendering/deferred_renderer.h"
+#include "io/texture_io.h"
 
 class App
 {
@@ -21,6 +22,7 @@ private:
 	egx::RenderTarget target;
 
 	egx::ModelManager model_manager;
+	eio::TextureLoader texture_loader;
 	DeferrdRenderer renderer;
 
 	FXAA fxaa;

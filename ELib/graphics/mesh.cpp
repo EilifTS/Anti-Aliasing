@@ -41,7 +41,7 @@ void egx::ModelManager::LoadMesh(Device& dev, CommandContext& context, const std
 	}
 }
 
-void egx::ModelManager::LoadAssets(Device& dev, CommandContext& context)
+void egx::ModelManager::LoadAssets(Device& dev, CommandContext& context, eio::TextureLoader& texture_loader)
 {
-	mat_manager.LoadMaterialAssets(dev, context);
+	mat_manager.LoadMaterialAssets(dev, context, texture_loader);
 }

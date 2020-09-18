@@ -34,7 +34,7 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	//model_manager.DisableNormalMaps();
 	//model_manager.DisableSpecularMaps();
 	//model_manager.DisableMaskTextures();
-	model_manager.LoadAssets(dev, context);
+	model_manager.LoadAssets(dev, context, texture_loader);
 }
 
 void App::Update(eio::InputManager& im)

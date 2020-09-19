@@ -40,6 +40,8 @@ namespace egx
 		void SetVertexBuffer(const VertexBuffer& buffer);
 		void SetIndexBuffer(const IndexBuffer& buffer);
 
+		void CopyBuffer(const GPUBuffer& src, GPUBuffer& dest);
+
 		void Draw(int vertex_count);
 		void DrawIndexed(int index_count);
 

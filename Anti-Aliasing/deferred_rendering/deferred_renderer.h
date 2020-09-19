@@ -15,6 +15,7 @@ public:
 	void PrepareFrame(egx::Device& dev, egx::CommandContext& context);
 	void RenderModel(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model);
 	void RenderLight(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::RenderTarget& target);
+	void PrepareFrameEnd() { light_manager.PrepareFrameEnd(); };
 
 private:
 	GBuffer g_buffer;

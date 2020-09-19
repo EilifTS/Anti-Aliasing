@@ -62,7 +62,8 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	renderer.RenderModel(dev, context, camera, *sponza_model);
 	renderer.RenderModel(dev, context, camera, *knight_model);
 	renderer.RenderLight(dev, context, camera, target);
-	
+	renderer.PrepareFrameEnd();
+
 	auto& back_buffer = context.GetCurrentBackBuffer();
 	fxaa.Apply(dev, context, target, back_buffer);
 }

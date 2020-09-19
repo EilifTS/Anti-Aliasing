@@ -124,6 +124,7 @@ void FXAA::Apply(egx::Device& dev, egx::CommandContext& context, egx::Texture2D&
 
 void FXAA::recompileShaders(egx::Device& dev)
 {
+	dev.WaitForGPU();
 	// Recompile shaders
 	egx::Shader VS;
 	egx::Shader PS;

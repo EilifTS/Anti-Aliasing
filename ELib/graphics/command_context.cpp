@@ -161,6 +161,11 @@ void egx::CommandContext::SetIndexBuffer(const IndexBuffer& buffer)
 	command_list->IASetIndexBuffer(views);
 }
 
+void egx::CommandContext::CopyBuffer(const GPUBuffer& src, GPUBuffer& dest)
+{
+	command_list->CopyResource(dest.buffer.Get(), src.buffer.Get());
+}
+
 void egx::CommandContext::Draw(int vertex_count)
 {
 	command_list->DrawInstanced(vertex_count, 1, 0, 0);

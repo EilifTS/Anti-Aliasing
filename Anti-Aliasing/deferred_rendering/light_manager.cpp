@@ -4,12 +4,12 @@
 namespace
 {
 	static const ema::vec3 shadow_map_light_dir = ema::vec3(0.15f, -1.0f, 0.15f).GetNormalized();
-	static const ema::point2D shadow_map_size = ema::point2D(2048, 2048) * 4;
+	static const ema::point2D shadow_map_size = ema::point2D(2048, 2048) * 1;
 	static const float shadow_map_near_plane = 1.0;
 	static const float shadow_map_far_plane = 10000.0;
 
 	static const int shadow_bias = 10000;
-	static const float shadow_slope_scale_bias = 0.00001f;
+	static const float shadow_slope_scale_bias = 0.0001f;
 	static const float shadow_bias_clamp = 1.0f;
 
 	struct ShadowMapConstBufferType
@@ -25,6 +25,9 @@ LightManager::LightManager(egx::Device& dev, egx::CommandContext& context)
 	light_dir(),
 	view_to_shadowmap_matrix(ema::mat4::Identity()),
 	const_buffer(dev, (int)sizeof(ShadowMapConstBufferType)),
+	update_static_this_frame(true),
+	current_buffer_is_static(false),
+	static_depth_buffer(dev, egx::TextureFormat::D32, shadow_map_size),
 	depth_buffer(dev, egx::TextureFormat::D32, shadow_map_size)
 {
 	camera.SetPosition(-shadow_map_light_dir*5000.0f);
@@ -32,8 +35,8 @@ LightManager::LightManager(egx::Device& dev, egx::CommandContext& context)
 	camera.SetUp({ 0.0f, 0.0f, 1.0f });
 	camera.UpdateViewMatrix();
 
-
-
+	static_depth_buffer.CreateDepthStencilView(dev);
+	static_depth_buffer.CreateShaderResourceView(dev, egx::TextureFormat::FLOAT32x1);
 	depth_buffer.CreateDepthStencilView(dev);
 	depth_buffer.CreateShaderResourceView(dev, egx::TextureFormat::FLOAT32x1);
 
@@ -94,14 +97,48 @@ void LightManager::PrepareFrame(egx::Device& dev, egx::CommandContext& context)
 	context.SetTransitionBuffer(const_buffer, egx::GPUBufferState::ConstantBuffer);
 
 
-	context.SetTransitionBuffer(depth_buffer, egx::GPUBufferState::DepthWrite);
-
-	context.ClearDepth(depth_buffer, 1.0f);
+	if (update_static_this_frame)
+	{
+		current_buffer_is_static = true;
+		context.SetTransitionBuffer(static_depth_buffer, egx::GPUBufferState::DepthWrite);
+		context.ClearDepth(static_depth_buffer, 1.0f);
+	}
+	else
+	{
+		current_buffer_is_static = false;
+		context.SetTransitionBuffer(static_depth_buffer, egx::GPUBufferState::CopySource);
+		context.SetTransitionBuffer(depth_buffer, egx::GPUBufferState::CopyDest);
+		context.CopyBuffer(static_depth_buffer, depth_buffer);
+		context.SetTransitionBuffer(depth_buffer, egx::GPUBufferState::DepthWrite);
+	}
 }
 
 void LightManager::RenderToShadowMap(egx::Device& dev, egx::CommandContext& context, egx::Model& model)
 {
-	context.SetDepthStencilBuffer(depth_buffer);
+	if (current_buffer_is_static)
+	{
+		if (model.IsStatic())
+		{
+			context.SetDepthStencilBuffer(static_depth_buffer);
+		}
+		else
+		{
+			current_buffer_is_static = false;
+			context.SetTransitionBuffer(static_depth_buffer, egx::GPUBufferState::CopySource);
+			context.SetTransitionBuffer(depth_buffer, egx::GPUBufferState::CopyDest);
+			context.CopyBuffer(static_depth_buffer, depth_buffer);
+			context.SetTransitionBuffer(depth_buffer, egx::GPUBufferState::DepthWrite);
+			context.SetDepthStencilBuffer(depth_buffer);
+		}
+	}
+	else
+	{
+		if (update_static_this_frame && model.IsStatic())
+			assert(0); // Static models must be rendered first
+		if (model.IsStatic()) return; // Dont render static models if you are not going to update the static buffer
+		context.SetDepthStencilBuffer(depth_buffer);
+	}
+
 	// Set root signature and pipeline state
 	context.SetRootSignature(shadow_rs);
 	context.SetPipelineState(shadow_ps);
@@ -136,4 +173,9 @@ void LightManager::RenderToShadowMap(egx::Device& dev, egx::CommandContext& cont
 		}
 	}
 
+}
+
+void LightManager::PrepareFrameEnd()
+{
+	update_static_this_frame = false;
 }

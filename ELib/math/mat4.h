@@ -23,6 +23,12 @@ namespace ema
 			out.matrix = DirectX::XMMatrixTranslation(offset.x, offset.y, offset.z);
 			return out;
 		}
+		static inline mat4 Scale(const vec3& scale)
+		{
+			mat4 out;
+			out.matrix = DirectX::XMMatrixScaling(scale.x, scale.y, scale.z);
+			return out;
+		}
 		static inline mat4 Projection(float near_plane, float far_plane, float field_of_view, float aspect_ratio)
 		{
 			mat4 out;

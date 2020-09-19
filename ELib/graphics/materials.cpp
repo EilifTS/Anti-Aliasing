@@ -59,34 +59,34 @@ void egx::MaterialManager::AddMaterial(const Material& material)
 {
 	assert(material_map.find(material.Name()) == material_map.end());
 
-	materials.push_back(material);
-	material_map[material.Name()] = &materials.back();
+	materials.push_back(std::make_shared<Material>(material));
+	material_map[material.Name()] = materials.back();
 	material_index_map[material.Name()] = (int)materials.size() - 1;
 }
 
 void egx::MaterialManager::DisableDiffuseTextures()
 {
-	for (auto& m : materials)
-		m.SetDiffuseMapName("");
+	for (auto pm : materials)
+		pm->SetDiffuseMapName("");
 }
 void egx::MaterialManager::DisableNormalMaps()
 {
-	for (auto& m : materials)
-		m.SetNormalMapName("");
+	for (auto pm : materials)
+		pm->SetNormalMapName("");
 }
 void egx::MaterialManager::DisableSpecularMaps()
 {
-	for (auto& m : materials)
-		m.SetSpecularMapName("");
+	for (auto pm : materials)
+		pm->SetSpecularMapName("");
 }
 void egx::MaterialManager::DisableMaskTextures()
 {
-	for (auto& m : materials)
-		m.SetMaskTextureName("");
+	for (auto pm : materials)
+		pm->SetMaskTextureName("");
 }
 
 void egx::MaterialManager::LoadMaterialAssets(Device& dev, CommandContext& context, eio::TextureLoader& texture_loader)
 {
-	for (auto& m : materials)
-		m.LoadAssets(dev, context, texture_loader);
+	for (auto pm : materials)
+		pm->LoadAssets(dev, context, texture_loader);
 }

@@ -26,22 +26,3 @@ egx::Mesh::Mesh(
 	dev.ScheduleUpload(context, cpu_index_buffer, index_buffer);
 	context.SetTransitionBuffer(index_buffer, GPUBufferState::IndexBuffer);
 }
-
-egx::ModelManager::ModelManager()
-{
-
-}
-
-void egx::ModelManager::LoadMesh(Device& dev, CommandContext& context, const std::string& file_path)
-{
-	auto loaded_meshes = eio::LoadMeshFromOBJB(dev, context, file_path, mat_manager);
-	for (auto pmesh : loaded_meshes)
-	{
-		meshes.push_back(pmesh);
-	}
-}
-
-void egx::ModelManager::LoadAssets(Device& dev, CommandContext& context, eio::TextureLoader& texture_loader)
-{
-	mat_manager.LoadMaterialAssets(dev, context, texture_loader);
-}

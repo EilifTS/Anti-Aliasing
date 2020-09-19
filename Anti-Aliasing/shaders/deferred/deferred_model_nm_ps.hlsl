@@ -1,6 +1,6 @@
 #include "g_buffer.hlsli"
 
-cbuffer MaterialBuffer : register(b1)
+cbuffer MaterialBuffer : register(b2)
 {
 	float4 diffuse_color;
 	float material_specular_exponent;
@@ -20,8 +20,7 @@ struct PSInput
 	float4 position : SV_POSITION;
 	float2 uv : TEXCOORD0;
 	float distance : TEXCOORD1;
-	float3 normal : NORMAL0;
-	float3x3 tbn : NORMAL1;
+	float3x3 tbn : NORMAL;
 };
 
 GBuffer PS(PSInput input)

@@ -1,6 +1,6 @@
 #include "g_buffer.hlsli"
 
-cbuffer MaterialBuffer : register(b1)
+cbuffer MaterialBuffer : register(b2)
 {
 	float4 diffuse_color;
 	float material_specular_exponent;

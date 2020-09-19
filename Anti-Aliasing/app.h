@@ -21,9 +21,13 @@ private:
 	egx::FPCamera camera;
 	egx::RenderTarget target;
 
-	egx::ModelManager model_manager;
 	eio::TextureLoader texture_loader;
+	egx::MaterialManager mat_manager;
 	DeferrdRenderer renderer;
+
+	// Models
+	std::shared_ptr<egx::Model> sponza_model;
+	std::shared_ptr<egx::Model> knight_model;
 
 	FXAA fxaa;
 };

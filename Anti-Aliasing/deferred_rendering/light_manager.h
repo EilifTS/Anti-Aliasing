@@ -2,6 +2,7 @@
 #include "graphics/egx.h"
 #include "g_buffer.h"
 #include "graphics/camera.h"
+#include "graphics/model.h"
 
 class LightManager
 {
@@ -10,7 +11,8 @@ public:
 
 	void Update(const egx::Camera& player_camera);
 
-	void RenderToShadowMap(egx::Device& dev, egx::CommandContext& context, egx::ModelList& models);
+	void PrepareFrame(egx::Device& dev, egx::CommandContext& context);
+	void RenderToShadowMap(egx::Device& dev, egx::CommandContext& context, egx::Model& model);
 	egx::DepthBuffer& GetShadowMap() { return depth_buffer; };
 	egx::ConstantBuffer& GetLightBuffer() { return const_buffer; };
 

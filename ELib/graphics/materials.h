@@ -74,7 +74,7 @@ namespace egx
 
 		inline int MaterialCount() const { return (int)materials.size(); };
 		inline int GetMaterialIndex(const std::string& material_name) const { return material_index_map.at(material_name); };
-		inline const Material& GetMaterial(int material_index) const { return materials.at(material_index); };
+		inline const Material& GetMaterial(int material_index) const { return *materials.at(material_index); };
 
 		void DisableDiffuseTextures();
 		void DisableNormalMaps();
@@ -83,8 +83,8 @@ namespace egx
 		void LoadMaterialAssets(Device& dev, CommandContext& context, eio::TextureLoader& texture_loader);
 
 	private:
-		std::unordered_map<std::string, egx::Material*> material_map;
+		std::unordered_map<std::string, std::shared_ptr<egx::Material>> material_map;
 		std::unordered_map<std::string, int> material_index_map;
-		std::vector<egx::Material> materials;
+		std::vector<std::shared_ptr<egx::Material>> materials;
 	};
 }

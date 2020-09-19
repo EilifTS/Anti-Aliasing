@@ -47,6 +47,6 @@ float4 PS(PSInput input) : SV_TARGET
 
 
 	//return float4(float3(normal.xy, normal.z), 1.0);
-	//return float4(shadow.xxx, 1.0);
+	//return float4(shadowmap.Sample(point_clamp, input.uv).xxx, 1.0);
 	return float4(color, 1.0);
 }

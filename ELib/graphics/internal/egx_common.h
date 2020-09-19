@@ -28,6 +28,8 @@ namespace egx
 	class IndexBuffer;
 	class RenderTarget;
 	class DescriptorHeap;
+	class Mesh;
+	class Model;
 
 	enum class GPUBufferState
 	{

@@ -17,9 +17,10 @@ void DeferrdRenderer::UpdateLight(egx::Camera& camera)
 	light_manager.Update(camera);
 }
 
-void DeferrdRenderer::RenderModels(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::ModelList& models)
+
+void DeferrdRenderer::PrepareFrame(egx::Device& dev, egx::CommandContext& context)
 {
-	light_manager.RenderToShadowMap(dev, context, models);
+	light_manager.PrepareFrame(dev, context);
 
 	context.SetTransitionBuffer(g_buffer.DiffuseBuffer(), egx::GPUBufferState::RenderTarget);
 	context.SetTransitionBuffer(g_buffer.NormalBuffer(), egx::GPUBufferState::RenderTarget);
@@ -27,6 +28,12 @@ void DeferrdRenderer::RenderModels(egx::Device& dev, egx::CommandContext& contex
 	context.ClearRenderTarget(g_buffer.DiffuseBuffer(), { 0.117f, 0.565f, 1.0f, 1.0f });
 	context.ClearRenderTarget(g_buffer.NormalBuffer(), { 0.0f, 0.0f, 0.0f, 1.0f });
 	context.ClearDepth(g_buffer.DepthBuffer(), 1.0f);
+}
+
+void DeferrdRenderer::RenderModel(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model)
+{
+	light_manager.RenderToShadowMap(dev, context, model);
+
 	context.SetRenderTargets(g_buffer.DiffuseBuffer(), g_buffer.NormalBuffer(), g_buffer.DepthBuffer());
 
 	// Set root signature and pipeline state
@@ -35,13 +42,14 @@ void DeferrdRenderer::RenderModels(egx::Device& dev, egx::CommandContext& contex
 
 	// Set root values
 	context.SetRootConstantBuffer(0, camera.GetBuffer());
+	context.SetRootConstantBuffer(1, model.GetModelBuffer());
 
 	// Set scissor and viewport
 	context.SetViewport();
 	context.SetScissor();
 	context.SetPrimitiveTopology(egx::Topology::TriangleList);
 
-	for (auto pmesh : models)
+	for (auto pmesh : model.GetMeshes())
 	{
 		if (pmesh->GetIndexBuffer().GetElementCount() > 0)
 		{
@@ -51,17 +59,17 @@ void DeferrdRenderer::RenderModels(egx::Device& dev, egx::CommandContext& contex
 
 			// Set material
 			const auto& material = pmesh->GetMaterial();
-			context.SetRootConstantBuffer(1, material.GetBuffer());
+			context.SetRootConstantBuffer(2, material.GetBuffer());
 			context.SetDescriptorHeap(*dev.buffer_heap);
 
 			if (material.HasDiffuseTexture())
-				context.SetRootDescriptorTable(2, material.GetDiffuseTexture());
+				context.SetRootDescriptorTable(3, material.GetDiffuseTexture());
 			if (material.HasNormalMap())
-				context.SetRootDescriptorTable(3, material.GetNormalMap());
+				context.SetRootDescriptorTable(4, material.GetNormalMap());
 			if (material.HasSpecularMap())
-				context.SetRootDescriptorTable(4, material.GetSpecularMap());
+				context.SetRootDescriptorTable(5, material.GetSpecularMap());
 			if (material.HasMaskTexture())
-				context.SetRootDescriptorTable(5, material.GetMaskTexture());
+				context.SetRootDescriptorTable(6, material.GetMaskTexture());
 
 			// Draw
 			context.DrawIndexed(pmesh->GetIndexBuffer().GetElementCount());
@@ -105,12 +113,13 @@ void DeferrdRenderer::RenderLight(egx::Device& dev, egx::CommandContext& context
 void DeferrdRenderer::initializeModelRenderer(egx::Device& dev, const ema::point2D& size)
 {
 	// Create root signature
-	model_rs.InitConstantBuffer(0);
-	model_rs.InitConstantBuffer(1);
-	model_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel);
-	model_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel);
-	model_rs.InitDescriptorTable(2, egx::ShaderVisibility::Pixel);
-	model_rs.InitDescriptorTable(3, egx::ShaderVisibility::Pixel);
+	model_rs.InitConstantBuffer(0); // Camera buffer
+	model_rs.InitConstantBuffer(1); // Model buffer
+	model_rs.InitConstantBuffer(2); // Material buffer
+	model_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel); // Diffuse
+	model_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel); // Normals
+	model_rs.InitDescriptorTable(2, egx::ShaderVisibility::Pixel); // Specular
+	model_rs.InitDescriptorTable(3, egx::ShaderVisibility::Pixel); // Mask
 	model_rs.AddSampler(egx::Sampler::LinearWrap(), 0);
 	model_rs.Finalize(dev);
 

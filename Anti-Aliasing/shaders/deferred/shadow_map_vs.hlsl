@@ -4,6 +4,11 @@ cbuffer CameraBuffer : register(b0)
 	matrix projection_matrix;
 	float2 near_plane_vs_rectangle;
 }
+cbuffer ModelBuffer : register(b1)
+{
+	matrix world_matrix;
+	uint is_static;
+}
 
 struct VSInput
 {
@@ -22,7 +27,8 @@ struct VSOutput
 VSOutput VS(VSInput input)
 {
 	VSOutput output;
-	output.position = mul(float4(input.position, 1.0), view_matrix);
+	output.position = mul(float4(input.position, 1.0), world_matrix);
+	output.position = mul(output.position, view_matrix);
 	output.position = mul(output.position, projection_matrix);
 	output.uv = input.uv;
 

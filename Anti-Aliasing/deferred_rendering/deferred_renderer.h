@@ -3,6 +3,7 @@
 #include "g_buffer.h"
 #include "graphics/camera.h"
 #include "light_manager.h"
+#include "graphics/model.h"
 
 class DeferrdRenderer
 {
@@ -11,7 +12,8 @@ public:
 
 	void UpdateLight(egx::Camera& camera);
 
-	void RenderModels(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::ModelList& models);
+	void PrepareFrame(egx::Device& dev, egx::CommandContext& context);
+	void RenderModel(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model);
 	void RenderLight(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::RenderTarget& target);
 
 private:

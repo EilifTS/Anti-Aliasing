@@ -52,27 +52,4 @@ namespace egx
 		std::string name;
 		const Material& material;
 	};
-
-	typedef std::vector<std::shared_ptr<Mesh>> ModelList;
-	class ModelManager
-	{
-	public:
-		ModelManager();
-
-		void LoadMesh(Device& dev, CommandContext& context, const std::string& file_path);
-		void LoadAssets(Device& dev, CommandContext& context, eio::TextureLoader& texture_loader);
-
-		inline void DisableDiffuseTextures() { mat_manager.DisableDiffuseTextures(); };
-		inline void DisableNormalMaps() { mat_manager.DisableNormalMaps(); };
-		inline void DisableSpecularMaps() { mat_manager.DisableSpecularMaps(); };
-		inline void DisableMaskTextures() { mat_manager.DisableMaskTextures(); };
-
-		inline ModelList& GetModels() { return meshes; };
-
-	private:
-		MaterialManager mat_manager;
-
-		ModelList meshes;
-
-	};
 }

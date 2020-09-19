@@ -168,6 +168,7 @@
     <ClInclude Include="graphics\internal\upload_heap.h" />
     <ClInclude Include="graphics\materials.h" />
     <ClInclude Include="graphics\mesh.h" />
+    <ClInclude Include="graphics\model.h" />
     <ClInclude Include="graphics\pipeline_state.h" />
     <ClInclude Include="graphics\render_target.h" />
     <ClInclude Include="graphics\root_signature.h" />
@@ -204,6 +205,7 @@
     <ClCompile Include="graphics\internal\upload_heap.cpp" />
     <ClCompile Include="graphics\materials.cpp" />
     <ClCompile Include="graphics\mesh.cpp" />
+    <ClCompile Include="graphics\model.cpp" />
     <ClCompile Include="graphics\pipeline_state.cpp" />
     <ClCompile Include="graphics\render_target.cpp" />
     <ClCompile Include="graphics\root_signature.cpp" />

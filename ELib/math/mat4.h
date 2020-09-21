@@ -35,6 +35,17 @@ namespace ema
 			out.matrix = DirectX::XMMatrixPerspectiveFovLH(field_of_view, aspect_ratio, near_plane, far_plane);
 			return out;
 		}
+		static inline mat4 ProjectionOffset(float near_plane, float far_plane, const ema::vec2& dims, const ema::vec2 offset)
+		{
+			mat4 out;
+			out.matrix = DirectX::XMMatrixPerspectiveOffCenterLH(
+				offset.x - dims.x,
+				offset.x + dims.x,
+				offset.y - dims.y,
+				offset.y + dims.y,
+				near_plane, far_plane);
+			return out;
+		}
 		static inline mat4 Orthographic(const ema::vec2& dims, float near_plane, float far_plane)
 		{
 			mat4 out;

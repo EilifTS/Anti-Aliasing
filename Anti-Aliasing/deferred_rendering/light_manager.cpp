@@ -4,7 +4,7 @@
 namespace
 {
 	static const ema::vec3 shadow_map_light_dir = ema::vec3(0.15f, -1.0f, 0.15f).GetNormalized();
-	static const ema::point2D shadow_map_size = ema::point2D(2048, 2048) * 1;
+	static const ema::point2D shadow_map_size = ema::point2D(2048, 2048) * 2;
 	static const float shadow_map_near_plane = 1.0;
 	static const float shadow_map_far_plane = 10000.0;
 
@@ -21,7 +21,7 @@ namespace
 
 LightManager::LightManager(egx::Device& dev, egx::CommandContext& context)
 	:
-	camera(dev, context, ema::vec2(shadow_map_size) * 0.5f, shadow_map_near_plane, shadow_map_far_plane),
+	camera(dev, context, ema::vec2(shadow_map_size) * 1.0f, shadow_map_near_plane, shadow_map_far_plane),
 	light_dir(),
 	view_to_shadowmap_matrix(ema::mat4::Identity()),
 	const_buffer(dev, (int)sizeof(ShadowMapConstBufferType)),

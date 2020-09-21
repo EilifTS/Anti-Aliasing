@@ -4,6 +4,7 @@
 #include "graphics/camera.h"
 #include "light_manager.h"
 #include "graphics/model.h"
+#include "tone_mapper.h"
 
 class DeferrdRenderer
 {
@@ -17,6 +18,8 @@ public:
 	void RenderLight(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::RenderTarget& target);
 	void PrepareFrameEnd() { light_manager.PrepareFrameEnd(); };
 
+	void ApplyToneMapping(egx::Device& dev, egx::CommandContext& context, egx::Texture2D& texture, egx::RenderTarget& target) { tone_mapper.Apply(dev, context, texture, target); };
+
 private:
 	GBuffer g_buffer;
 	LightManager light_manager;
@@ -26,6 +29,8 @@ private:
 
 	egx::RootSignature light_rs;
 	egx::PipelineState light_ps;
+
+	ToneMapper tone_mapper;
 
 private:
 	void initializeModelRenderer(egx::Device& dev, const ema::point2D& size);

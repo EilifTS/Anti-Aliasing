@@ -191,6 +191,8 @@
     <ClInclude Include="math\vec2.h" />
     <ClInclude Include="math\vec3.h" />
     <ClInclude Include="math\vec4.h" />
+    <ClInclude Include="misc\binary_helpers.h" />
+    <ClInclude Include="misc\sequences.h" />
     <ClInclude Include="misc\string_helpers.h" />
     <ClInclude Include="window\window.h" />
   </ItemGroup>

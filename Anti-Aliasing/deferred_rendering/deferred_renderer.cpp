@@ -3,7 +3,8 @@
 
 DeferrdRenderer::DeferrdRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size)
 	: g_buffer(dev, size),
-	light_manager(dev, context)
+	light_manager(dev, context),
+	tone_mapper(dev)
 {
 	context.SetTransitionBuffer(g_buffer.DepthBuffer(), egx::GPUBufferState::DepthWrite);
 

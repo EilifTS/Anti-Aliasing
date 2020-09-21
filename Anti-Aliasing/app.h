@@ -5,9 +5,15 @@
 #include "graphics/egx.h"
 #include "graphics/camera.h"
 
-#include "aa/fxaa.h"
+#include "aa/fxaa/fxaa.h"
+#include "aa/taa/taa.h"
 #include "deferred_rendering/deferred_renderer.h"
 #include "io/texture_io.h"
+
+enum class AAMode
+{
+	FXAA, TAA
+};
 
 class App
 {
@@ -19,7 +25,8 @@ public:
 
 private:
 	egx::FPCamera camera;
-	egx::RenderTarget target;
+	egx::RenderTarget target1;
+	egx::RenderTarget target2;
 
 	eio::TextureLoader texture_loader;
 	egx::MaterialManager mat_manager;
@@ -29,5 +36,7 @@ private:
 	std::shared_ptr<egx::Model> sponza_model;
 	std::shared_ptr<egx::Model> knight_model;
 
+	AAMode aa_mode;
 	FXAA fxaa;
+	TAA taa;
 };

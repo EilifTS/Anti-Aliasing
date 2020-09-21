@@ -38,12 +38,16 @@ void egx::Camera::UpdateViewMatrix()
 egx::ProjectiveCamera::ProjectiveCamera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane, float field_of_view)
 	: Camera(dev, context, window_size, near_plane, far_plane), field_of_view(field_of_view)
 {
-	updateProjectionMatrix();
+	
 }
-void egx::ProjectiveCamera::updateProjectionMatrix()
+void egx::ProjectiveCamera::updateProjectionMatrix(const ema::vec2& jitter)
 {
-	projection_matrix = ema::mat4::Projection(near_plane, far_plane, field_of_view, AspectRatio());
 	near_plane_vs_rectangle = ema::vec2(AspectRatio() * tanf(0.5f * field_of_view), tanf(0.5f * field_of_view));
+	//projection_matrix = ema::mat4::Projection(near_plane, far_plane, field_of_view, AspectRatio());
+
+	ema::vec2 final_jitter = ema::vec2((jitter.x - 0.5f) / window_size.x, (jitter.y - 0.5f) / window_size.y);
+	projection_matrix = ema::mat4::ProjectionOffset(near_plane, far_plane, near_plane_vs_rectangle, final_jitter);
+
 	buffer_updated = false;
 }
 
@@ -55,8 +59,10 @@ egx::FPCamera::FPCamera(Device& dev, CommandContext& context, const ema::vec2& w
 	up = ema::vec3(0.0f, 1.0f, 0.0f);
 }
 
-void egx::FPCamera::Update(const eio::InputManager& im)
+void egx::FPCamera::Update(const eio::InputManager& im, const ema::vec2& jitter)
 {
+	updateProjectionMatrix(jitter);
+
 	auto& keyboard = im.Keyboard();
 	auto& mouse = im.Mouse();
 	auto mouse_movement = mouse.Movement();

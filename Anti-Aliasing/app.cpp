@@ -17,15 +17,20 @@ namespace
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	: 
 	camera(dev, context, ema::vec2(im.Window().WindowSize()), 1.0f, 10000.0f, 3.141592f / 3.0f, 200.0f, 0.001f),
-	target(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
+	target1(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
+	target2(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
 	renderer(dev, context, im.Window().WindowSize()),
-	fxaa(dev, im.Window().WindowSize())
+	fxaa(dev, im.Window().WindowSize()),
+	taa(dev, im.Window().WindowSize(), 1600),
+	aa_mode(AAMode::TAA)
 {
 	camera.SetPosition({ 1000.0f, 100.0f, 0.0f });
 	camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.5f });
 
-	target.CreateShaderResourceView(dev);
-	target.CreateRenderTargetView(dev);
+	target1.CreateShaderResourceView(dev);
+	target1.CreateRenderTargetView(dev);
+	target2.CreateShaderResourceView(dev);
+	target2.CreateRenderTargetView(dev);
 
 	// Load assets
 	sponza_model = std::make_shared<egx::Model>(dev, eio::LoadMeshFromOBJB(dev, context, "models/sponza", mat_manager));
@@ -41,9 +46,24 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 
 void App::Update(eio::InputManager& im)
 {
-	camera.Update(im);
+	ema::vec2 jitter = ema::vec2(0.5f);
+	if (aa_mode == AAMode::TAA)
+	{
+		taa.Update();
+		jitter = taa.GetJitter();
+	}
+
+	camera.Update(im, jitter);
 	renderer.UpdateLight(camera);
-	fxaa.HandleInput(im);
+
+	if(aa_mode == AAMode::FXAA)
+		fxaa.HandleInput(im);
+
+	if (im.Keyboard().IsKeyReleased('Q'))
+	{
+		if (aa_mode == AAMode::FXAA) aa_mode = AAMode::TAA;
+		else if (aa_mode == AAMode::TAA) aa_mode = AAMode::FXAA;
+	}
 
 	float rot = (float)((double)im.Clock().GetTime() / 1000000.0);
 	//if(fmod(rot, 1.0f) < 0.5f)
@@ -61,9 +81,15 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	renderer.PrepareFrame(dev, context);
 	renderer.RenderModel(dev, context, camera, *sponza_model);
 	renderer.RenderModel(dev, context, camera, *knight_model);
-	renderer.RenderLight(dev, context, camera, target);
+	renderer.RenderLight(dev, context, camera, target1);
 	renderer.PrepareFrameEnd();
 
+	if (aa_mode == AAMode::TAA)
+		taa.Apply(dev, context, target1, target2);
+	else if(aa_mode == AAMode::FXAA)
+		fxaa.Apply(dev, context, target1, target2);
+
 	auto& back_buffer = context.GetCurrentBackBuffer();
-	fxaa.Apply(dev, context, target, back_buffer);
+	renderer.ApplyToneMapping(dev, context, target2, back_buffer);
+
 }

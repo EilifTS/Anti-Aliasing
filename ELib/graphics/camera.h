@@ -35,7 +35,6 @@ namespace egx
 		inline void SetUp(const ema::vec3& new_up) { up = new_up; };
 
 	protected:
-		virtual void updateProjectionMatrix() = 0;
 
 	protected:
 		ema::vec2 window_size;
@@ -59,7 +58,7 @@ namespace egx
 		ProjectiveCamera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane, float field_of_view);
 
 	protected:
-		void updateProjectionMatrix();
+		void updateProjectionMatrix(const ema::vec2& jitter);
 
 	protected:
 		float field_of_view;
@@ -71,7 +70,7 @@ namespace egx
 	public:
 		FPCamera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane, float field_of_view, float speed, float mouse_speed);
 
-		void Update(const eio::InputManager& im);
+		void Update(const eio::InputManager& im, const ema::vec2& jitter);
 
 		inline void SetRotation(const ema::vec3& new_roll_pitch_yaw) { roll_pitch_yaw = new_roll_pitch_yaw; };
 

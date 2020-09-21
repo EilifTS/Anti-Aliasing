@@ -366,7 +366,7 @@ void egx::Device::Present(CommandContext& context)
 {
 	context.SetTransitionBuffer(back_buffers[current_frame], GPUBufferState::Present);
 	QueueList(context);
-	THROWIFFAILED(swap_chain->Present(0, 0), "Failed to present frame");
+	THROWIFFAILED(swap_chain->Present(1, 0), "Failed to present frame");
 	PrepareNextFrame();
 	THROWIFFAILED(command_allocators[current_frame]->Reset(), "Failed to reset command allocator");
 	context.command_list->Close();

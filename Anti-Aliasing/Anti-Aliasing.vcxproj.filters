@@ -21,9 +21,6 @@
     <ClCompile Include="app.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="aa\fxaa.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="deferred_rendering\g_buffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -33,12 +30,18 @@
     <ClCompile Include="deferred_rendering\light_manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="aa\fxaa\fxaa.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="aa\taa\taa.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="deferred_rendering\tone_mapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="aa\fxaa.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="deferred_rendering\g_buffer.h">
@@ -48,6 +51,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="deferred_rendering\light_manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="aa\fxaa\fxaa.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="aa\taa\taa.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="aa\taa\jitter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="deferred_rendering\tone_mapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -60,6 +75,12 @@
     <FxCompile Include="shaders\deferred\deferred_model_nm_vs.hlsl" />
     <FxCompile Include="shaders\deferred\shadow_map_vs.hlsl" />
     <FxCompile Include="shaders\deferred\shadow_map_ps.hlsl" />
+    <FxCompile Include="shaders\taa\taa_ps.hlsl" />
+    <FxCompile Include="shaders\taa\taa_vs.hlsl" />
+    <FxCompile Include="shaders\deferred\tone_map_ps.hlsl" />
+    <FxCompile Include="shaders\deferred\tone_map_vs.hlsl" />
+    <FxCompile Include="shaders\taa\format_converter_ps.hlsl" />
+    <FxCompile Include="shaders\taa\format_converter_vs.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fxaa\fxaa_header.hlsli" />

@@ -141,6 +141,12 @@
     <ClInclude Include="graphics\model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="misc\binary_helpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="misc\sequences.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="graphics\internal\descriptor_heap.cpp">

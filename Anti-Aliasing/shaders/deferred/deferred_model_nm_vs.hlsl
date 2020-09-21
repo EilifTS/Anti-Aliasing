@@ -2,7 +2,8 @@ cbuffer CameraBuffer : register(b0)
 {
 	matrix view_matrix;
 	matrix projection_matrix;
-	float2 near_plane_vs_rectangle;
+	matrix inv_projection_matrix;
+	matrix inv_projection_matrix_no_jitter;
 }
 cbuffer ModelBuffer : register(b1)
 {

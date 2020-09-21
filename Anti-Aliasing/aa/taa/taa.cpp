@@ -1,11 +1,21 @@
 #include "taa.h"
+#include "graphics/cpu_buffer.h"
+
+namespace
+{
+	struct taaBufferType
+	{
+		ema::mat4 view_to_prev_frame_clip;
+	};
+}
 
 TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count)
 	: jitter(Jitter::Halton(2, 3, sample_count)),
 	sample_count(sample_count),
 	current_index(0),
 	history_buffer(dev, egx::TextureFormat::FLOAT16x4, window_size),
-	temp_target(dev, egx::TextureFormat::FLOAT16x4, window_size)
+	temp_target(dev, egx::TextureFormat::FLOAT16x4, window_size),
+	taa_buffer(dev, (int)sizeof(taaBufferType))
 {
 	history_buffer.CreateShaderResourceView(dev);
 	temp_target.CreateRenderTargetView(dev);
@@ -13,11 +23,29 @@ TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count)
 	initializeFormatConverter(dev);
 }
 
+void TAA::Update(const ema::mat4& prev_frame_view_matrix, const ema::mat4& prev_frame_proj_matrix_no_jitter, const ema::mat4& inv_view_matrix)
+{ 
+	current_index = (current_index + 1) % sample_count;
+	view_to_prev_clip = (
+		inv_view_matrix *
+		prev_frame_view_matrix *
+		prev_frame_proj_matrix_no_jitter);
+};
 
-void TAA::Apply(egx::Device& dev, egx::CommandContext& context, egx::Texture2D& new_frame, egx::RenderTarget& target)
+void TAA::Apply(egx::Device& dev, egx::CommandContext& context, egx::Texture2D& new_frame, egx::Texture2D& depth_buffer, egx::RenderTarget& target, egx::Camera& camera)
 {
+	// Update constant buffer
+	taaBufferType taabt;
+	taabt.view_to_prev_frame_clip = view_to_prev_clip.Transpose();
+
+	egx::CPUBuffer cpu_buffer(&taabt, sizeof(taabt));
+	context.SetTransitionBuffer(taa_buffer, egx::GPUBufferState::CopyDest);
+	dev.ScheduleUpload(context, cpu_buffer, taa_buffer);
+	context.SetTransitionBuffer(taa_buffer, egx::GPUBufferState::ConstantBuffer);
+
 	context.SetTransitionBuffer(new_frame, egx::GPUBufferState::PixelResource);
 	context.SetTransitionBuffer(history_buffer, egx::GPUBufferState::PixelResource);
+	context.SetTransitionBuffer(depth_buffer, egx::GPUBufferState::PixelResource);
 	context.SetTransitionBuffer(temp_target, egx::GPUBufferState::RenderTarget);
 	context.SetTransitionBuffer(target, egx::GPUBufferState::RenderTarget);
 
@@ -25,8 +53,11 @@ void TAA::Apply(egx::Device& dev, egx::CommandContext& context, egx::Texture2D& 
 	context.SetPipelineState(taa_ps);
 
 	context.SetDescriptorHeap(*dev.buffer_heap);
-	context.SetRootDescriptorTable(0, new_frame);
-	context.SetRootDescriptorTable(1, history_buffer);
+	context.SetRootConstantBuffer(0, camera.GetBuffer());
+	context.SetRootConstantBuffer(1, taa_buffer);
+	context.SetRootDescriptorTable(2, new_frame);
+	context.SetRootDescriptorTable(3, history_buffer);
+	context.SetRootDescriptorTable(4, depth_buffer);
 
 	context.SetRenderTarget(temp_target);
 
@@ -59,8 +90,11 @@ void TAA::Apply(egx::Device& dev, egx::CommandContext& context, egx::Texture2D& 
 void TAA::initializeTAA(egx::Device& dev)
 {
 	// Create root signature
-	taa_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel);
-	taa_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel);
+	taa_rs.InitConstantBuffer(0); // Camera buffer
+	taa_rs.InitConstantBuffer(1, egx::ShaderVisibility::Pixel); // TAA buffer
+	taa_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel); // New sample texture
+	taa_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel); // History buffer
+	taa_rs.InitDescriptorTable(2, egx::ShaderVisibility::Pixel); // Depth buffer
 	taa_rs.AddSampler(egx::Sampler::LinearClamp(), 0);
 	taa_rs.Finalize(dev);
 

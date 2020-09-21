@@ -20,6 +20,8 @@ public:
 
 	void ApplyToneMapping(egx::Device& dev, egx::CommandContext& context, egx::Texture2D& texture, egx::RenderTarget& target) { tone_mapper.Apply(dev, context, texture, target); };
 
+	GBuffer& GetGBuffer() { return g_buffer; };
+
 private:
 	GBuffer g_buffer;
 	LightManager light_manager;

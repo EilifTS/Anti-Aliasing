@@ -5,12 +5,7 @@
 
 namespace egx
 {
-	struct CameraBufferType
-	{
-		ema::mat4 view_matrix;
-		ema::mat4 projection_matrix;
-		ema::vec2 near_plane_view_space_rectangle;
-	};
+	
 
 	class Camera
 	{
@@ -29,6 +24,8 @@ namespace egx
 		inline const ema::vec3& LookAt() const { return look_at; };
 		inline const ema::mat4& ViewMatrix() const{ return view_matrix; };
 		inline const ema::mat4& ProjectionMatrix() const{ return projection_matrix; };
+		inline const ema::mat4& ProjectionMatrixNoJitter() const{ return projection_matrix_no_jitter; };
+		inline const ema::mat4& InvProjectionMatrix() const{ return inv_projection_matrix; };
 
 		inline void SetPosition(const ema::vec3& new_pos) { position = new_pos; };
 		inline void SetLookAt(const ema::vec3& new_look_at) { look_at = new_look_at; };
@@ -47,6 +44,9 @@ namespace egx
 
 		ema::mat4 view_matrix;
 		ema::mat4 projection_matrix;
+		ema::mat4 inv_projection_matrix;
+		ema::mat4 projection_matrix_no_jitter;
+		ema::mat4 inv_projection_matrix_no_jitter;
 
 		bool buffer_updated;
 		egx::ConstantBuffer buffer;

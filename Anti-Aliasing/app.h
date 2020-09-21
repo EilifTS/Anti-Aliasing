@@ -34,7 +34,9 @@ private:
 
 	// Models
 	std::shared_ptr<egx::Model> sponza_model;
-	std::shared_ptr<egx::Model> knight_model;
+	std::shared_ptr<egx::Model> knight_model1;
+	std::shared_ptr<egx::Model> knight_model2;
+	std::shared_ptr<egx::Model> knight_model3;
 
 	AAMode aa_mode;
 	FXAA fxaa;

@@ -3,11 +3,22 @@
 #include "command_context.h"
 #include "cpu_buffer.h"
 
+namespace
+{
+	struct cameraBufferType
+	{
+		ema::mat4 view_matrix;
+		ema::mat4 projection_matrix;
+		ema::mat4 inv_projection_matrix;
+		ema::mat4 inv_projection_matrix_no_jitter;
+	};
+}
+
 // Camera
 egx::Camera::Camera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane)
 	: window_size(window_size), near_plane(near_plane), far_plane(far_plane), 
 	view_matrix(ema::mat4::Identity()), projection_matrix(ema::mat4::Identity()),
-	buffer_updated(false), buffer(dev, (int)sizeof(CameraBufferType))
+	buffer_updated(false), buffer(dev, (int)sizeof(cameraBufferType))
 {
 }
 
@@ -15,10 +26,11 @@ void egx::Camera::UpdateBuffer(Device& dev, CommandContext& context)
 {
 	if (!buffer_updated)
 	{
-		CameraBufferType cbt;
+		cameraBufferType cbt;
 		cbt.view_matrix = view_matrix.Transpose();
 		cbt.projection_matrix = projection_matrix.Transpose();
-		cbt.near_plane_view_space_rectangle = near_plane_vs_rectangle;
+		cbt.inv_projection_matrix = inv_projection_matrix.Transpose();
+		cbt.inv_projection_matrix_no_jitter = inv_projection_matrix_no_jitter.Transpose();
 
 		CPUBuffer cpu_buffer(&cbt, (int)sizeof(cbt));
 		context.SetTransitionBuffer(buffer, GPUBufferState::CopyDest);
@@ -47,6 +59,9 @@ void egx::ProjectiveCamera::updateProjectionMatrix(const ema::vec2& jitter)
 
 	ema::vec2 final_jitter = ema::vec2((jitter.x - 0.5f) / window_size.x, (jitter.y - 0.5f) / window_size.y);
 	projection_matrix = ema::mat4::ProjectionOffset(near_plane, far_plane, near_plane_vs_rectangle, final_jitter);
+	projection_matrix_no_jitter = ema::mat4::Projection(near_plane, far_plane, near_plane_vs_rectangle);
+	inv_projection_matrix = projection_matrix.Inverse();
+	inv_projection_matrix_no_jitter = projection_matrix_no_jitter.Inverse();
 
 	buffer_updated = false;
 }
@@ -106,6 +121,8 @@ egx::OrthographicCamera::OrthographicCamera(Device& dev, CommandContext& context
 void egx::OrthographicCamera::updateProjectionMatrix()
 {
 	projection_matrix = ema::mat4::Orthographic(window_size, near_plane, far_plane);
+	projection_matrix_no_jitter = projection_matrix;
+	inv_projection_matrix = projection_matrix.Inverse();
 	near_plane_vs_rectangle = ema::vec2(AspectRatio(), 1.0f); // Not right but not really needed
 	buffer_updated = false;
 }

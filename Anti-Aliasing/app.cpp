@@ -35,8 +35,22 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	// Load assets
 	sponza_model = std::make_shared<egx::Model>(dev, eio::LoadMeshFromOBJB(dev, context, "models/sponza", mat_manager));
 	sponza_model->SetStatic(true);
-	knight_model = std::make_shared<egx::Model>(dev, eio::LoadMeshFromOBJB(dev, context, "models/knight", mat_manager));
-	knight_model->SetScale(120.0f);
+
+	auto knight_mesh = eio::LoadMeshFromOBJB(dev, context, "models/knight", mat_manager);
+	knight_model1 = std::make_shared<egx::Model>(dev, knight_mesh);
+	knight_model2 = std::make_shared<egx::Model>(dev, knight_mesh);
+	knight_model3 = std::make_shared<egx::Model>(dev, knight_mesh);
+	knight_model1->SetScale(120.0f);
+	knight_model2->SetScale(120.0f);
+	knight_model3->SetScale(120.0f);
+	knight_model1->SetPosition(ema::vec3(-80.0f, 0.0f, 50.0f));
+	knight_model2->SetPosition(ema::vec3(-440.0f, 0.0f, 50.0f));
+	knight_model3->SetPosition(ema::vec3(300.0f, 0.0f, 50.0f));
+	knight_model1->SetRotation(ema::vec3(0.0f, 0.0f, 0.0f));
+	knight_model2->SetRotation(ema::vec3(0.0f, 0.0f, 3.141692f));
+	knight_model3->SetRotation(ema::vec3(0.0f, 0.0f, 3.141692f));
+	knight_model3->SetStatic(true);
+
 	//mat_manager.DisableDiffuseTextures();
 	//mat_manager.DisableNormalMaps();
 	//mat_manager.DisableSpecularMaps();
@@ -47,45 +61,46 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 void App::Update(eio::InputManager& im)
 {
 	ema::vec2 jitter = ema::vec2(0.5f);
-	if (aa_mode == AAMode::TAA)
-	{
-		taa.Update();
-		jitter = taa.GetJitter();
-	}
+	if (aa_mode == AAMode::TAA) jitter = taa.GetNextJitter();
+
+	ema::mat4 prev_frame_view_matrix = camera.ViewMatrix();
+	ema::mat4 prev_frame_proj_matrix_no_jitter = camera.ProjectionMatrixNoJitter();
 
 	camera.Update(im, jitter);
 	renderer.UpdateLight(camera);
 
 	if(aa_mode == AAMode::FXAA)
 		fxaa.HandleInput(im);
-
+	taa.Update(prev_frame_view_matrix, prev_frame_proj_matrix_no_jitter, camera.ViewMatrix().Inverse());
 	if (im.Keyboard().IsKeyReleased('Q'))
 	{
 		if (aa_mode == AAMode::FXAA) aa_mode = AAMode::TAA;
 		else if (aa_mode == AAMode::TAA) aa_mode = AAMode::FXAA;
 	}
 
-	float rot = (float)((double)im.Clock().GetTime() / 1000000.0);
-	//if(fmod(rot, 1.0f) < 0.5f)
-	//	knight_model->SetRotation(ema::vec3(0.0f, 0.0f, rot));
-	//else
-	//	knight_model->SetRotation(ema::vec3(0.0f, 0.0f, 0.0f));
-	knight_model->SetRotation(ema::vec3(0.0f, 0.0f, rot));
+	float time = (float)((double)im.Clock().GetTime() / 1000000.0);
+	float rot = time;
+	knight_model1->SetRotation(ema::vec3(0.0f, 0.0f, rot));
+	knight_model2->SetPosition(ema::vec3(-440.0f, 0.0f, 50.0f + 10.0f*sinf(time)));
 }
 void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 {
 	camera.UpdateBuffer(dev, context);
 	sponza_model->UpdateBuffer(dev, context);
-	knight_model->UpdateBuffer(dev, context);
+	knight_model1->UpdateBuffer(dev, context);
+	knight_model2->UpdateBuffer(dev, context);
+	knight_model3->UpdateBuffer(dev, context);
 
 	renderer.PrepareFrame(dev, context);
 	renderer.RenderModel(dev, context, camera, *sponza_model);
-	renderer.RenderModel(dev, context, camera, *knight_model);
+	renderer.RenderModel(dev, context, camera, *knight_model3);
+	renderer.RenderModel(dev, context, camera, *knight_model1);
+	renderer.RenderModel(dev, context, camera, *knight_model2);
 	renderer.RenderLight(dev, context, camera, target1);
 	renderer.PrepareFrameEnd();
 
 	if (aa_mode == AAMode::TAA)
-		taa.Apply(dev, context, target1, target2);
+		taa.Apply(dev, context, target1, renderer.GetGBuffer().NormalBuffer(), target2, camera);
 	else if(aa_mode == AAMode::FXAA)
 		fxaa.Apply(dev, context, target1, target2);
 

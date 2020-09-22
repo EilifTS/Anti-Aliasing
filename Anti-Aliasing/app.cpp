@@ -19,7 +19,7 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	target2(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
 	renderer(dev, context, im.Window().WindowSize(), far_plane),
 	fxaa(dev, im.Window().WindowSize()),
-	taa(dev, im.Window().WindowSize(), 1600),
+	taa(dev, im.Window().WindowSize(), 16),
 	aa_mode(AAMode::TAA)
 {
 	camera.SetPosition({ 1000.0f, 100.0f, 0.0f });
@@ -94,11 +94,13 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	renderer.RenderModel(dev, context, camera, *knight_model3);
 	renderer.RenderModel(dev, context, camera, *knight_model1);
 	renderer.RenderModel(dev, context, camera, *knight_model2);
+	renderer.RenderMotionVectors(dev, context, camera, *knight_model1);
+	renderer.RenderMotionVectors(dev, context, camera, *knight_model2);
 	renderer.RenderLight(dev, context, camera, target1);
 	renderer.PrepareFrameEnd();
 
 	if (aa_mode == AAMode::TAA)
-		taa.Apply(dev, context, target1, renderer.GetGBuffer().NormalBuffer(), target2, camera);
+		taa.Apply(dev, context, renderer.GetDepthNoJitter(), renderer.GetGBuffer().NormalBuffer(), renderer.GetMotionVectors(), target1, target2, camera);
 	else if(aa_mode == AAMode::FXAA)
 		fxaa.Apply(dev, context, target1, target2);
 

@@ -1,14 +1,13 @@
+#include "../headers/camera.hlsli"
+#include "../headers/model.hlsli"
+
 cbuffer CameraBuffer : register(b0)
 {
-	matrix view_matrix;
-	matrix projection_matrix;
-	matrix inv_projection_matrix;
-	matrix inv_projection_matrix_no_jitter;
+	CameraBufferType camera;
 }
 cbuffer ModelBuffer : register(b1)
 {
-	matrix world_matrix;
-	uint is_static;
+	ModelBufferType model;
 }
 
 struct VSInput
@@ -28,9 +27,9 @@ struct VSOutput
 VSOutput VS(VSInput input)
 {
 	VSOutput output;
-	output.position = mul(float4(input.position, 1.0), world_matrix);
-	output.position = mul(output.position, view_matrix);
-	output.position = mul(output.position, projection_matrix);
+	output.position = mul(float4(input.position, 1.0), model.world_matrix);
+	output.position = mul(output.position, camera.view_matrix);
+	output.position = mul(output.position, camera.projection_matrix);
 	output.uv = input.uv;
 
 	return output;

@@ -16,11 +16,14 @@ public:
 	void PrepareFrame(egx::Device& dev, egx::CommandContext& context);
 	void RenderModel(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model);
 	void RenderLight(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::RenderTarget& target);
+	void RenderMotionVectors(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model);
 	void PrepareFrameEnd() { light_manager.PrepareFrameEnd(); };
 
 	void ApplyToneMapping(egx::Device& dev, egx::CommandContext& context, egx::Texture2D& texture, egx::RenderTarget& target) { tone_mapper.Apply(dev, context, texture, target); };
 
 	GBuffer& GetGBuffer() { return g_buffer; };
+	egx::DepthBuffer& GetDepthNoJitter() { return unjittered_depth; };
+	egx::Texture2D& GetMotionVectors() { return motion_vectors; };
 
 private:
 	GBuffer g_buffer;
@@ -32,9 +35,15 @@ private:
 	egx::RootSignature light_rs;
 	egx::PipelineState light_ps;
 
+	egx::RootSignature motion_vector_rs;
+	egx::PipelineState motion_vector_ps;
+	egx::RenderTarget motion_vectors;
+	egx::DepthBuffer unjittered_depth;
+
 	ToneMapper tone_mapper;
 
 private:
-	void initializeModelRenderer(egx::Device& dev, const ema::point2D& size);
-	void initializeLightRenderer(egx::Device& dev, const ema::point2D& size);
+	void initializeModelRenderer(egx::Device& dev);
+	void initializeLightRenderer(egx::Device& dev);
+	void initializeMotionVectorRenderer(egx::Device& dev);
 };

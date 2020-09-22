@@ -16,7 +16,8 @@ namespace egx
 		void UpdateViewMatrix();
 		void UpdateBuffer(Device& dev, CommandContext& context);
 
-		inline egx::ConstantBuffer& GetBuffer() { return buffer; };
+		inline egx::ConstantBuffer& GetLastBuffer() { return *last_buffer; };
+		inline egx::ConstantBuffer& GetBuffer() { return *curr_buffer; };
 		inline float FarPlane() const { return far_plane; };
 		inline float NearPlane() const { return near_plane; };
 		inline float AspectRatio() const { return window_size.x / window_size.y; };
@@ -43,13 +44,14 @@ namespace egx
 		ema::vec3 up;
 
 		ema::mat4 view_matrix;
+		ema::mat4 inv_view_matrix;
 		ema::mat4 projection_matrix;
 		ema::mat4 inv_projection_matrix;
 		ema::mat4 projection_matrix_no_jitter;
 		ema::mat4 inv_projection_matrix_no_jitter;
 
-		bool buffer_updated;
-		egx::ConstantBuffer buffer;
+		std::shared_ptr<egx::ConstantBuffer> last_buffer;
+		std::shared_ptr<egx::ConstantBuffer> curr_buffer;
 	};
 
 	class ProjectiveCamera : public Camera

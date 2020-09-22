@@ -4,12 +4,20 @@
 DeferrdRenderer::DeferrdRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size, float far_plane)
 	: g_buffer(dev, size, far_plane),
 	light_manager(dev, context),
-	tone_mapper(dev)
+	tone_mapper(dev),
+	motion_vectors(dev, egx::TextureFormat::FLOAT16x2, size),
+	unjittered_depth(dev, egx::TextureFormat::D24_S8, size)
 {
 	context.SetTransitionBuffer(g_buffer.DepthBuffer(), egx::GPUBufferState::DepthWrite);
+	context.SetTransitionBuffer(unjittered_depth, egx::GPUBufferState::DepthWrite);
 
-	initializeModelRenderer(dev, size);
-	initializeLightRenderer(dev, size);
+	motion_vectors.CreateShaderResourceView(dev);
+	motion_vectors.CreateRenderTargetView(dev);
+	unjittered_depth.CreateDepthStencilView(dev);
+
+	initializeModelRenderer(dev);
+	initializeLightRenderer(dev);
+	initializeMotionVectorRenderer(dev);
 
 }
 
@@ -25,10 +33,13 @@ void DeferrdRenderer::PrepareFrame(egx::Device& dev, egx::CommandContext& contex
 
 	context.SetTransitionBuffer(g_buffer.DiffuseBuffer(), egx::GPUBufferState::RenderTarget);
 	context.SetTransitionBuffer(g_buffer.NormalBuffer(), egx::GPUBufferState::RenderTarget);
+	context.SetTransitionBuffer(motion_vectors, egx::GPUBufferState::RenderTarget);
 
 	context.ClearRenderTarget(g_buffer.DiffuseBuffer());
 	context.ClearRenderTarget(g_buffer.NormalBuffer());
+	context.ClearRenderTarget(motion_vectors);
 	context.ClearDepth(g_buffer.DepthBuffer());
+	context.ClearDepthStencil(unjittered_depth);
 }
 
 void DeferrdRenderer::RenderModel(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model)
@@ -111,7 +122,40 @@ void DeferrdRenderer::RenderLight(egx::Device& dev, egx::CommandContext& context
 	context.Draw(4);
 }
 
-void DeferrdRenderer::initializeModelRenderer(egx::Device& dev, const ema::point2D& size)
+void DeferrdRenderer::RenderMotionVectors(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model)
+{
+	context.SetRenderTarget(motion_vectors, unjittered_depth);
+
+	// Set root signature and pipeline state
+	context.SetRootSignature(motion_vector_rs);
+	context.SetPipelineState(motion_vector_ps);
+
+	// Set root values
+	context.SetRootConstantBuffer(0, camera.GetBuffer());
+	context.SetRootConstantBuffer(1, camera.GetLastBuffer());
+	context.SetRootConstantBuffer(2, model.GetModelBuffer());
+
+	// Set scissor and viewport
+	context.SetViewport();
+	context.SetScissor();
+	context.SetPrimitiveTopology(egx::Topology::TriangleList);
+	context.SetStencilRefrenceValue(1);
+
+	for (auto pmesh : model.GetMeshes())
+	{
+		if (pmesh->GetIndexBuffer().GetElementCount() > 0)
+		{
+			// Set vertex buffer
+			context.SetVertexBuffer(pmesh->GetVertexBuffer());
+			context.SetIndexBuffer(pmesh->GetIndexBuffer());
+
+			// Draw
+			context.DrawIndexed(pmesh->GetIndexBuffer().GetElementCount());
+		}
+	}
+}
+
+void DeferrdRenderer::initializeModelRenderer(egx::Device& dev)
 {
 	// Create root signature
 	model_rs.InitConstantBuffer(0); // Camera buffer
@@ -148,7 +192,7 @@ void DeferrdRenderer::initializeModelRenderer(egx::Device& dev, const ema::point
 	model_ps.Finalize(dev);
 }
 
-void DeferrdRenderer::initializeLightRenderer(egx::Device& dev, const ema::point2D& size)
+void DeferrdRenderer::initializeLightRenderer(egx::Device& dev)
 {
 	// Create root signature
 	light_rs.InitConstantBuffer(0);
@@ -179,4 +223,37 @@ void DeferrdRenderer::initializeLightRenderer(egx::Device& dev, const ema::point
 	light_ps.SetRasterState(egx::RasterState::Default());
 	light_ps.SetDepthStencilState(egx::DepthStencilState::DepthOff());
 	light_ps.Finalize(dev);
+}
+
+void DeferrdRenderer::initializeMotionVectorRenderer(egx::Device& dev)
+{
+	// Create root signature
+	motion_vector_rs.InitConstantBuffer(0); // Camera buffer
+	motion_vector_rs.InitConstantBuffer(1); // Last Camera buffer
+	motion_vector_rs.InitConstantBuffer(2); // Model buffer
+	motion_vector_rs.AddSampler(egx::Sampler::LinearClamp(), 0);
+	motion_vector_rs.Finalize(dev);
+
+	// Create Shaders
+	egx::Shader VS;
+	egx::Shader PS;
+	VS.CompileVertexShader("shaders/deferred/motion_vector_vs.hlsl");
+	PS.CompilePixelShader("shaders/deferred/motion_vector_ps.hlsl");
+
+	// Input layout
+	egx::InputLayout layout = egx::MeshVertex::GetInputLayout();
+
+	// Create PSO
+	motion_vector_ps.SetRootSignature(motion_vector_rs);
+	motion_vector_ps.SetInputLayout(layout);
+	motion_vector_ps.SetPrimitiveTopology(egx::TopologyType::Triangle);
+	motion_vector_ps.SetVertexShader(VS);
+	motion_vector_ps.SetPixelShader(PS);
+	motion_vector_ps.SetDepthStencilFormat(g_buffer.DepthBuffer().Format());
+	motion_vector_ps.SetRenderTargetFormat(motion_vectors.Format());
+
+	motion_vector_ps.SetBlendState(egx::BlendState::NoBlend());
+	motion_vector_ps.SetRasterState(egx::RasterState::Default());
+	motion_vector_ps.SetDepthStencilState(egx::DepthStencilState::MotionVectorWriteStencil());
+	motion_vector_ps.Finalize(dev);
 }

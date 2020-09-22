@@ -129,6 +129,10 @@ void egx::CommandContext::SetPrimitiveTopology(Topology top)
 	auto t = convertTopology(top);
 	command_list->IASetPrimitiveTopology(t);
 }
+void egx::CommandContext::SetStencilRefrenceValue(unsigned char value)
+{
+	command_list->OMSetStencilRef((UINT)value);
+}
 
 void egx::CommandContext::SetDescriptorHeap(DescriptorHeap& heap)
 {

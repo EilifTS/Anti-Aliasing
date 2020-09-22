@@ -8,8 +8,10 @@ namespace
 	struct cameraBufferType
 	{
 		ema::mat4 view_matrix;
+		ema::mat4 inv_view_matrix;
 		ema::mat4 projection_matrix;
 		ema::mat4 inv_projection_matrix;
+		ema::mat4 projection_matrix_no_jitter;
 		ema::mat4 inv_projection_matrix_no_jitter;
 	};
 }
@@ -17,33 +19,38 @@ namespace
 // Camera
 egx::Camera::Camera(Device& dev, CommandContext& context, const ema::vec2& window_size, float near_plane, float far_plane)
 	: window_size(window_size), near_plane(near_plane), far_plane(far_plane), 
-	view_matrix(ema::mat4::Identity()), projection_matrix(ema::mat4::Identity()),
-	buffer_updated(false), buffer(dev, (int)sizeof(cameraBufferType))
+	view_matrix(ema::mat4::Identity()), projection_matrix(ema::mat4::Identity())
 {
+	curr_buffer = std::make_shared<egx::ConstantBuffer>(dev, (int)sizeof(cameraBufferType));
+	last_buffer = std::make_shared<egx::ConstantBuffer>(dev, (int)sizeof(cameraBufferType));
 }
 
 void egx::Camera::UpdateBuffer(Device& dev, CommandContext& context)
 {
-	if (!buffer_updated)
-	{
-		cameraBufferType cbt;
-		cbt.view_matrix = view_matrix.Transpose();
-		cbt.projection_matrix = projection_matrix.Transpose();
-		cbt.inv_projection_matrix = inv_projection_matrix.Transpose();
-		cbt.inv_projection_matrix_no_jitter = inv_projection_matrix_no_jitter.Transpose();
+	// Swap buffers
+	auto temp = last_buffer;
+	last_buffer = curr_buffer;
+	curr_buffer = temp;
 
-		CPUBuffer cpu_buffer(&cbt, (int)sizeof(cbt));
-		context.SetTransitionBuffer(buffer, GPUBufferState::CopyDest);
-		dev.ScheduleUpload(context, cpu_buffer, buffer);
-		context.SetTransitionBuffer(buffer, GPUBufferState::ConstantBuffer);
-		buffer_updated = true;
-	}
+	cameraBufferType cbt;
+	cbt.view_matrix = view_matrix.Transpose();
+	cbt.inv_view_matrix = inv_view_matrix.Transpose();
+	cbt.projection_matrix = projection_matrix.Transpose();
+	cbt.inv_projection_matrix = inv_projection_matrix.Transpose();
+	cbt.projection_matrix_no_jitter = projection_matrix_no_jitter.Transpose();
+	cbt.inv_projection_matrix_no_jitter = inv_projection_matrix_no_jitter.Transpose();
+
+	CPUBuffer cpu_buffer(&cbt, (int)sizeof(cbt));
+	context.SetTransitionBuffer(*curr_buffer, GPUBufferState::CopyDest);
+	dev.ScheduleUpload(context, cpu_buffer, *curr_buffer);
+	context.SetTransitionBuffer(*curr_buffer, GPUBufferState::ConstantBuffer);
+	context.SetTransitionBuffer(*last_buffer, GPUBufferState::ConstantBuffer);
 }
 
 void egx::Camera::UpdateViewMatrix()
 {
 	view_matrix = ema::mat4::LookAt(position, look_at, up);
-	buffer_updated = false;
+	inv_view_matrix = view_matrix.Inverse();
 }
 
 // Projective Camera
@@ -62,8 +69,6 @@ void egx::ProjectiveCamera::updateProjectionMatrix(const ema::vec2& jitter)
 	projection_matrix_no_jitter = ema::mat4::Projection(near_plane, far_plane, near_plane_vs_rectangle);
 	inv_projection_matrix = projection_matrix.Inverse();
 	inv_projection_matrix_no_jitter = projection_matrix_no_jitter.Inverse();
-
-	buffer_updated = false;
 }
 
 // First person camera
@@ -124,5 +129,4 @@ void egx::OrthographicCamera::updateProjectionMatrix()
 	projection_matrix_no_jitter = projection_matrix;
 	inv_projection_matrix = projection_matrix.Inverse();
 	near_plane_vs_rectangle = ema::vec2(AspectRatio(), 1.0f); // Not right but not really needed
-	buffer_updated = false;
 }

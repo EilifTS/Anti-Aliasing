@@ -102,6 +102,54 @@ namespace egx
 			out.BackFace = defaultStencilOp;
 			return out;
 		}
+		static inline DepthStencilState MotionVectorWriteStencil()
+		{
+			DepthStencilState out;
+			out.DepthEnable = TRUE;
+			out.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+			out.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+
+			// Write ref value to stencil buffer
+			out.StencilEnable = TRUE;
+			out.StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK;
+			out.StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK;
+
+			D3D12_DEPTH_STENCILOP_DESC defaultStencilOp = {};
+			out.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+			out.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+			out.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+			out.FrontFace.StencilDepthFailOp= D3D12_STENCIL_OP_KEEP;
+
+			out.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+			out.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+			out.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+			out.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+			return out;
+		}
+		static inline DepthStencilState CompWithRefStencil()
+		{
+			DepthStencilState out;
+			out.DepthEnable = FALSE;
+			out.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+			out.DepthFunc = D3D12_COMPARISON_FUNC_EQUAL;
+
+			// Pass if stencil equals ref value
+			out.StencilEnable = TRUE;
+			out.StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK;
+			out.StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK;
+
+			D3D12_DEPTH_STENCILOP_DESC defaultStencilOp = {};
+			out.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
+			out.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+			out.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+			out.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+
+			out.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+			out.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+			out.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+			out.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+			return out;
+		}
 	};
 
 	class PipelineState

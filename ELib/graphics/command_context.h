@@ -29,6 +29,7 @@ namespace egx
 		void SetScissor(const ema::point2D& size);
 		inline void SetScissor(); // Set scissor to the whole screen
 		void SetPrimitiveTopology(Topology top);
+		void SetStencilRefrenceValue(unsigned char value);
 
 		void SetDescriptorHeap(DescriptorHeap& heap);
 

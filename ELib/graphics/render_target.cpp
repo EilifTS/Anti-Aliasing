@@ -2,14 +2,23 @@
 #include "internal/egx_internal.h"
 #include "device.h"
 
-egx::RenderTarget::RenderTarget(Device& dev, TextureFormat format, const ema::point2D& size, ClearValue clear_value)
-	: rtv(),
+namespace
+{
+	D3D12_CLEAR_VALUE convertClearValue(DXGI_FORMAT format, const ema::color& color)
+	{
+		float vals[] = { color.r, color.g, color.b, color.a };
+		return CD3DX12_CLEAR_VALUE(format, vals);
+	}
+}
+
+egx::RenderTarget::RenderTarget(Device& dev, TextureFormat format, const ema::point2D& size, const ema::color& clear_value)
+	: rtv(), clear_value(convertClearValue(convertFormat(format), clear_value)),
 	Texture2D(
 		dev,
 		convertFormat(format),
 		size,
 		D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
-		clear_value
+		convertClearValue(convertFormat(format), clear_value)
 	)
 {
 

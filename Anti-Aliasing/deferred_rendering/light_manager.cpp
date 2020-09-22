@@ -101,7 +101,7 @@ void LightManager::PrepareFrame(egx::Device& dev, egx::CommandContext& context)
 	{
 		current_buffer_is_static = true;
 		context.SetTransitionBuffer(static_depth_buffer, egx::GPUBufferState::DepthWrite);
-		context.ClearDepth(static_depth_buffer, 1.0f);
+		context.ClearDepth(static_depth_buffer);
 	}
 	else
 	{

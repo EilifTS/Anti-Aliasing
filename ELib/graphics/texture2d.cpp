@@ -12,7 +12,7 @@ egx::Texture2D::Texture2D(Device& dev, TextureFormat format, const ema::point2D&
 		1,
 		D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		D3D12_RESOURCE_FLAG_NONE,
-		ClearValue::None
+		nullptr
 		)
 {
 	
@@ -58,7 +58,7 @@ egx::Texture2D::Texture2D(Device& dev,
 	DXGI_FORMAT format,
 	const ema::point2D& size,
 	D3D12_RESOURCE_FLAGS flags,
-	ClearValue clear_value)
+	D3D12_CLEAR_VALUE clear_value)
 	: size(size), srv_cpu(), srv_gpu(), format(revertFormat(format)),
 	GPUBuffer(
 		dev,
@@ -68,7 +68,7 @@ egx::Texture2D::Texture2D(Device& dev,
 		1,
 		D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		flags,
-		clear_value
+		&clear_value
 		)
 {
 

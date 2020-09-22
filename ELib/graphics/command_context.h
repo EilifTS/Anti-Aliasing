@@ -10,10 +10,10 @@ namespace egx
 	public:
 		CommandContext(Device& dev, const ema::point2D& window_size);
 
-		void ClearRenderTarget(RenderTarget& target, const ema::color& color);
-		void ClearDepth(DepthBuffer& buffer, float depth);
+		void ClearRenderTarget(RenderTarget& target);
+		void ClearDepth(DepthBuffer& buffer);
 		void ClearStencil(DepthBuffer& buffer);
-		void ClearDepthStencil(DepthBuffer& buffer, float depth);
+		void ClearDepthStencil(DepthBuffer& buffer);
 
 		void SetPipelineState(PipelineState& pipeline_state);
 

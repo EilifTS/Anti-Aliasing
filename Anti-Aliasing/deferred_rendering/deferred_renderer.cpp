@@ -1,8 +1,8 @@
 #include "deferred_renderer.h"
 #include "graphics/cpu_buffer.h"
 
-DeferrdRenderer::DeferrdRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size)
-	: g_buffer(dev, size),
+DeferrdRenderer::DeferrdRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size, float far_plane)
+	: g_buffer(dev, size, far_plane),
 	light_manager(dev, context),
 	tone_mapper(dev)
 {
@@ -26,9 +26,9 @@ void DeferrdRenderer::PrepareFrame(egx::Device& dev, egx::CommandContext& contex
 	context.SetTransitionBuffer(g_buffer.DiffuseBuffer(), egx::GPUBufferState::RenderTarget);
 	context.SetTransitionBuffer(g_buffer.NormalBuffer(), egx::GPUBufferState::RenderTarget);
 
-	context.ClearRenderTarget(g_buffer.DiffuseBuffer(), { 0.117f, 0.565f, 1.0f, 1.0f });
-	context.ClearRenderTarget(g_buffer.NormalBuffer(), { 0.0f, 0.0f, 0.0f, 1.0f });
-	context.ClearDepth(g_buffer.DepthBuffer(), 1.0f);
+	context.ClearRenderTarget(g_buffer.DiffuseBuffer());
+	context.ClearRenderTarget(g_buffer.NormalBuffer());
+	context.ClearDepth(g_buffer.DepthBuffer());
 }
 
 void DeferrdRenderer::RenderModel(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model)
@@ -87,7 +87,7 @@ void DeferrdRenderer::RenderLight(egx::Device& dev, egx::CommandContext& context
 	context.SetTransitionBuffer(g_buffer.NormalBuffer(), egx::GPUBufferState::PixelResource);
 	context.SetTransitionBuffer(light_manager.GetShadowMap(), egx::GPUBufferState::PixelResource);
 
-	context.ClearRenderTarget(target, { 0.117f, 0.565f, 1.0f, 1.0f });
+	context.ClearRenderTarget(target);
 	context.SetRenderTarget(target);
 
 	// Set root signature and pipeline state

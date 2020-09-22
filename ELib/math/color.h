@@ -40,6 +40,7 @@ namespace ema
 			const float gamma = 2.2f;
 			return color(c.vec.Power(gamma));
 		}
+		static color SkyBlue() { return color(0.117f, 0.565f, 1.0f, 1.0f); };
 
 		inline color& operator+=(const color& rhs)
 		{

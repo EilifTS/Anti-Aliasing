@@ -8,7 +8,8 @@ namespace egx
 	class DepthBuffer : public Texture2D
 	{
 	public:
-		DepthBuffer(Device& dev, TextureFormat format, const ema::point2D& size);
+		inline DepthBuffer(Device& dev, TextureFormat format, const ema::point2D& size) : DepthBuffer(dev, format, size, 1.0f, 0) {};
+		DepthBuffer(Device& dev, TextureFormat format, const ema::point2D& size, float depth_clear, unsigned char stencil_clear);
 
 		void CreateDepthStencilView(Device& dev);
 		const ema::point2D& Size() const { return size; };
@@ -18,6 +19,7 @@ namespace egx
 
 	private:
 		D3D12_CPU_DESCRIPTOR_HANDLE dsv;
+		D3D12_CLEAR_VALUE clear_value;
 
 	private:
 		friend CommandContext;

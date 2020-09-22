@@ -9,7 +9,7 @@
 class DeferrdRenderer
 {
 public:
-	DeferrdRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size);
+	DeferrdRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size, float far_plane);
 
 	void UpdateLight(egx::Camera& camera);
 

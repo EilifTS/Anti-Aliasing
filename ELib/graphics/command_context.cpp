@@ -32,21 +32,26 @@ egx::CommandContext::CommandContext(Device& dev, const ema::point2D& window_size
 
 }
 
-void egx::CommandContext::ClearRenderTarget(RenderTarget& target, const ema::color& color)
+void egx::CommandContext::ClearRenderTarget(RenderTarget& target)
 {
-	command_list->ClearRenderTargetView(target.getRTV(), reinterpret_cast<const float*>(&color), 0, nullptr);
+	command_list->ClearRenderTargetView(target.getRTV(), target.clear_value.Color, 0, nullptr);
 }
-void egx::CommandContext::ClearDepth(DepthBuffer& buffer, float depth)
+void egx::CommandContext::ClearDepth(DepthBuffer& buffer)
 {
-	command_list->ClearDepthStencilView(buffer.getDSV(), D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
+	command_list->ClearDepthStencilView(buffer.getDSV(), D3D12_CLEAR_FLAG_DEPTH, buffer.clear_value.DepthStencil.Depth, 0, 0, nullptr);
 }
 void egx::CommandContext::ClearStencil(DepthBuffer& buffer)
 {
-	command_list->ClearDepthStencilView(buffer.getDSV(), D3D12_CLEAR_FLAG_STENCIL, 0.0f, 0, 0, nullptr);
+	command_list->ClearDepthStencilView(buffer.getDSV(), D3D12_CLEAR_FLAG_STENCIL, 0.0f, buffer.clear_value.DepthStencil.Stencil, 0, nullptr);
 }
-void egx::CommandContext::ClearDepthStencil(DepthBuffer& buffer, float depth)
+void egx::CommandContext::ClearDepthStencil(DepthBuffer& buffer)
 {
-	command_list->ClearDepthStencilView(buffer.getDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, depth, 0, 0, nullptr);
+	command_list->ClearDepthStencilView(
+		buffer.getDSV(), 
+		D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 
+		buffer.clear_value.DepthStencil.Depth, 
+		buffer.clear_value.DepthStencil.Stencil, 
+		0, nullptr);
 }
 
 void egx::CommandContext::SetPipelineState(PipelineState& pipeline_state)

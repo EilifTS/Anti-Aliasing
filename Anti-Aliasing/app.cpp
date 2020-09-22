@@ -7,19 +7,17 @@
 
 namespace
 {
-	struct VertexType
-	{
-		ema::vec3 pos;
-		ema::color color;
-	};
+	
+	const static float near_plane = 1.0f;
+	const static float far_plane = 10000.0f;
 }
 
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	: 
-	camera(dev, context, ema::vec2(im.Window().WindowSize()), 1.0f, 10000.0f, 3.141592f / 3.0f, 200.0f, 0.001f),
+	camera(dev, context, ema::vec2(im.Window().WindowSize()), near_plane, far_plane, 3.141592f / 3.0f, 200.0f, 0.001f),
 	target1(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
 	target2(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
-	renderer(dev, context, im.Window().WindowSize()),
+	renderer(dev, context, im.Window().WindowSize(), far_plane),
 	fxaa(dev, im.Window().WindowSize()),
 	taa(dev, im.Window().WindowSize(), 1600),
 	aa_mode(AAMode::TAA)

@@ -2,14 +2,22 @@
 #include "internal/egx_internal.h"
 #include "device.h"
 
-egx::DepthBuffer::DepthBuffer(Device& dev, TextureFormat format, const ema::point2D& size)
-	:  dsv(),
+namespace
+{
+	D3D12_CLEAR_VALUE convertClearValue(DXGI_FORMAT format, float depth_clear, unsigned char stencil_clear)
+	{
+		return CD3DX12_CLEAR_VALUE(format, depth_clear, stencil_clear);
+	}
+}
+
+egx::DepthBuffer::DepthBuffer(Device& dev, TextureFormat format, const ema::point2D& size, float depth_clear, unsigned char stencil_clear)
+	:  dsv(), clear_value(convertClearValue(convertFormat(format), depth_clear, stencil_clear)),
 	Texture2D(
 		dev,
 		convertFormat(format),
 		size,
 		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
-		ClearValue::Depth1
+		convertClearValue(convertFormat(format), depth_clear, stencil_clear)
 	)
 {
 	assert(isDepthFormat(format));

@@ -15,7 +15,7 @@ namespace egx
 			vertex_count, 1, 1, vertex_size,
 			D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 			D3D12_RESOURCE_FLAG_NONE,
-			ClearValue::None),
+			nullptr),
 			view()
 		{
 			view.BufferLocation = buffer->GetGPUVirtualAddress();

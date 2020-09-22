@@ -72,11 +72,6 @@ namespace egx
 		UNKNOWN =			DXGI_FORMAT_UNKNOWN
 	};
 
-	enum class ClearValue
-	{
-		Depth0, Depth1, ColorBlack, ColorBlue, Clear0001, None
-	};
-
 	enum class ShaderVisibility
 	{
 		All, Vertex, Pixel

@@ -4,7 +4,7 @@
 class GBuffer
 {
 public:
-	GBuffer(egx::Device& dev, const ema::point2D& size);
+	GBuffer(egx::Device& dev, const ema::point2D& size, float far_plane);
 
 	inline egx::RenderTarget& DiffuseBuffer() { return diffuse_target; };
 	inline egx::RenderTarget& NormalBuffer() { return normal_target; };

@@ -22,7 +22,7 @@ namespace egx
 			DXGI_FORMAT format,
 			const ema::point2D& size,
 			D3D12_RESOURCE_FLAGS flags,
-			ClearValue clear_value); // Constructor used by rt and ds
+			D3D12_CLEAR_VALUE clear_value); // Constructor used by rt and ds
 
 		// Getters
 		const D3D12_CPU_DESCRIPTOR_HANDLE& getSRVCPU() const;

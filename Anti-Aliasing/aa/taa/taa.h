@@ -32,14 +32,18 @@ private:
 	egx::PipelineState taa_static_ps;
 	egx::RootSignature taa_dynamic_rs;
 	egx::PipelineState taa_dynamic_ps;
+	egx::RootSignature rectification_rs;
+	egx::PipelineState rectification_ps;
 	egx::RootSignature format_converter_rs;
 	egx::PipelineState format_converter_ps;
 
 	egx::Texture2D history_buffer;
+	egx::RenderTarget reprojected_history;
 	egx::RenderTarget temp_target;
 
 	egx::ConstantBuffer taa_buffer;
 	ema::mat4 view_to_prev_clip;
+	ema::vec4 window_size;
 
 private:
 	void applyStatic(
@@ -47,26 +51,18 @@ private:
 		egx::CommandContext& context,
 		egx::DepthBuffer& stencil_buffer,
 		egx::Texture2D& distance_buffer,
-		egx::Texture2D& new_frame,
 		egx::Camera& camera);
 	void applyDynamic(
 		egx::Device& dev,
 		egx::CommandContext& context,
 		egx::DepthBuffer& stencil_buffer,
 		egx::Texture2D& distance_buffer,
-		egx::Texture2D& motion_vectors,
-		egx::Texture2D& new_frame,
-		egx::Camera& camera);
+		egx::Texture2D& motion_vectors);
 
-	//void ApplyDynamic(
-	//	egx::Device& dev,
-	//	egx::CommandContext& context,
-	//	egx::DepthBuffer& stencil_buffer,
-	//	egx::Texture2D& distance_buffer,
-	//	egx::Texture2D& motion_vectors,
-	//	egx::Texture2D& new_frame,
-	//	egx::RenderTarget& target,
-	//	egx::Camera& camera);
+	void applyRectification(
+		egx::Device& dev,
+		egx::CommandContext& context,
+		egx::Texture2D& new_frame);
 
 	void applyFormatConversion(
 		egx::Device& dev,
@@ -75,5 +71,6 @@ private:
 
 	void initializeTAAStatic(egx::Device& dev);
 	void initializeTAADynamic(egx::Device& dev);
+	void initializeRectification(egx::Device& dev);
 	void initializeFormatConverter(egx::Device& dev);
 };

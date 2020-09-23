@@ -15,12 +15,17 @@ TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count)
 	current_index(0),
 	history_buffer(dev, egx::TextureFormat::FLOAT16x4, window_size),
 	temp_target(dev, egx::TextureFormat::FLOAT16x4, window_size),
-	taa_buffer(dev, (int)sizeof(taaBufferType))
+	reprojected_history(dev, egx::TextureFormat::FLOAT16x4, window_size),
+	taa_buffer(dev, (int)sizeof(taaBufferType)),
+	window_size((float)window_size.x, (float)window_size.y, 1.0f / (float)window_size.x, 1.0f / (float)window_size.y)
 {
 	history_buffer.CreateShaderResourceView(dev);
+	reprojected_history.CreateShaderResourceView(dev);
+	reprojected_history.CreateRenderTargetView(dev);
 	temp_target.CreateRenderTargetView(dev);
 	initializeTAAStatic(dev);
 	initializeTAADynamic(dev);
+	initializeRectification(dev);
 	initializeFormatConverter(dev);
 }
 
@@ -56,11 +61,13 @@ void TAA::Apply(
 	context.SetTransitionBuffer(history_buffer, egx::GPUBufferState::PixelResource);
 	context.SetTransitionBuffer(distance_buffer, egx::GPUBufferState::PixelResource);
 	context.SetTransitionBuffer(motion_vectors, egx::GPUBufferState::PixelResource);
+	context.SetTransitionBuffer(reprojected_history, egx::GPUBufferState::RenderTarget);
 	context.SetTransitionBuffer(temp_target, egx::GPUBufferState::RenderTarget);
 	context.SetTransitionBuffer(target, egx::GPUBufferState::RenderTarget);
 
-	applyStatic(dev, context, stencil_buffer, distance_buffer, new_frame, camera);
-	applyDynamic(dev, context, stencil_buffer, distance_buffer, motion_vectors, new_frame, camera);
+	applyStatic(dev, context, stencil_buffer, distance_buffer, camera);
+	applyDynamic(dev, context, stencil_buffer, distance_buffer, motion_vectors);
+	applyRectification(dev, context, new_frame);
 	applyFormatConversion(dev, context, target);
 }
 
@@ -69,22 +76,19 @@ void TAA::applyStatic(
 	egx::CommandContext& context,
 	egx::DepthBuffer& stencil_buffer,
 	egx::Texture2D& distance_buffer,
-	egx::Texture2D& new_frame,
 	egx::Camera& camera)
 {
-	
-
 	context.SetRootSignature(taa_static_rs);
 	context.SetPipelineState(taa_static_ps);
 
 	context.SetDescriptorHeap(*dev.buffer_heap);
-	context.SetRootConstantBuffer(0, camera.GetBuffer());
-	context.SetRootConstantBuffer(1, taa_buffer);
-	context.SetRootDescriptorTable(2, new_frame);
+	context.SetRootConstant(0, 4, &window_size);
+	context.SetRootConstantBuffer(1, camera.GetBuffer());
+	context.SetRootConstantBuffer(2, taa_buffer);
 	context.SetRootDescriptorTable(3, history_buffer);
 	context.SetRootDescriptorTable(4, distance_buffer);
 
-	context.SetRenderTarget(temp_target, stencil_buffer);
+	context.SetRenderTarget(reprojected_history, stencil_buffer);
 
 	context.SetViewport();
 	context.SetScissor();
@@ -99,21 +103,17 @@ void TAA::applyDynamic(
 	egx::CommandContext& context,
 	egx::DepthBuffer& stencil_buffer,
 	egx::Texture2D& distance_buffer,
-	egx::Texture2D& motion_vectors,
-	egx::Texture2D& new_frame,
-	egx::Camera& camera)
+	egx::Texture2D& motion_vectors)
 {
 	context.SetRootSignature(taa_dynamic_rs);
 	context.SetPipelineState(taa_dynamic_ps);
 
 	context.SetDescriptorHeap(*dev.buffer_heap);
-	context.SetRootConstantBuffer(0, camera.GetBuffer());
-	context.SetRootDescriptorTable(1, new_frame);
-	context.SetRootDescriptorTable(2, history_buffer);
-	context.SetRootDescriptorTable(3, distance_buffer);
-	context.SetRootDescriptorTable(4, motion_vectors);
+	context.SetRootDescriptorTable(0, history_buffer);
+	context.SetRootDescriptorTable(1, distance_buffer);
+	context.SetRootDescriptorTable(2, motion_vectors);
 
-	context.SetRenderTarget(temp_target, stencil_buffer);
+	context.SetRenderTarget(reprojected_history, stencil_buffer);
 
 	context.SetViewport();
 	context.SetScissor();
@@ -123,6 +123,29 @@ void TAA::applyDynamic(
 	context.Draw(4);
 }
 
+void TAA::applyRectification(
+	egx::Device& dev,
+	egx::CommandContext& context,
+	egx::Texture2D& new_frame)
+{
+	context.SetTransitionBuffer(reprojected_history, egx::GPUBufferState::PixelResource);
+
+	context.SetRootSignature(rectification_rs);
+	context.SetPipelineState(rectification_ps);
+
+	context.SetDescriptorHeap(*dev.buffer_heap);
+	context.SetRootConstant(0, 4, &window_size);
+	context.SetRootDescriptorTable(1, new_frame);
+	context.SetRootDescriptorTable(2, reprojected_history);
+
+	context.SetRenderTarget(temp_target);
+
+	context.SetViewport();
+	context.SetScissor();
+	context.SetPrimitiveTopology(egx::Topology::TriangleStrip);
+
+	context.Draw(4);
+}
 
 void TAA::applyFormatConversion(
 	egx::Device& dev,
@@ -152,11 +175,11 @@ void TAA::applyFormatConversion(
 void TAA::initializeTAAStatic(egx::Device& dev)
 {
 	// Create root signature
-	taa_static_rs.InitConstantBuffer(0); // Camera buffer
-	taa_static_rs.InitConstantBuffer(1, egx::ShaderVisibility::Pixel); // TAA buffer
-	taa_static_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel); // New sample texture
-	taa_static_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel); // History buffer
-	taa_static_rs.InitDescriptorTable(2, egx::ShaderVisibility::Pixel); // Depth buffer
+	taa_static_rs.InitConstants(4, 0); // Window values
+	taa_static_rs.InitConstantBuffer(1); // Camera buffer
+	taa_static_rs.InitConstantBuffer(2, egx::ShaderVisibility::Pixel); // TAA buffer
+	taa_static_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel); // History buffer
+	taa_static_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel); // Depth buffer
 	taa_static_rs.AddSampler(egx::Sampler::LinearClamp(), 0);
 	taa_static_rs.Finalize(dev);
 
@@ -186,11 +209,9 @@ void TAA::initializeTAAStatic(egx::Device& dev)
 void TAA::initializeTAADynamic(egx::Device& dev)
 {
 	// Create root signature
-	taa_dynamic_rs.InitConstantBuffer(0); // Camera buffer
-	taa_dynamic_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel); // New sample texture
-	taa_dynamic_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel); // History buffer
-	taa_dynamic_rs.InitDescriptorTable(2, egx::ShaderVisibility::Pixel); // Depth buffer
-	taa_dynamic_rs.InitDescriptorTable(3, egx::ShaderVisibility::Pixel); // Motion vectors
+	taa_dynamic_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel); // History buffer
+	taa_dynamic_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel); // Depth buffer
+	taa_dynamic_rs.InitDescriptorTable(2, egx::ShaderVisibility::Pixel); // Motion vectors
 	taa_dynamic_rs.AddSampler(egx::Sampler::LinearClamp(), 0);
 	taa_dynamic_rs.Finalize(dev);
 
@@ -216,6 +237,38 @@ void TAA::initializeTAADynamic(egx::Device& dev)
 	taa_dynamic_ps.SetRasterState(egx::RasterState::Default());
 	taa_dynamic_ps.SetDepthStencilState(egx::DepthStencilState::CompWithRefStencil());
 	taa_dynamic_ps.Finalize(dev);
+}
+void TAA::initializeRectification(egx::Device& dev)
+{
+	// Create root signature
+	rectification_rs.InitConstants(4, 0); // New sample texture
+	rectification_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel); // New sample texture
+	rectification_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel); // History buffer
+	rectification_rs.AddSampler(egx::Sampler::LinearClamp(), 0);
+	rectification_rs.Finalize(dev);
+
+	// Create Shaders
+	egx::Shader VS;
+	egx::Shader PS;
+	VS.CompileVertexShader("shaders/taa/rectification_vs.hlsl");
+	PS.CompilePixelShader("shaders/taa/rectification_ps.hlsl");
+
+	// Empty input layout
+	egx::InputLayout input_layout;
+
+	// Create PSO
+	rectification_ps.SetRootSignature(rectification_rs);
+	rectification_ps.SetInputLayout(input_layout);
+	rectification_ps.SetPrimitiveTopology(egx::TopologyType::Triangle);
+	rectification_ps.SetVertexShader(VS);
+	rectification_ps.SetPixelShader(PS);
+	rectification_ps.SetDepthStencilFormat(egx::TextureFormat::D32);
+	rectification_ps.SetRenderTargetFormat(temp_target.Format());
+
+	rectification_ps.SetBlendState(egx::BlendState::NoBlend());
+	rectification_ps.SetRasterState(egx::RasterState::Default());
+	rectification_ps.SetDepthStencilState(egx::DepthStencilState::DepthOff());
+	rectification_ps.Finalize(dev);
 }
 void TAA::initializeFormatConverter(egx::Device& dev)
 {

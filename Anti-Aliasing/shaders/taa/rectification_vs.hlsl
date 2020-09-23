@@ -1,5 +1,3 @@
-#include "../headers/camera.hlsli"
-
 struct VSOutput
 {
 	float4 position : SV_POSITION;

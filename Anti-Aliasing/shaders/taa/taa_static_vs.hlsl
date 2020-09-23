@@ -1,6 +1,6 @@
 #include "../headers/camera.hlsli"
 
-cbuffer CameraBuffer : register(b0)
+cbuffer CameraBuffer : register(b1)
 {
 	CameraBufferType camera;
 }

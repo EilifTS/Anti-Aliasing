@@ -7,7 +7,6 @@
 
 namespace
 {
-	
 	const static float near_plane = 1.0f;
 	const static float far_plane = 10000.0f;
 }

@@ -5,15 +5,12 @@ DeferrdRenderer::DeferrdRenderer(egx::Device& dev, egx::CommandContext& context,
 	: g_buffer(dev, size, far_plane),
 	light_manager(dev, context),
 	tone_mapper(dev),
-	motion_vectors(dev, egx::TextureFormat::FLOAT16x2, size),
-	unjittered_depth(dev, egx::TextureFormat::D24_S8, size)
+	motion_vectors(dev, egx::TextureFormat::FLOAT16x2, size)
 {
 	context.SetTransitionBuffer(g_buffer.DepthBuffer(), egx::GPUBufferState::DepthWrite);
-	context.SetTransitionBuffer(unjittered_depth, egx::GPUBufferState::DepthWrite);
 
 	motion_vectors.CreateShaderResourceView(dev);
 	motion_vectors.CreateRenderTargetView(dev);
-	unjittered_depth.CreateDepthStencilView(dev);
 
 	initializeModelRenderer(dev);
 	initializeLightRenderer(dev);
@@ -39,7 +36,6 @@ void DeferrdRenderer::PrepareFrame(egx::Device& dev, egx::CommandContext& contex
 	context.ClearRenderTarget(g_buffer.NormalBuffer());
 	context.ClearRenderTarget(motion_vectors);
 	context.ClearDepth(g_buffer.DepthBuffer());
-	context.ClearDepthStencil(unjittered_depth);
 }
 
 void DeferrdRenderer::RenderModel(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model)
@@ -124,7 +120,7 @@ void DeferrdRenderer::RenderLight(egx::Device& dev, egx::CommandContext& context
 
 void DeferrdRenderer::RenderMotionVectors(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model)
 {
-	context.SetRenderTarget(motion_vectors, unjittered_depth);
+	context.SetRenderTarget(motion_vectors, g_buffer.DepthBuffer());
 
 	// Set root signature and pipeline state
 	context.SetRootSignature(motion_vector_rs);

@@ -23,6 +23,8 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 {
 	camera.SetPosition({ 1000.0f, 100.0f, 0.0f });
 	camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.5f });
+	//camera.SetPosition({ 700.0f, 300.0f, 0.0f });
+	//camera.SetRotation({ 0.0f, 1.3f, -3.141592f * 0.5f });
 
 	target1.CreateShaderResourceView(dev);
 	target1.CreateRenderTargetView(dev);
@@ -46,7 +48,7 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	knight_model1->SetRotation(ema::vec3(0.0f, 0.0f, 0.0f));
 	knight_model2->SetRotation(ema::vec3(0.0f, 0.0f, 3.141692f));
 	knight_model3->SetRotation(ema::vec3(0.0f, 0.0f, 3.141692f));
-	knight_model3->SetStatic(true);
+	//knight_model3->SetStatic(true);
 
 	//mat_manager.DisableDiffuseTextures();
 	//mat_manager.DisableNormalMaps();
@@ -78,7 +80,7 @@ void App::Update(eio::InputManager& im)
 	float time = (float)((double)im.Clock().GetTime() / 1000000.0);
 	float rot = time;
 	knight_model1->SetRotation(ema::vec3(0.0f, 0.0f, rot));
-	knight_model2->SetPosition(ema::vec3(-440.0f, 0.0f, 50.0f + 10.0f*sinf(time)));
+	knight_model2->SetPosition(ema::vec3(-440.0f, 0.0f, 50.0f + 10.0f*sinf(10.0f*time)));
 }
 void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 {
@@ -99,7 +101,7 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	renderer.PrepareFrameEnd();
 
 	if (aa_mode == AAMode::TAA)
-		taa.Apply(dev, context, renderer.GetDepthNoJitter(), renderer.GetGBuffer().NormalBuffer(), renderer.GetMotionVectors(), target1, target2, camera);
+		taa.Apply(dev, context, renderer.GetGBuffer().DepthBuffer(), renderer.GetGBuffer().NormalBuffer(), renderer.GetMotionVectors(), target1, target2, camera);
 	else if(aa_mode == AAMode::FXAA)
 		fxaa.Apply(dev, context, target1, target2);
 

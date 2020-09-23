@@ -22,7 +22,6 @@ public:
 	void ApplyToneMapping(egx::Device& dev, egx::CommandContext& context, egx::Texture2D& texture, egx::RenderTarget& target) { tone_mapper.Apply(dev, context, texture, target); };
 
 	GBuffer& GetGBuffer() { return g_buffer; };
-	egx::DepthBuffer& GetDepthNoJitter() { return unjittered_depth; };
 	egx::Texture2D& GetMotionVectors() { return motion_vectors; };
 
 private:
@@ -38,7 +37,6 @@ private:
 	egx::RootSignature motion_vector_rs;
 	egx::PipelineState motion_vector_ps;
 	egx::RenderTarget motion_vectors;
-	egx::DepthBuffer unjittered_depth;
 
 	ToneMapper tone_mapper;
 

@@ -67,7 +67,8 @@ private:
 	void applyFormatConversion(
 		egx::Device& dev,
 		egx::CommandContext& context,
-		egx::RenderTarget& target);
+		egx::RenderTarget& target,
+		egx::Texture2D& motion_vectors);
 
 	void initializeTAAStatic(egx::Device& dev);
 	void initializeTAADynamic(egx::Device& dev);

@@ -35,9 +35,10 @@ VSOutput VS(VSInput input)
 	float4 last_pos = mul(float4(input.position, 1.0), model.last_world_matrix);
 	curr_pos = mul(curr_pos, curr_cam.view_matrix);
 	last_pos = mul(last_pos, last_cam.view_matrix);
+	output.position = mul(curr_pos, curr_cam.projection_matrix);
 	curr_pos = mul(curr_pos, curr_cam.projection_matrix_no_jitter);
 	last_pos = mul(last_pos, last_cam.projection_matrix_no_jitter);
-	output.position = curr_pos;
+	
 	curr_pos /= curr_pos.w;
 	last_pos /= last_pos.w;
 	output.mv = last_pos.xy - curr_pos.xy;

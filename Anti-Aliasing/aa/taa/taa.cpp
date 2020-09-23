@@ -68,7 +68,7 @@ void TAA::Apply(
 	applyStatic(dev, context, stencil_buffer, distance_buffer, camera);
 	applyDynamic(dev, context, stencil_buffer, distance_buffer, motion_vectors);
 	applyRectification(dev, context, new_frame);
-	applyFormatConversion(dev, context, target);
+	applyFormatConversion(dev, context, target, motion_vectors);
 }
 
 void TAA::applyStatic(
@@ -150,7 +150,8 @@ void TAA::applyRectification(
 void TAA::applyFormatConversion(
 	egx::Device& dev,
 	egx::CommandContext& context,
-	egx::RenderTarget& target)
+	egx::RenderTarget& target,
+	egx::Texture2D& motion_vectors)
 {
 	// Convert format
 	context.SetTransitionBuffer(history_buffer, egx::GPUBufferState::CopyDest);
@@ -162,6 +163,7 @@ void TAA::applyFormatConversion(
 	context.SetPipelineState(format_converter_ps);
 
 	context.SetRootDescriptorTable(0, history_buffer);
+	context.SetRootDescriptorTable(1, motion_vectors);
 
 	context.SetRenderTarget(target);
 
@@ -274,6 +276,7 @@ void TAA::initializeFormatConverter(egx::Device& dev)
 {
 	// Create root signature
 	format_converter_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel);
+	format_converter_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel); // Motion vectors for debugging
 	format_converter_rs.AddSampler(egx::Sampler::LinearClamp(), 0);
 	format_converter_rs.Finalize(dev);
 

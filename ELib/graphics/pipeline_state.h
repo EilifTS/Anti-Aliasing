@@ -107,7 +107,7 @@ namespace egx
 			DepthStencilState out;
 			out.DepthEnable = TRUE;
 			out.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-			out.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+			out.DepthFunc = D3D12_COMPARISON_FUNC_EQUAL;
 
 			// Write ref value to stencil buffer
 			out.StencilEnable = TRUE;

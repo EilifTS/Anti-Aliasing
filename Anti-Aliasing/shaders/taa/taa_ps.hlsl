@@ -113,7 +113,39 @@ float4 PS(PSInput input) : SV_TARGET
 	}
 	else // Dynamic object pixel
 	{
-		prev_frame_uv = input.uv + motion_vectors.Sample(linear_clamp, input.uv);
+		// Dialate forground objects
+		float2 offset_nw = rec_window_size * float2(-2.0, -2.0);
+		float2 offset_ne = rec_window_size * float2( 2.0, -2.0);
+		float2 offset_sw = rec_window_size * float2(-2.0,  2.0);
+		float2 offset_se = rec_window_size * float2( 2.0,  2.0);
+		float depth_nw = depth_buffer.Sample(linear_clamp, input.uv + offset_nw);
+		float depth_ne = depth_buffer.Sample(linear_clamp, input.uv + offset_ne);
+		float depth_sw = depth_buffer.Sample(linear_clamp, input.uv + offset_sw);
+		float depth_se = depth_buffer.Sample(linear_clamp, input.uv + offset_se);
+
+		float2 mv_offset = offset_nw;
+		float frontmost_depth = depth_nw;
+		if (frontmost_depth < depth_ne)
+		{
+			mv_offset = offset_ne;
+			frontmost_depth = depth_ne;
+		}
+		if (frontmost_depth < depth_sw)
+		{
+			mv_offset = offset_sw;
+			frontmost_depth = depth_sw;
+		}
+		if (frontmost_depth < depth_se)
+		{
+			mv_offset = offset_se;
+			frontmost_depth = depth_se;
+		}
+		if (frontmost_depth < clip_depth)
+		{
+			mv_offset = float2(0.0, 0.0);
+		}
+
+		prev_frame_uv = input.uv + motion_vectors.Sample(linear_clamp, input.uv + mv_offset);
 	}
 
 	// Sample history

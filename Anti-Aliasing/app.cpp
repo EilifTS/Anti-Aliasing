@@ -70,7 +70,13 @@ void App::Update(eio::InputManager& im)
 
 	if(aa_mode == AAMode::FXAA)
 		fxaa.HandleInput(im);
-	taa.Update(prev_frame_view_matrix, prev_frame_proj_matrix_no_jitter, camera.ViewMatrix().Inverse());
+
+	taa.Update(
+		camera.ProjectionMatrixNoJitter().Inverse(), 
+		camera.ViewMatrix().Inverse(), 
+		prev_frame_view_matrix, 
+		prev_frame_proj_matrix_no_jitter);
+
 	if (im.Keyboard().IsKeyReleased('Q'))
 	{
 		if (aa_mode == AAMode::FXAA) aa_mode = AAMode::TAA;
@@ -80,7 +86,7 @@ void App::Update(eio::InputManager& im)
 	float time = (float)((double)im.Clock().GetTime() / 1000000.0);
 	float rot = time;
 	knight_model1->SetRotation(ema::vec3(0.0f, 0.0f, rot));
-	knight_model2->SetPosition(ema::vec3(-440.0f, 0.0f, 50.0f + 10.0f*sinf(10.0f*time)));
+	knight_model2->SetPosition(ema::vec3(-440.0f, 0.0f, 50.0f + 50.0f*sinf(10.0f*time)));
 }
 void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 {
@@ -97,11 +103,12 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	renderer.RenderModel(dev, context, camera, *knight_model2);
 	renderer.RenderMotionVectors(dev, context, camera, *knight_model1);
 	renderer.RenderMotionVectors(dev, context, camera, *knight_model2);
+	renderer.RenderMotionVectors(dev, context, camera, *knight_model3);
 	renderer.RenderLight(dev, context, camera, target1);
 	renderer.PrepareFrameEnd();
 
 	if (aa_mode == AAMode::TAA)
-		taa.Apply(dev, context, renderer.GetGBuffer().DepthBuffer(), renderer.GetGBuffer().NormalBuffer(), renderer.GetMotionVectors(), target1, target2, camera);
+		taa.Apply(dev, context, renderer.GetGBuffer().DepthBuffer(), renderer.GetMotionVectors(), target1, target2, camera);
 	else if(aa_mode == AAMode::FXAA)
 		fxaa.Apply(dev, context, target1, target2);
 

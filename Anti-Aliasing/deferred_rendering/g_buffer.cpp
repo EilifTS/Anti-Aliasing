@@ -11,4 +11,5 @@ GBuffer::GBuffer(egx::Device& dev, const ema::point2D& size, float far_plane)
 	normal_target.CreateRenderTargetView(dev);
 	normal_target.CreateShaderResourceView(dev);
 	depth_buffer.CreateDepthStencilView(dev);
+	depth_buffer.CreateShaderResourceViews(dev, egx::TextureFormat::D24_S8_Depth, egx::TextureFormat::D24_S8_Stencil);
 }

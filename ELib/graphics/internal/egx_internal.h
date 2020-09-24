@@ -78,6 +78,18 @@ namespace egx
 		}
 		return false;
 	}
+	inline DXGI_FORMAT convertToDepthStencilFormat(egx::TextureFormat format)
+	{
+		switch (format)
+		{
+		case egx::TextureFormat::D16:     return DXGI_FORMAT_D16_UNORM;
+		case egx::TextureFormat::D24_S8:  return DXGI_FORMAT_D24_UNORM_S8_UINT;
+		case egx::TextureFormat::D32:     return DXGI_FORMAT_D32_FLOAT;
+		case egx::TextureFormat::D32_S32: return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+		}
+		assert(0);
+		return DXGI_FORMAT_UNKNOWN;
+	}
 
 	inline int formatByteSize(DXGI_FORMAT format)
 	{
@@ -90,11 +102,13 @@ namespace egx
 		case DXGI_FORMAT_D24_UNORM_S8_UINT:
 		case DXGI_FORMAT_D32_FLOAT:
 		case DXGI_FORMAT_R32_FLOAT:
+		case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
 		case DXGI_FORMAT_R16G16_FLOAT:
 		case DXGI_FORMAT_R8G8B8A8_UNORM:
 		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
 		case DXGI_FORMAT_B8G8R8A8_UNORM:
 		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+		case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
 			return 4;
 		case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
 		case DXGI_FORMAT_R32G32_FLOAT:
@@ -104,7 +118,7 @@ namespace egx
 			return 16;
 		default: throw std::runtime_error("Unsupported texture format");
 		}
-		return 0;
+		return DXGI_FORMAT_UNKNOWN;
 	}
 
 	inline D3D12_SHADER_VISIBILITY convertVisibility(egx::ShaderVisibility vis)

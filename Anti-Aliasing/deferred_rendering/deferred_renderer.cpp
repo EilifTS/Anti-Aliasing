@@ -30,12 +30,13 @@ void DeferrdRenderer::PrepareFrame(egx::Device& dev, egx::CommandContext& contex
 
 	context.SetTransitionBuffer(g_buffer.DiffuseBuffer(), egx::GPUBufferState::RenderTarget);
 	context.SetTransitionBuffer(g_buffer.NormalBuffer(), egx::GPUBufferState::RenderTarget);
+	context.SetTransitionBuffer(g_buffer.DepthBuffer(), egx::GPUBufferState::DepthWrite);
 	context.SetTransitionBuffer(motion_vectors, egx::GPUBufferState::RenderTarget);
 
 	context.ClearRenderTarget(g_buffer.DiffuseBuffer());
 	context.ClearRenderTarget(g_buffer.NormalBuffer());
 	context.ClearRenderTarget(motion_vectors);
-	context.ClearDepth(g_buffer.DepthBuffer());
+	context.ClearDepthStencil(g_buffer.DepthBuffer());
 }
 
 void DeferrdRenderer::RenderModel(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model)

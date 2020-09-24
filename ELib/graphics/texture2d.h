@@ -10,6 +10,7 @@ namespace egx
 	public:
 		Texture2D(Device& dev, TextureFormat format, const ema::point2D& size);
 
+		void CreateShaderResourceViews(Device& dev, TextureFormat format1, TextureFormat format2);
 		void CreateShaderResourceView(Device& dev, TextureFormat format);
 		inline void CreateShaderResourceView(Device& dev) { CreateShaderResourceView(dev, format); };
 		inline const ema::point2D& Size() const { return size; };
@@ -31,6 +32,7 @@ namespace egx
 	protected:
 		D3D12_CPU_DESCRIPTOR_HANDLE srv_cpu;
 		D3D12_GPU_DESCRIPTOR_HANDLE srv_gpu;
+		int srv_count;
 		TextureFormat format;
 		ema::point2D size;
 

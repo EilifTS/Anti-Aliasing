@@ -25,11 +25,11 @@ void egx::RootSignature::InitShaderResource(int shader_register)
 	param.InitAsShaderResourceView(shader_register, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	root_parameters.push_back(param);
 }
-void egx::RootSignature::InitDescriptorTable(int shader_register, ShaderVisibility visibility)
+void egx::RootSignature::InitDescriptorTable(int shader_register, int num_entries, ShaderVisibility visibility)
 {
 	CD3DX12_ROOT_PARAMETER1 param;
 	std::shared_ptr<CD3DX12_DESCRIPTOR_RANGE1> range = std::make_shared<CD3DX12_DESCRIPTOR_RANGE1>();
-	range->Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, shader_register, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
+	range->Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, num_entries, shader_register, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
 	ranges.push_back(range);
 	param.InitAsDescriptorTable(1, ranges.back().get(), convertVisibility(visibility));
 	root_parameters.push_back(param);

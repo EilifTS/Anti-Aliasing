@@ -81,12 +81,8 @@
     <FxCompile Include="shaders\taa\format_converter_vs.hlsl" />
     <FxCompile Include="shaders\deferred\motion_vector_ps.hlsl" />
     <FxCompile Include="shaders\deferred\motion_vector_vs.hlsl" />
-    <FxCompile Include="shaders\taa\taa_static_ps.hlsl" />
-    <FxCompile Include="shaders\taa\taa_static_vs.hlsl" />
-    <FxCompile Include="shaders\taa\taa_dynamic_vs.hlsl" />
-    <FxCompile Include="shaders\taa\taa_dynamic_ps.hlsl" />
-    <FxCompile Include="shaders\taa\rectification_vs.hlsl" />
-    <FxCompile Include="shaders\taa\rectification_ps.hlsl" />
+    <FxCompile Include="shaders\taa\taa_ps.hlsl" />
+    <FxCompile Include="shaders\taa\taa_vs.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fxaa\fxaa_header.hlsli" />

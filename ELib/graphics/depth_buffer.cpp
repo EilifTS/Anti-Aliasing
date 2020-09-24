@@ -8,16 +8,18 @@ namespace
 	{
 		return CD3DX12_CLEAR_VALUE(format, depth_clear, stencil_clear);
 	}
+
+	
 }
 
 egx::DepthBuffer::DepthBuffer(Device& dev, TextureFormat format, const ema::point2D& size, float depth_clear, unsigned char stencil_clear)
-	:  dsv(), clear_value(convertClearValue(convertFormat(format), depth_clear, stencil_clear)),
+	:  dsv(), clear_value(convertClearValue(convertToDepthStencilFormat(format), depth_clear, stencil_clear)),
 	Texture2D(
 		dev,
 		convertFormat(format),
 		size,
 		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
-		convertClearValue(convertFormat(format), depth_clear, stencil_clear)
+		convertClearValue(convertToDepthStencilFormat(format), depth_clear, stencil_clear)
 	)
 {
 	assert(isDepthFormat(format));
@@ -26,7 +28,7 @@ egx::DepthBuffer::DepthBuffer(Device& dev, TextureFormat format, const ema::poin
 void egx::DepthBuffer::CreateDepthStencilView(Device& dev)
 {
 	D3D12_DEPTH_STENCIL_VIEW_DESC desc = {};
-	desc.Format = convertFormat(format);
+	desc.Format = convertToDepthStencilFormat(format);
 	desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 
 	dsv = dev.dsv_heap->GetNextHandle();

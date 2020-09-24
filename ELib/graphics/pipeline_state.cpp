@@ -38,7 +38,7 @@ void egx::PipelineState::SetPixelShader(Shader& pixel_shader)
 void egx::PipelineState::SetDepthStencilFormat(TextureFormat format)
 {
 	assert(isDepthFormat(format));
-	desc.DSVFormat = convertFormat(format);
+	desc.DSVFormat = convertToDepthStencilFormat(format);
 }
 
 void egx::PipelineState::SetRenderTargetFormat(TextureFormat format)

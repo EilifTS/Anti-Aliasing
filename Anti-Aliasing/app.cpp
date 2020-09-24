@@ -68,8 +68,10 @@ void App::Update(eio::InputManager& im)
 	camera.Update(im, jitter);
 	renderer.UpdateLight(camera);
 
-	if(aa_mode == AAMode::FXAA)
+	if (aa_mode == AAMode::FXAA)
 		fxaa.HandleInput(im);
+	else if (aa_mode == AAMode::TAA)
+		taa.HandleInput(im);
 
 	taa.Update(
 		camera.ProjectionMatrixNoJitter().Inverse(), 

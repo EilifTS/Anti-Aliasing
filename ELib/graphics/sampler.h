@@ -23,7 +23,7 @@ namespace egx
 			desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
 			desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
 			desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-			desc.MipLODBias = 0;
+			desc.MipLODBias = 0.0;
 			desc.MaxAnisotropy = 0;
 			desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
 			desc.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
@@ -45,6 +45,10 @@ namespace egx
 			desc.AddressU = address_mode_x;
 			desc.AddressV = address_mode_x;
 			desc.AddressW = address_mode_x;
+		};
+		inline void SetMipMapBias(float bias)
+		{
+			desc.MipLODBias = bias;
 		};
 
 		inline static Sampler LinearClamp()

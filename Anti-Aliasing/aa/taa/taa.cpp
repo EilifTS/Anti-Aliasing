@@ -7,6 +7,9 @@ namespace
 	{
 		ema::mat4 clip_to_prev_frame_clip;
 	};
+
+	static const int   sample_count_presets[4] = {          2,     4,     8,     16 };
+	static const std::string alpha_presets[4]  = { "0.5", "0.3", "0.2", "0.13" };
 }
 
 TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count)
@@ -38,6 +41,45 @@ void TAA::Update(
 		prev_frame_proj_matrix_no_jitter);
 };
 
+void TAA::HandleInput(const eio::InputManager& im)
+{
+	auto& keyboard = im.Keyboard();
+
+	if (keyboard.IsKeyReleased('1'))
+	{
+		taa_preset = (taa_preset + 1) % (int)_countof(sample_count_presets);
+		macro_list.SetMacro("TAA_ALPHA", alpha_presets[taa_preset]);
+		sample_count = sample_count_presets[taa_preset];
+		jitter = Jitter::Halton(2, 3, sample_count);
+		current_index = 0;
+		recompile_shaders = true;
+	}
+	if (keyboard.IsKeyReleased('2'))
+	{
+		macro_list.SetMacro("TAA_USE_CATMUL_ROM", taa_use_catmul_room ? "0" : "1");
+		taa_use_catmul_room = !taa_use_catmul_room;
+		recompile_shaders = true;
+	}
+	if (keyboard.IsKeyReleased('3')) 
+	{
+		macro_list.SetMacro("TAA_USE_HISTORY_RECTIFICATION", taa_use_history_rectification ? "0" : "1");
+		taa_use_history_rectification = !taa_use_history_rectification;
+		recompile_shaders = true;
+	}
+	if (keyboard.IsKeyReleased('4')) 
+	{
+		macro_list.SetMacro("TAA_USE_YCOCG", taa_use_ycocg ? "0" : "1");
+		taa_use_ycocg = !taa_use_ycocg;
+		recompile_shaders = true;
+	}
+	if (keyboard.IsKeyReleased('5')) 
+	{
+		macro_list.SetMacro("TAA_USE_CLIPPING", taa_use_clipping ? "0" : "1");
+		taa_use_clipping = !taa_use_clipping;
+		recompile_shaders = true;
+	}
+}
+
 void TAA::Apply(
 	egx::Device& dev,
 	egx::CommandContext& context,
@@ -47,6 +89,9 @@ void TAA::Apply(
 	egx::RenderTarget& target,
 	egx::Camera& camera)
 {
+	// Recompile if macros are changed
+	if (recompile_shaders) recompileShaders(dev);
+
 	// Update constant buffer
 	taaBufferType taabt;
 	taabt.clip_to_prev_frame_clip = clip_to_prev_clip.Transpose();
@@ -188,4 +233,19 @@ void TAA::initializeFormatConverter(egx::Device& dev)
 	format_converter_ps.SetRasterState(egx::RasterState::Default());
 	format_converter_ps.SetDepthStencilState(egx::DepthStencilState::DepthOff());
 	format_converter_ps.Finalize(dev);
+}
+
+
+void TAA::recompileShaders(egx::Device& dev)
+{
+	dev.WaitForGPU();
+	// Create Shaders
+	egx::Shader VS;
+	egx::Shader PS;
+	VS.CompileVertexShader("shaders/taa/taa_vs.hlsl");
+	PS.CompilePixelShader("shaders/taa/taa_ps.hlsl", macro_list); 
+	taa_ps.SetVertexShader(VS);
+	taa_ps.SetPixelShader(PS);
+	taa_ps.Finalize(dev);
+	recompile_shaders = false;
 }

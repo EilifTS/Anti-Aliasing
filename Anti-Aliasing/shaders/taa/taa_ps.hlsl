@@ -1,4 +1,25 @@
 
+// Defines
+#ifndef TAA_ALPHA
+#define TAA_ALPHA 0.13
+#endif
+
+#ifndef TAA_USE_CATMUL_ROM
+#define TAA_USE_CATMUL_ROM 1
+#endif
+
+#ifndef TAA_USE_HISTORY_RECTIFICATION
+#define TAA_USE_HISTORY_RECTIFICATION 1
+#endif
+
+#ifndef TAA_USE_YCOCG
+#define TAA_USE_YCOCG 1
+#endif
+
+#ifndef TAA_USE_CLIPPING
+#define TAA_USE_CLIPPING 1
+#endif
+
 Texture2D			new_sample_tex		: register(t0);
 Texture2D			history_buffer		: register(t1);
 Texture2D<float2>	motion_vectors		: register(t2);
@@ -15,6 +36,7 @@ cbuffer constants : register(b0)
 cbuffer TAABuffer : register(b1)
 {
 	matrix clip_to_prev_frame_clip_matrix;
+	float alpha;
 };
 
 // Pixel shader input
@@ -149,24 +171,34 @@ float4 PS(PSInput input) : SV_TARGET
 	}
 
 	// Sample history
+	bool refresh_history = true;
 	float4 history = float4(0.0, 0.0, 0.0, 0.0);
 	if (prev_frame_uv.x > 0.0 && prev_frame_uv.x <= 1.0 && prev_frame_uv.y > 0.0 && prev_frame_uv.y <= 1.0)
+	{
+#if TAA_USE_CATMUL_ROM
 		history = float4(catmulRom(prev_frame_uv), 1.0);
-		//history = history_buffer.Sample(linear_clamp, prev_frame_uv);
-
+#else
+		history = history_buffer.Sample(linear_clamp, prev_frame_uv);
+#endif // TAA_USE_CATMUL_ROM
+		refresh_history = false;
+	}
 
 	// History rectification
-	float3 new_sample = new_sample_tex.Sample(linear_clamp, input.uv).xyz;
+	float4 new_sample = new_sample_tex.Sample(linear_clamp, input.uv);
+
+#if TAA_USE_HISTORY_RECTIFICATION
+
 	float3 ns_nw = new_sample_tex.Sample(linear_clamp, input.uv + rec_window_size * float2(-1.0, -1.0)).xyz;
 	float3 ns_n =  new_sample_tex.Sample(linear_clamp, input.uv + rec_window_size * float2( 0.0, -1.0)).xyz;
 	float3 ns_ne = new_sample_tex.Sample(linear_clamp, input.uv + rec_window_size * float2( 1.0, -1.0)).xyz;
 	float3 ns_w =  new_sample_tex.Sample(linear_clamp, input.uv + rec_window_size * float2(-1.0,  0.0)).xyz;
-	float3 ns_m =  new_sample;
+	float3 ns_m =  new_sample.xyz;
 	float3 ns_e =  new_sample_tex.Sample(linear_clamp, input.uv + rec_window_size * float2( 1.0,  0.0)).xyz;
 	float3 ns_sw = new_sample_tex.Sample(linear_clamp, input.uv + rec_window_size * float2(-1.0,  1.0)).xyz;
 	float3 ns_s =  new_sample_tex.Sample(linear_clamp, input.uv + rec_window_size * float2( 0.0,  1.0)).xyz;
 	float3 ns_se = new_sample_tex.Sample(linear_clamp, input.uv + rec_window_size * float2( 1.0,  1.0)).xyz;
 
+#if TAA_USE_YCOCG
 	ns_nw = rgbToYCoCg(ns_nw);
 	ns_n  = rgbToYCoCg(ns_n);
 	ns_ne = rgbToYCoCg(ns_ne);
@@ -176,6 +208,8 @@ float4 PS(PSInput input) : SV_TARGET
 	ns_sw = rgbToYCoCg(ns_sw);
 	ns_s  = rgbToYCoCg(ns_s);
 	ns_se = rgbToYCoCg(ns_se);
+	history.rgb = rgbToYCoCg(history.rgb);
+#endif // TAA_USE_YCOCG
 
 	float3 min_n =		min(ns_nw, min(ns_n,  ns_ne));
 	float3 min_m =		min(ns_w,  min(ns_m,  ns_e));
@@ -187,13 +221,23 @@ float4 PS(PSInput input) : SV_TARGET
 	float3 max_s =		max(ns_sw, max(ns_s,  ns_se));
 	float3 max_sample = max(max_n, max(max_m, max_s));
 
-	float3 clipped_sample = clipHistory(rgbToYCoCg(history.rgb), 0.5 * (min_sample + max_sample), min_sample, max_sample);
-	clipped_sample = YCoCgTorgb(clipped_sample);
-	//float3 clamped_sample = clamp(rgbToYCoCg(history), min_sample, max_sample);
-	//clamped_sample = YCoCgTorgb(clamped_sample);
+#if TAA_USE_CLIPPING
+	float3 clipped_sample = clipHistory(history.rgb, 0.5 * (min_sample + max_sample), min_sample, max_sample);
+	history = float4(clipped_sample, 1.0);
+#else
+	float3 clamped_sample = clamp(history.rgb, min_sample, max_sample);
+	history = float4(clamped_sample, 1.0);
+#endif // TAA_USE_CLIPPING
 
-	float alpha = 0.13;
-	float4 color = (0.0).xxxx;
-	color = float4(lerp(clipped_sample, new_sample, alpha), 1.0);
-	return color;
+#if TAA_USE_YCOCG
+	history.rgb = YCoCgTorgb(history.rgb);
+#endif // TAA_USE_YCOCG
+
+#endif // TAA_USE_HISTORY_RECTIFICATION
+
+
+	float alpha = TAA_ALPHA;
+	if (refresh_history) alpha = 1.0;
+
+	return lerp(history, new_sample, alpha);
 }

@@ -17,6 +17,8 @@ public:
 		const ema::mat4& prev_frame_view_matrix,
 		const ema::mat4& prev_frame_proj_matrix_no_jitter);
 
+	void HandleInput(const eio::InputManager& im);
+
 	void Apply(
 		egx::Device& dev, 
 		egx::CommandContext& context, 
@@ -43,6 +45,15 @@ private:
 	ema::mat4 clip_to_prev_clip;
 	ema::vec4 window_size;
 
+	// Shader macros
+	egx::ShaderMacroList macro_list;
+	bool recompile_shaders = false;
+	int  taa_preset = 3;
+	bool taa_use_catmul_room = true;
+	bool taa_use_history_rectification = true;
+	bool taa_use_ycocg = true;
+	bool taa_use_clipping = true;
+
 private:
 	void applyTAA(
 		egx::Device& dev,
@@ -60,4 +71,6 @@ private:
 
 	void initializeTAA(egx::Device& dev);
 	void initializeFormatConverter(egx::Device& dev);
+
+	void recompileShaders(egx::Device& dev);
 };

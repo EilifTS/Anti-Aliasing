@@ -24,6 +24,8 @@ public:
 	GBuffer& GetGBuffer() { return g_buffer; };
 	egx::Texture2D& GetMotionVectors() { return motion_vectors; };
 
+	void SetSampler(bool biased);
+
 private:
 	GBuffer g_buffer;
 	LightManager light_manager;
@@ -40,8 +42,14 @@ private:
 
 	ToneMapper tone_mapper;
 
+	// Shader macros
+	egx::ShaderMacroList macro_list;
+	bool recompile_shaders;
+
 private:
 	void initializeModelRenderer(egx::Device& dev);
 	void initializeLightRenderer(egx::Device& dev);
 	void initializeMotionVectorRenderer(egx::Device& dev);
+
+	void recompileShaders(egx::Device& dev);
 };

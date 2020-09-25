@@ -6,7 +6,7 @@ namespace
 	static const ema::vec3 shadow_map_light_dir = ema::vec3(0.15f, -1.0f, 0.15f).GetNormalized();
 	static const ema::point2D shadow_map_size = ema::point2D(2048, 2048) * 2;
 	static const float shadow_map_near_plane = 1.0;
-	static const float shadow_map_far_plane = 10000.0;
+	static const float shadow_map_far_plane = 100.0;
 
 	static const int shadow_bias = 10000;
 	static const float shadow_slope_scale_bias = 0.0001f;
@@ -21,7 +21,7 @@ namespace
 
 LightManager::LightManager(egx::Device& dev, egx::CommandContext& context)
 	:
-	camera(dev, context, ema::vec2(shadow_map_size) * 1.0f, shadow_map_near_plane, shadow_map_far_plane),
+	camera(dev, context, ema::vec2(40.0f), shadow_map_near_plane, shadow_map_far_plane),
 	light_dir(),
 	view_to_shadowmap_matrix(ema::mat4::Identity()),
 	const_buffer(dev, (int)sizeof(ShadowMapConstBufferType)),
@@ -30,7 +30,7 @@ LightManager::LightManager(egx::Device& dev, egx::CommandContext& context)
 	static_depth_buffer(dev, egx::TextureFormat::D32, shadow_map_size),
 	depth_buffer(dev, egx::TextureFormat::D32, shadow_map_size)
 {
-	camera.SetPosition(-shadow_map_light_dir*5000.0f);
+	camera.SetPosition(-shadow_map_light_dir*50.0f);
 	camera.SetLookAt({ 0.0f, 0.0f, 0.0f });
 	camera.SetUp({ 0.0f, 0.0f, 1.0f });
 	camera.UpdateViewMatrix();

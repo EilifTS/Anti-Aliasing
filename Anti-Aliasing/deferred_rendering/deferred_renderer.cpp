@@ -26,6 +26,8 @@ void DeferrdRenderer::UpdateLight(egx::Camera& camera)
 
 void DeferrdRenderer::PrepareFrame(egx::Device& dev, egx::CommandContext& context)
 {
+	if (recompile_shaders) recompileShaders(dev);
+
 	light_manager.PrepareFrame(dev, context);
 
 	context.SetTransitionBuffer(g_buffer.DiffuseBuffer(), egx::GPUBufferState::RenderTarget);
@@ -152,9 +154,25 @@ void DeferrdRenderer::RenderMotionVectors(egx::Device& dev, egx::CommandContext&
 	}
 }
 
+void DeferrdRenderer::SetSampler(bool biased)
+{
+	if (biased)
+	{
+		macro_list.SetMacro("SAMPLER", "linear_wrap_biased");
+	}
+	else
+	{
+		macro_list.SetMacro("SAMPLER", "linear_wrap");
+	}
+	recompile_shaders = true;
+}
+
 void DeferrdRenderer::initializeModelRenderer(egx::Device& dev)
 {
 	// Create root signature
+	auto biased_sampler = egx::Sampler::LinearWrap();
+	biased_sampler.SetMipMapBias(-1.5f);
+
 	model_rs.InitConstantBuffer(0); // Camera buffer
 	model_rs.InitConstantBuffer(1); // Model buffer
 	model_rs.InitConstantBuffer(2); // Material buffer
@@ -163,6 +181,7 @@ void DeferrdRenderer::initializeModelRenderer(egx::Device& dev)
 	model_rs.InitDescriptorTable(2, egx::ShaderVisibility::Pixel); // Specular
 	model_rs.InitDescriptorTable(3, egx::ShaderVisibility::Pixel); // Mask
 	model_rs.AddSampler(egx::Sampler::LinearWrap(), 0);
+	model_rs.AddSampler(biased_sampler, 1);
 	model_rs.Finalize(dev);
 
 	// Create Shaders
@@ -253,4 +272,20 @@ void DeferrdRenderer::initializeMotionVectorRenderer(egx::Device& dev)
 	motion_vector_ps.SetRasterState(egx::RasterState::Default());
 	motion_vector_ps.SetDepthStencilState(egx::DepthStencilState::MotionVectorWriteStencil());
 	motion_vector_ps.Finalize(dev);
+}
+
+void DeferrdRenderer::recompileShaders(egx::Device& dev)
+{
+	dev.WaitForGPU();
+	auto input_layout = egx::MeshVertex::GetInputLayout();
+	// Create Shaders
+	egx::Shader VS;
+	egx::Shader PS;
+	VS.CompileVertexShader("shaders/deferred/deferred_model_nm_vs.hlsl");
+	PS.CompilePixelShader("shaders/deferred/deferred_model_nm_ps.hlsl", macro_list);
+	model_ps.SetInputLayout(input_layout);
+	model_ps.SetVertexShader(VS);
+	model_ps.SetPixelShader(PS);
+	model_ps.Finalize(dev);
+	recompile_shaders = false;
 }

@@ -65,8 +65,8 @@ void egx::ProjectiveCamera::updateProjectionMatrix(const ema::vec2& jitter)
 	//projection_matrix = ema::mat4::Projection(near_plane, far_plane, field_of_view, AspectRatio());
 
 	ema::vec2 final_jitter = ema::vec2((jitter.x - 0.5f) / window_size.x, (jitter.y - 0.5f) / window_size.y);
-	projection_matrix = ema::mat4::ProjectionOffset(near_plane, far_plane, near_plane_vs_rectangle, final_jitter);
-	projection_matrix_no_jitter = ema::mat4::Projection(near_plane, far_plane, near_plane_vs_rectangle);
+	projection_matrix = ema::mat4::ProjectionOffset(near_plane, far_plane, near_plane_vs_rectangle * near_plane, final_jitter*near_plane);
+	projection_matrix_no_jitter = ema::mat4::Projection(near_plane, far_plane, near_plane_vs_rectangle * near_plane);
 	inv_projection_matrix = projection_matrix.Inverse();
 	inv_projection_matrix_no_jitter = projection_matrix_no_jitter.Inverse();
 }
@@ -88,19 +88,23 @@ void egx::FPCamera::Update(const eio::InputManager& im, const ema::vec2& jitter)
 	auto mouse_movement = mouse.Movement();
 
 	float dt = (float)im.Clock().FrameTime();
+	float c_speed = speed;
+
+	if (keyboard.IsKeyDown(17))
+		c_speed *= 100.0f;
 
 	if (keyboard.IsKeyDown('W'))
-		position += (look_at - position) * dt * speed;
+		position += (look_at - position) * dt * c_speed;
 	if (keyboard.IsKeyDown('S'))
-		position -= (look_at - position) * dt * speed;
+		position -= (look_at - position) * dt * c_speed;
 	if (keyboard.IsKeyDown('D'))
-		position += right * dt * speed;
+		position += right * dt * c_speed;
 	if (keyboard.IsKeyDown('A'))
-		position -= right * dt * speed;
+		position -= right * dt * c_speed;
 	if (keyboard.IsKeyDown(32))
-		position += up * dt * speed;
+		position += ema::vec3(0.0f, 1.0f, 0.0f) * dt * c_speed;
 	if (keyboard.IsKeyDown(16))
-		position -= up * dt * speed;
+		position -= ema::vec3(0.0f, 1.0f, 0.0f) * dt * c_speed;
 
 	roll_pitch_yaw += ema::vec3(0.0f, (float)mouse_movement.y * mouse_speed, (float)mouse_movement.x * mouse_speed);
 
@@ -113,7 +117,10 @@ void egx::FPCamera::Update(const eio::InputManager& im, const ema::vec2& jitter)
 	right = ema::vec3(right4.x, right4.y, right4.z);
 	up = ema::vec3(up4.x, up4.y, up4.z);
 
-	UpdateViewMatrix();
+	//UpdateViewMatrix();
+	view_matrix = ema::mat4::Translation(-position) * ema::mat4::LookAt(ema::vec3(), look_at - position, up);	
+	inv_view_matrix = ema::mat4::LookAt(ema::vec3(), look_at - position, up).Transpose() * ema::mat4::Translation(-position);
+
 }
 
 // Orthographic camera

@@ -7,13 +7,13 @@
 
 namespace
 {
-	const static float near_plane = 1.0f;
-	const static float far_plane = 10000.0f;
+	const static float near_plane = 0.1f;
+	const static float far_plane = 1000.0f;
 }
 
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	: 
-	camera(dev, context, ema::vec2(im.Window().WindowSize()), near_plane, far_plane, 3.141592f / 3.0f, 200.0f, 0.001f),
+	camera(dev, context, ema::vec2(im.Window().WindowSize()), near_plane, far_plane, 3.141592f / 3.0f, 2.0f, 0.001f),
 	target1(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
 	target2(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
 	renderer(dev, context, im.Window().WindowSize(), far_plane),
@@ -21,7 +21,7 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	taa(dev, im.Window().WindowSize(), 16),
 	aa_mode(AAMode::TAA)
 {
-	camera.SetPosition({ 1000.0f, 100.0f, 0.0f });
+	camera.SetPosition({ 10.0f, 1.0f, 0.0f });
 	camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.5f });
 	//camera.SetPosition({ 700.0f, 300.0f, 0.0f });
 	//camera.SetRotation({ 0.0f, 1.3f, -3.141592f * 0.5f });
@@ -33,18 +33,19 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 
 	// Load assets
 	sponza_model = std::make_shared<egx::Model>(dev, eio::LoadMeshFromOBJB(dev, context, "models/sponza", mat_manager));
+	sponza_model->SetScale(0.01f);
 	sponza_model->SetStatic(true);
 
 	auto knight_mesh = eio::LoadMeshFromOBJB(dev, context, "models/knight", mat_manager);
 	knight_model1 = std::make_shared<egx::Model>(dev, knight_mesh);
 	knight_model2 = std::make_shared<egx::Model>(dev, knight_mesh);
 	knight_model3 = std::make_shared<egx::Model>(dev, knight_mesh);
-	knight_model1->SetScale(120.0f);
-	knight_model2->SetScale(120.0f);
-	knight_model3->SetScale(120.0f);
-	knight_model1->SetPosition(ema::vec3(-80.0f, 0.0f, 50.0f));
-	knight_model2->SetPosition(ema::vec3(-440.0f, 0.0f, 50.0f));
-	knight_model3->SetPosition(ema::vec3(300.0f, 0.0f, 50.0f));
+	knight_model1->SetScale(1.2f);
+	knight_model2->SetScale(1.2f);
+	knight_model3->SetScale(1.2f);
+	knight_model1->SetPosition(ema::vec3(-0.8f, 0.0f, 0.5f));
+	knight_model2->SetPosition(ema::vec3(-4.4f, 0.0f, 0.5f));
+	knight_model3->SetPosition(ema::vec3(3.0f, 0.0f, 0.5f));
 	knight_model1->SetRotation(ema::vec3(0.0f, 0.0f, 0.0f));
 	knight_model2->SetRotation(ema::vec3(0.0f, 0.0f, 3.141692f));
 	knight_model3->SetRotation(ema::vec3(0.0f, 0.0f, 3.141692f));
@@ -59,6 +60,20 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 
 void App::Update(eio::InputManager& im)
 {
+	if (im.Keyboard().IsKeyReleased('Q'))
+	{
+		if (aa_mode == AAMode::FXAA)
+		{
+			aa_mode = AAMode::TAA;
+			renderer.SetSampler(true);
+		}
+		else if (aa_mode == AAMode::TAA)
+		{
+			aa_mode = AAMode::FXAA;
+			renderer.SetSampler(false);
+		}
+	}
+
 	ema::vec2 jitter = ema::vec2(0.5f);
 	if (aa_mode == AAMode::TAA) jitter = taa.GetNextJitter();
 
@@ -79,16 +94,12 @@ void App::Update(eio::InputManager& im)
 		prev_frame_view_matrix, 
 		prev_frame_proj_matrix_no_jitter);
 
-	if (im.Keyboard().IsKeyReleased('Q'))
-	{
-		if (aa_mode == AAMode::FXAA) aa_mode = AAMode::TAA;
-		else if (aa_mode == AAMode::TAA) aa_mode = AAMode::FXAA;
-	}
+	
 
 	float time = (float)((double)im.Clock().GetTime() / 1000000.0);
 	float rot = time;
 	knight_model1->SetRotation(ema::vec3(0.0f, 0.0f, rot));
-	knight_model2->SetPosition(ema::vec3(-440.0f, 0.0f, 50.0f + 50.0f*sinf(10.0f*time)));
+	knight_model2->SetPosition(ema::vec3(-4.4f, 0.0f, 0.5f + 0.5f*sinf(10.0f*time)));
 }
 void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 {

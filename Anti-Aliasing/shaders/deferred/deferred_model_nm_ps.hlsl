@@ -14,6 +14,11 @@ Texture2D material_normal_map_texture : register(t1);
 Texture2D material_specular_map_texture : register(t2);
 Texture2D material_mask_texture : register(t3);
 SamplerState linear_wrap : register(s0);
+SamplerState linear_wrap_biased : register(s1);
+
+#ifndef SAMPLER
+#define SAMPLER linear_wrap_biased
+#endif
 
 struct PSInput
 {
@@ -29,26 +34,26 @@ GBuffer PS(PSInput input)
 
 	if (use_mask_texture == 1)
 	{
-		float mask = material_mask_texture.Sample(linear_wrap, input.uv).x;
+		float mask = material_mask_texture.Sample(SAMPLER, input.uv).x;
 		clip(mask - 0.5);
 	}
 
 	float3 color = float3(0.0, 0.0, 0.0);
 	if (use_diffuse_texture == 1)
-		color = material_diffuse_color_texture.Sample(linear_wrap, input.uv).rgb;
+		color = material_diffuse_color_texture.Sample(SAMPLER, input.uv).rgb;
 	else
 		color = diffuse_color;
 	
 	float specular_intensity = 0.0;
 	if (use_specular_map == 1)
-		specular_intensity = material_specular_map_texture.Sample(linear_wrap, input.uv).x;
+		specular_intensity = material_specular_map_texture.Sample(SAMPLER, input.uv).x;
 	else
 		specular_intensity = 0.00;
 
 	float3 normal = float3(0.0, 0.0, 1.0);
 	if (use_normal_map == 1)
 	{
-		float3 normal_sample = material_normal_map_texture.Sample(linear_wrap, input.uv).xyx;
+		float3 normal_sample = material_normal_map_texture.Sample(SAMPLER, input.uv).xyx;
 		normal = float3((normal_sample.xy * 2.0 - 1.0) * float2(1.0, -1.0), normal_sample.z);
 		normal = normalize(mul(normal, input.tbn));
 	}

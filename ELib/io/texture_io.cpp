@@ -50,14 +50,12 @@ namespace
 						int index_u2 = mip_offset_u + ((2 * y + (1 % width_u)) * width_u + 2 * x + 0)              * bytes_per_pixel + i;
 						int index_u3 = mip_offset_u + ((2 * y + (1 % width_u)) * width_u + 2 * x + (1 % height_u)) * bytes_per_pixel + i;
 						int index_s = mip_offset_s + (y * width_s + x) * bytes_per_pixel + i;
-						data_out[index_s] =
-							(uint8_t)((
-								(uint32_t)data_out[index_u0] + 
-								(uint32_t)data_out[index_u1] + 
-								(uint32_t)data_out[index_u2] + 
-								(uint32_t)data_out[index_u3]
-								) >> 2
-								);
+						uint32_t sum = (uint32_t)data_out[index_u0] +
+							(uint32_t)data_out[index_u1] +
+							(uint32_t)data_out[index_u2] +
+							(uint32_t)data_out[index_u3];
+						if (sum % 4 >= 2) sum += 2;
+						data_out[index_s] = (uint8_t)((sum) >> 2);
 					}
 				}
 			}

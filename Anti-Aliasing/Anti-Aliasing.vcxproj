@@ -273,7 +273,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\deferred\g_buffer.hlsli" />
-    <None Include="shaders\deferred\phong.hlsli" />
+    <None Include="shaders\deferred\illumination.hlsli" />
     <None Include="shaders\deferred\shadow.hlsli" />
     <None Include="shaders\fxaa\fxaa_header.hlsli">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>

@@ -1,4 +1,4 @@
-#include "phong.hlsli"
+#include "illumination.hlsli"
 #include "shadow.hlsli"
 
 Texture2D diffuse_texture : register(t0);
@@ -11,6 +11,7 @@ cbuffer LightBuffer : register(b1)
 {
 	matrix view_to_shadowmap_matrix;
 	float4 light_dir;
+	float roughness_in;
 }
 
 struct PSInput
@@ -22,7 +23,7 @@ struct PSInput
 
 float4 PS(PSInput input) : SV_TARGET
 {
-	float3 color = diffuse_texture.Sample(point_clamp, input.uv).rgb;
+	float3 albedo_color = diffuse_texture.Sample(point_clamp, input.uv).rgb;
 	float specular_intensity = diffuse_texture.Sample(point_clamp, input.uv).a;
 	float3 normal = normal_texture.Sample(point_clamp, input.uv).xyz;
 	float distance = normal_texture.Sample(point_clamp, input.uv).w;
@@ -34,16 +35,29 @@ float4 PS(PSInput input) : SV_TARGET
 	float shadow_factor = calculateShadowSmooth4(shadowmap, shadow_sampler, view_position, view_to_shadowmap_matrix);
 
 	// Light calculation
-	float diffuse = 0.0;
-	float specular = 0.0;
+	// Ambient light
+	float3 color = 0.2 * albedo_color;
 	if (shadow_factor > 0.0)
 	{
-		diffuse = phong_diffuse_light(light_dir.xyz, normal) * shadow_factor;
-		float3 reflection_vector = phong_reflection_vector(light_dir.xyz, normal);
-		specular = phong_specular_light(reflection_vector, view_dir, 10) * shadow_factor;
+		float roughness = roughness_in;
+		float shinyness = 0.5;
+		//float freshnell
+
+		float3 l = normalize(-light_dir.xyz);
+		float3 v = -view_dir;
+		float3 n = normalize(normal);
+		float3 h = normalize(l + v);
+		float3 r = phong_reflection_vector(l, n);
+		float nl = dot(n, l);
+
+		float diffuse = 1.0f;
+		//if(diffuse > 0.0)
+			//specular = diffuse * phong_specular_light(n, h, 10);
+		//specular = phong_specular_light(r, v, 10);
+		float specular = saturate(nl) * specular_spec(n, l, v, h, roughness) * shadow_factor;
+
+		color += saturate(nl) * shadow_factor * (lerp(diffuse * albedo_color, specular.xxx, shinyness));
 	}
-		
-	color = color * (0.2 +  0.8 * diffuse) + 0.8 * specular_intensity * specular.xxx;
 
 
 	//return float4(float3(normal.xy, normal.z), 1.0);

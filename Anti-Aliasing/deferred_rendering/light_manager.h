@@ -32,4 +32,6 @@ private:
 	egx::RootSignature shadow_rs;
 	egx::PipelineState shadow_ps;
 
+	float r;
+
 };

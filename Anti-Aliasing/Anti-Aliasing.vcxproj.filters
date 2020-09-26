@@ -87,9 +87,9 @@
   <ItemGroup>
     <None Include="shaders\fxaa\fxaa_header.hlsli" />
     <None Include="shaders\deferred\g_buffer.hlsli" />
-    <None Include="shaders\deferred\phong.hlsli" />
     <None Include="shaders\deferred\shadow.hlsli" />
     <None Include="shaders\headers\camera.hlsli" />
     <None Include="shaders\headers\model.hlsli" />
+    <None Include="shaders\deferred\illumination.hlsli" />
   </ItemGroup>
 </Project>

@@ -8,14 +8,15 @@ namespace
 	static const float shadow_map_near_plane = 1.0;
 	static const float shadow_map_far_plane = 100.0;
 
-	static const int shadow_bias = 10000;
-	static const float shadow_slope_scale_bias = 0.0001f;
+	static const int shadow_bias = 100000;
+	static const float shadow_slope_scale_bias = 1.1f;
 	static const float shadow_bias_clamp = 1.0f;
 
 	struct ShadowMapConstBufferType
 	{
 		ema::mat4 view_to_shadowmap_matrix;
 		ema::vec4 light_dir;
+		float roughness;
 	};
 }
 
@@ -30,6 +31,7 @@ LightManager::LightManager(egx::Device& dev, egx::CommandContext& context)
 	static_depth_buffer(dev, egx::TextureFormat::D32, shadow_map_size),
 	depth_buffer(dev, egx::TextureFormat::D32, shadow_map_size)
 {
+	r = 0;
 	camera.SetPosition(-shadow_map_light_dir*50.0f);
 	camera.SetLookAt({ 0.0f, 0.0f, 0.0f });
 	camera.SetUp({ 0.0f, 0.0f, 1.0f });
@@ -90,7 +92,9 @@ void LightManager::PrepareFrame(egx::Device& dev, egx::CommandContext& context)
 	// Update light buffer
 	ShadowMapConstBufferType smcbt;
 	smcbt.view_to_shadowmap_matrix = view_to_shadowmap_matrix;
-	smcbt.light_dir = light_dir;
+	smcbt.light_dir = light_dir.GetNormalized();
+	r = fmod(r + 0.01f, 1.0f);
+	smcbt.roughness = r;
 	egx::CPUBuffer cpu_buffer(&smcbt, (int)sizeof(smcbt));
 	context.SetTransitionBuffer(const_buffer, egx::GPUBufferState::CopyDest);
 	dev.ScheduleUpload(context, cpu_buffer, const_buffer);

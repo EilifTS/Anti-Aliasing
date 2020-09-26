@@ -171,7 +171,7 @@ void DeferrdRenderer::initializeModelRenderer(egx::Device& dev)
 {
 	// Create root signature
 	auto biased_sampler = egx::Sampler::LinearWrap();
-	biased_sampler.SetMipMapBias(-1.5f);
+	biased_sampler.SetMipMapBias(-1.0f);
 
 	model_rs.InitConstantBuffer(0); // Camera buffer
 	model_rs.InitConstantBuffer(1); // Model buffer

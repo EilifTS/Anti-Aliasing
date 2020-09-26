@@ -37,11 +37,11 @@ float4 PS(PSInput input) : SV_TARGET
 	// Light calculation
 	// Ambient light
 	float3 color = 0.2 * albedo_color;
+
 	if (shadow_factor > 0.0)
 	{
-		float roughness = roughness_in;
-		float shinyness = 0.5;
-		//float freshnell
+		float roughness = 0.8 - 0.7 * specular_intensity;
+		float shinyness = 0.0 + 0.2 * specular_intensity;
 
 		float3 l = normalize(-light_dir.xyz);
 		float3 v = -view_dir;
@@ -51,16 +51,10 @@ float4 PS(PSInput input) : SV_TARGET
 		float nl = dot(n, l);
 
 		float diffuse = 1.0f;
-		//if(diffuse > 0.0)
-			//specular = diffuse * phong_specular_light(n, h, 10);
-		//specular = phong_specular_light(r, v, 10);
-		float specular = saturate(nl) * specular_spec(n, l, v, h, roughness) * shadow_factor;
+		float specular = specular_spec(n, l, v, h, roughness);
 
 		color += saturate(nl) * shadow_factor * (lerp(diffuse * albedo_color, specular.xxx, shinyness));
 	}
 
-
-	//return float4(float3(normal.xy, normal.z), 1.0);
-	//return float4(shadowmap.Sample(point_clamp, input.uv).xxx, 1.0);
 	return float4(color, 1.0);
 }

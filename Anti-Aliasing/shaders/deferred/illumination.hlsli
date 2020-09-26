@@ -37,7 +37,7 @@ float specular_spec(float3 n, float3 l, float3 v, float3 h, float r)
 	float alpha2 = alpha * alpha;
 
 	const float pi = 3.14159265f;
-	float k = alpha * 0.5;
+	float k = (r+1.0)*(r+1.0) * 0.125;
 	float nh = dot(n, h);
 	float nv = dot(n, v);
 	float nl = dot(n, l);

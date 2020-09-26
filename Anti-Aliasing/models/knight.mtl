@@ -12,7 +12,7 @@ d 1.000000
 illum 2
 map_bump textures\\knight\\Knight_normal.png
 map_Kd textures\\knight\\Knight_diffuse.png
-map_spec textures\\knight\\Knight_roughness.png
+map_spec textures\\knight\\Knight_spec.png
 refl C:textures\\knight\\Knight_metallic.png
 
 newmtl Espada
@@ -26,5 +26,5 @@ d 1.000000
 illum 2
 map_bump textures\\knight\\Sword_normal.png
 map_Kd textures\\knight\\Sword_diffuse.png
-map_spec textures\\knight\\Sword_roughness.png
+map_spec textures\\knight\\Sword_spec.png
 refl textures\\knight\\Sword_metallic.png

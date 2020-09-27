@@ -67,8 +67,8 @@ void egx::ProjectiveCamera::updateProjectionMatrix(const ema::vec2& jitter)
 	ema::vec2 final_jitter = ema::vec2((jitter.x - 0.5f) / window_size.x, (jitter.y - 0.5f) / window_size.y);
 	projection_matrix = ema::mat4::ProjectionOffset(near_plane, far_plane, near_plane_vs_rectangle * near_plane, final_jitter*near_plane);
 	projection_matrix_no_jitter = ema::mat4::Projection(near_plane, far_plane, near_plane_vs_rectangle * near_plane);
-	inv_projection_matrix = projection_matrix.Inverse();
-	inv_projection_matrix_no_jitter = projection_matrix_no_jitter.Inverse();
+	inv_projection_matrix = ema::mat4::ProjectionOffsetInverse(near_plane, far_plane, near_plane_vs_rectangle * near_plane, final_jitter * near_plane);
+	inv_projection_matrix_no_jitter = ema::mat4::ProjectionOffsetInverse(near_plane, far_plane, near_plane_vs_rectangle * near_plane, ema::vec2());
 }
 
 // First person camera
@@ -117,10 +117,8 @@ void egx::FPCamera::Update(const eio::InputManager& im, const ema::vec2& jitter)
 	right = ema::vec3(right4.x, right4.y, right4.z);
 	up = ema::vec3(up4.x, up4.y, up4.z);
 
-	//UpdateViewMatrix();
 	view_matrix = ema::mat4::Translation(-position) * ema::mat4::LookAt(ema::vec3(), look_at - position, up);	
-	inv_view_matrix = ema::mat4::LookAt(ema::vec3(), look_at - position, up).Transpose() * ema::mat4::Translation(-position);
-
+	inv_view_matrix = ema::mat4::LookAt(ema::vec3(), look_at - position, up).Transpose() * ema::mat4::Translation(position);
 }
 
 // Orthographic camera

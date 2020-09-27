@@ -75,7 +75,8 @@ void App::Update(eio::InputManager& im)
 	}
 
 	ema::vec2 jitter = ema::vec2(0.5f);
-	if (aa_mode == AAMode::TAA) jitter = taa.GetNextJitter();
+	//if (aa_mode == AAMode::TAA) jitter = taa.GetNextJitter();
+	jitter = taa.GetNextJitter();
 
 	ema::mat4 prev_frame_view_matrix = camera.ViewMatrix();
 	ema::mat4 prev_frame_proj_matrix_no_jitter = camera.ProjectionMatrixNoJitter();
@@ -88,11 +89,22 @@ void App::Update(eio::InputManager& im)
 	else if (aa_mode == AAMode::TAA)
 		taa.HandleInput(im);
 
-	taa.Update(
-		camera.ProjectionMatrixNoJitter().Inverse(), 
-		camera.ViewMatrix().Inverse(), 
-		prev_frame_view_matrix, 
-		prev_frame_proj_matrix_no_jitter);
+	if (aa_mode == AAMode::TAA)
+	{
+		taa.Update(
+			camera.ProjectionMatrixNoJitter().Inverse(),
+			camera.ViewMatrix().Inverse(),
+			prev_frame_view_matrix,
+			prev_frame_proj_matrix_no_jitter);
+	}
+	else
+	{
+		if(im.Keyboard().IsKeyReleased('Z'))taa.Update(
+			camera.ProjectionMatrixNoJitter().Inverse(),
+			camera.ViewMatrix().Inverse(),
+			prev_frame_view_matrix,
+			prev_frame_proj_matrix_no_jitter);
+	}
 
 	
 

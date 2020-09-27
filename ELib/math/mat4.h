@@ -44,12 +44,36 @@ namespace ema
 		static inline mat4 ProjectionOffset(float near_plane, float far_plane, const ema::vec2& dims, const ema::vec2 offset)
 		{
 			mat4 out;
-			out.matrix = DirectX::XMMatrixPerspectiveOffCenterLH(
-				offset.x - dims.x,
-				offset.x + dims.x,
-				offset.y - dims.y,
-				offset.y + dims.y,
-				near_plane, far_plane);
+
+			float n = near_plane;
+			float rw = 1.0f / dims.x;
+			float rh = 1.0f / dims.y;
+			float R = far_plane / (far_plane - near_plane);
+			float a = offset.x;
+			float b = offset.y;
+
+			out.matrix.r[0] = DirectX::XMVectorSet(n * rw, 0.0f, 0.0f, 0.0f);
+			out.matrix.r[1] = DirectX::XMVectorSet(0.0f, n * rh, 0.0f, 0.0f);
+			out.matrix.r[2] = DirectX::XMVectorSet(-a*rw, -b*rh, R, 1.0f);
+			out.matrix.r[3] = DirectX::XMVectorSet(0.0f, 0.0f, -R*n, 0.0f);
+
+			return out;
+		}
+		static inline mat4 ProjectionOffsetInverse(float near_plane, float far_plane, const ema::vec2& dims, const ema::vec2 offset)
+		{
+			mat4 out;
+			float rec_n = 1.0f / near_plane;
+			float rec_R = rec_n - 1.0f / far_plane;
+			float w = dims.x;
+			float h = dims.y;
+			float a = offset.x;
+			float b = offset.y;
+
+			out.matrix.r[0] = DirectX::XMVectorSet(rec_n * w,	0.0f,		0.0f, 0.0f);
+			out.matrix.r[1] = DirectX::XMVectorSet(0.0f,		rec_n * h,	0.0f, 0.0f);
+			out.matrix.r[2] = DirectX::XMVectorSet(0.0f,		0.0f,		0.0f, -rec_R);
+			out.matrix.r[3] = DirectX::XMVectorSet(a * rec_n,	b * rec_n,	1.0f, rec_n);
+
 			return out;
 		}
 		static inline mat4 Orthographic(const ema::vec2& dims, float near_plane, float far_plane)

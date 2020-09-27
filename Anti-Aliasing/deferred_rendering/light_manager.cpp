@@ -8,7 +8,7 @@ namespace
 	static const float shadow_map_near_plane = 1.0;
 	static const float shadow_map_far_plane = 100.0;
 
-	static const int shadow_bias = 100000;
+	static const int shadow_bias = 50000;
 	static const float shadow_slope_scale_bias = 1.1f;
 	static const float shadow_bias_clamp = 1.0f;
 

@@ -132,6 +132,7 @@ float4 PS(PSInput input) : SV_TARGET
 		float4 prev_frame_pos = mul(clip_position, clip_to_prev_frame_clip_matrix);
 		prev_frame_pos /= prev_frame_pos.w;
 		prev_frame_uv = prev_frame_pos.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
+		//prev_frame_uv = clip_position.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
 	}
 	else // Dynamic object pixel
 	{

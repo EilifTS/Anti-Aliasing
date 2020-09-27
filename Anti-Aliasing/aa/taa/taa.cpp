@@ -8,8 +8,8 @@ namespace
 		ema::mat4 clip_to_prev_frame_clip;
 	};
 
-	static const int   sample_count_presets[4] = {          2,     4,     8,     16 };
-	static const std::string alpha_presets[4]  = { "0.5", "0.3", "0.2", "0.13" };
+	static const int   sample_count_presets[5] = {          2,     4,     8,     16, 32 };
+	static const std::string alpha_presets[5]  = { "0.5", "0.3", "0.2", "0.13", "0.05" };
 }
 
 TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count)
@@ -34,11 +34,17 @@ void TAA::Update(
 	const ema::mat4& prev_frame_proj_matrix_no_jitter)
 { 
 	current_index = (current_index + 1) % sample_count;
+
+	auto id1 = inv_view_matrix * prev_frame_view_matrix;
+	auto id2 = inv_proj_matrix_no_jitter * prev_frame_proj_matrix_no_jitter;
 	clip_to_prev_clip = (
 		inv_proj_matrix_no_jitter *
-		inv_view_matrix *
-		prev_frame_view_matrix *
+		(inv_view_matrix *		// Paranthesis important for multiplication precision
+		prev_frame_view_matrix) *
 		prev_frame_proj_matrix_no_jitter);
+
+	ema::vec4 frame_pos(0.5f, 0.5f, 0.5f, 1.0f);
+	auto prev_frame_pos = frame_pos * clip_to_prev_clip;
 };
 
 void TAA::HandleInput(const eio::InputManager& im)

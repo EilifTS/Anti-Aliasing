@@ -74,6 +74,8 @@ namespace egx
 		friend PipelineState;
 		friend CommandContext;
 		friend RenderTarget;
+		friend Mesh;
+		friend TLAS;
 		friend std::shared_ptr<egx::Texture2D> eio::LoadTextureFromFile(egx::Device& dev, egx::CommandContext& context, const std::string& file_name, bool use_srgb);
 	};
 }

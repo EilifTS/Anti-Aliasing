@@ -46,10 +46,19 @@ namespace egx
 		inline IndexBuffer& GetIndexBuffer() { return index_buffer; };
 		inline const Material& GetMaterial() const { return material; };
 
+		void BuildAccelerationStructure(Device& dev, CommandContext& context);
+
 	private:
 		VertexBuffer vertex_buffer;
 		IndexBuffer index_buffer;
 		std::string name;
 		const Material& material;
+
+		// Ray tracing
+		std::unique_ptr<GPUBuffer> blas_scratch;
+		std::unique_ptr<GPUBuffer> blas_result;
+
+	private:
+		friend TLAS;
 	};
 }

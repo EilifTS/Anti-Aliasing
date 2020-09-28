@@ -24,7 +24,7 @@ egx::Model::Model(Device& dev, const std::vector<std::shared_ptr<Mesh>>& meshes)
 void egx::Model::UpdateBuffer(Device& dev, CommandContext& context)
 {
 	ModelBufferType mbt;
-	mbt.world_matrix = ema::mat4::Scale(scale) * ema::mat4::RollPitchYaw(rotation) * ema::mat4::Translation(position);
+	mbt.world_matrix = CalculateWorldMatrix();
 	mbt.world_matrix = mbt.world_matrix.Transpose();
 	mbt.last_world_matrix = last_world_matrix;
 	last_world_matrix = mbt.world_matrix;
@@ -34,4 +34,9 @@ void egx::Model::UpdateBuffer(Device& dev, CommandContext& context)
 	dev.ScheduleUpload(context, cpu_buffer, model_buffer);
 	context.SetTransitionBuffer(model_buffer, GPUBufferState::ConstantBuffer);
 
+}
+
+ema::mat4 egx::Model::CalculateWorldMatrix()
+{
+	return ema::mat4::Scale(scale) * ema::mat4::RollPitchYaw(rotation) * ema::mat4::Translation(position);
 }

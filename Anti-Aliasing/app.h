@@ -4,6 +4,7 @@
 
 #include "graphics/egx.h"
 #include "graphics/camera.h"
+#include "graphics/tlas.h"
 
 #include "aa/fxaa/fxaa.h"
 #include "aa/taa/taa.h"
@@ -38,7 +39,11 @@ private:
 	std::shared_ptr<egx::Model> knight_model2;
 	std::shared_ptr<egx::Model> knight_model3;
 
+	// Anti aliasing
 	AAMode aa_mode;
 	FXAA fxaa;
 	TAA taa;
+
+	// Ray tracing
+	egx::TLAS tlas;
 };

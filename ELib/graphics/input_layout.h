@@ -35,7 +35,7 @@ namespace egx
 			addElement("TEXCOORD", tc_c, elements);
 			tc_c++;
 		}
-		inline void AddIntegers(int elements)
+		inline void AddTextureCoordinateInt(int elements)
 		{
 			addElement("TEXCOORD", tc_c, elements, true);
 			tc_c++;

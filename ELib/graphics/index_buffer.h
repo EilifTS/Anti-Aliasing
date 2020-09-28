@@ -27,5 +27,6 @@ namespace egx
 		D3D12_INDEX_BUFFER_VIEW view;
 
 		friend CommandContext;
+		friend Mesh;
 	};
 }

@@ -175,6 +175,7 @@
     <ClInclude Include="graphics\sampler.h" />
     <ClInclude Include="graphics\shader.h" />
     <ClInclude Include="graphics\texture2d.h" />
+    <ClInclude Include="graphics\tlas.h" />
     <ClInclude Include="graphics\vertex_buffer.h" />
     <ClInclude Include="io\console.h" />
     <ClInclude Include="io\game_clock.h" />
@@ -213,6 +214,7 @@
     <ClCompile Include="graphics\root_signature.cpp" />
     <ClCompile Include="graphics\shader.cpp" />
     <ClCompile Include="graphics\texture2d.cpp" />
+    <ClCompile Include="graphics\tlas.cpp" />
     <ClCompile Include="io\console.cpp" />
     <ClCompile Include="io\game_clock.cpp" />
     <ClCompile Include="io\internal\WICTextureLoader12.cpp" />

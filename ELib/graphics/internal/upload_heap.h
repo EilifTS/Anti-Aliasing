@@ -20,5 +20,6 @@ namespace egx
 
 	private:
 		friend CommandContext;
+		friend TLAS;
 	};
 }

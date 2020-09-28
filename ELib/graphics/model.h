@@ -27,6 +27,7 @@ namespace egx
 		inline void SetScale(const ema::vec3& new_scale) { scale = new_scale; };
 		inline void SetScale(float new_scale) { scale = ema::vec3(new_scale); };
 
+		ema::mat4 CalculateWorldMatrix();
 
 	private:
 		std::vector<std::shared_ptr<Mesh>> meshes;

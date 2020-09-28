@@ -23,6 +23,7 @@ namespace egx
 		void SetDepthStencilBuffer(DepthBuffer& buffer);
 
 		void SetTransitionBuffer(GPUBuffer& buffer, GPUBufferState new_state);
+		void SetUABarrier(GPUBuffer& ua_buffer);
 
 		void SetViewport(const ema::point2D& size);
 		inline void SetViewport(); // Set viewport to the whole screen
@@ -53,12 +54,14 @@ namespace egx
 		void copyTextureFromUploadHeap(GPUBuffer& dest, UploadHeap& src, int sub_res, const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& footprint);
 
 	private:
-		ComPtr<ID3D12GraphicsCommandList> command_list;
+		ComPtr<ID3D12GraphicsCommandList4> command_list;
 		RenderTarget* current_bb;
 		ema::point2D window_size;
 
 	private:
 		friend Device;
+		friend Mesh;
+		friend TLAS;
 	};
 }
 

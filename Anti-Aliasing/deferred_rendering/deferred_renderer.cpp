@@ -91,7 +91,6 @@ void DeferrdRenderer::RenderModel(egx::Device& dev, egx::CommandContext& context
 
 void DeferrdRenderer::RenderLight(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::RenderTarget& target)
 {
-	
 	context.SetTransitionBuffer(target, egx::GPUBufferState::RenderTarget);
 	context.SetTransitionBuffer(g_buffer.DiffuseBuffer(), egx::GPUBufferState::PixelResource);
 	context.SetTransitionBuffer(g_buffer.NormalBuffer(), egx::GPUBufferState::PixelResource);

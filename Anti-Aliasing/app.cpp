@@ -4,6 +4,7 @@
 #include "graphics/input_layout.h"
 #include "graphics/cpu_buffer.h"
 #include "io/mesh_io.h"
+#include "graphics/mesh.h"
 
 namespace
 {
@@ -32,7 +33,8 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	target2.CreateRenderTargetView(dev);
 
 	// Load assets
-	sponza_model = std::make_shared<egx::Model>(dev, eio::LoadMeshFromOBJB(dev, context, "models/sponza", mat_manager));
+	auto sponza_mesh = eio::LoadMeshFromOBJB(dev, context, "models/sponza", mat_manager);
+	sponza_model = std::make_shared<egx::Model>(dev, sponza_mesh);
 	sponza_model->SetScale(0.01f);
 	sponza_model->SetStatic(true);
 
@@ -56,6 +58,18 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	//mat_manager.DisableSpecularMaps();
 	//mat_manager.DisableMaskTextures();
 	mat_manager.LoadMaterialAssets(dev, context, texture_loader);
+
+	// Create acceleration structures
+	for (auto pmesh : sponza_mesh)
+	{
+		pmesh->BuildAccelerationStructure(dev, context);
+	}
+	for (auto pmesh : knight_mesh)
+	{
+		pmesh->BuildAccelerationStructure(dev, context);
+	}
+	std::vector<std::shared_ptr<egx::Model>> models_vector = { sponza_model, knight_model1, knight_model2, knight_model3 };
+	tlas.Build(dev, context, models_vector);
 }
 
 void App::Update(eio::InputManager& im)
@@ -123,12 +137,12 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 
 	renderer.PrepareFrame(dev, context);
 	renderer.RenderModel(dev, context, camera, *sponza_model);
-	renderer.RenderModel(dev, context, camera, *knight_model3);
-	renderer.RenderModel(dev, context, camera, *knight_model1);
-	renderer.RenderModel(dev, context, camera, *knight_model2);
-	renderer.RenderMotionVectors(dev, context, camera, *knight_model1);
-	renderer.RenderMotionVectors(dev, context, camera, *knight_model2);
-	renderer.RenderMotionVectors(dev, context, camera, *knight_model3);
+	//renderer.RenderModel(dev, context, camera, *knight_model3);
+	//renderer.RenderModel(dev, context, camera, *knight_model1);
+	//renderer.RenderModel(dev, context, camera, *knight_model2);
+	//renderer.RenderMotionVectors(dev, context, camera, *knight_model1);
+	//renderer.RenderMotionVectors(dev, context, camera, *knight_model2);
+	//renderer.RenderMotionVectors(dev, context, camera, *knight_model3);
 	renderer.RenderLight(dev, context, camera, target1);
 	renderer.PrepareFrameEnd();
 

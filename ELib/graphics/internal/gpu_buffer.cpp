@@ -10,9 +10,10 @@ egx::GPUBuffer::GPUBuffer(
 	int element_size, 
 	D3D12_TEXTURE_LAYOUT layout, 
 	D3D12_RESOURCE_FLAGS flags,
-	D3D12_CLEAR_VALUE* clear_value)
+	D3D12_CLEAR_VALUE* clear_value,
+	GPUBufferState start_state)
 	: element_count(width * height * depth), element_size(element_size),
-	state(D3D12_RESOURCE_STATE_COPY_DEST)
+	state(convertResourceState(start_state))
 {
 	D3D12_RESOURCE_DESC desc = {};
 

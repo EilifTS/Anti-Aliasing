@@ -13,22 +13,7 @@ namespace egx
 {
 	inline D3D12_RESOURCE_STATES convertResourceState(GPUBufferState state)
 	{
-		switch (state)
-		{
-		case egx::GPUBufferState::VertexBuffer:		return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-		case egx::GPUBufferState::IndexBuffer:		return D3D12_RESOURCE_STATE_INDEX_BUFFER;
-		case egx::GPUBufferState::ConstantBuffer:	return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-		case egx::GPUBufferState::RenderTarget:		return D3D12_RESOURCE_STATE_RENDER_TARGET;
-		case egx::GPUBufferState::DepthWrite:		return D3D12_RESOURCE_STATE_DEPTH_WRITE;
-		case egx::GPUBufferState::DepthRead:		return D3D12_RESOURCE_STATE_DEPTH_READ;
-		case egx::GPUBufferState::NonPixelResource: return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-		case egx::GPUBufferState::PixelResource:	return D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-		case egx::GPUBufferState::CopyDest:			return D3D12_RESOURCE_STATE_COPY_DEST;
-		case egx::GPUBufferState::CopySource:		return D3D12_RESOURCE_STATE_COPY_SOURCE;
-		case egx::GPUBufferState::Present:			return D3D12_RESOURCE_STATE_PRESENT;
-		default: throw std::runtime_error("Invalid GPUBuffer state");
-		}
-		return D3D12_RESOURCE_STATE_COMMON;
+		return (D3D12_RESOURCE_STATES)state;
 	}
 
 	inline D3D12_PRIMITIVE_TOPOLOGY convertTopology(Topology top)

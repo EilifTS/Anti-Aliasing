@@ -34,6 +34,15 @@ void egx::RootSignature::InitDescriptorTable(int shader_register, int num_entrie
 	param.InitAsDescriptorTable(1, ranges.back().get(), convertVisibility(visibility));
 	root_parameters.push_back(param);
 }
+void egx::RootSignature::InitConstantBufferTable(int shader_register, int num_entries, ShaderVisibility visibility)
+{
+	CD3DX12_ROOT_PARAMETER1 param;
+	std::shared_ptr<CD3DX12_DESCRIPTOR_RANGE1> range = std::make_shared<CD3DX12_DESCRIPTOR_RANGE1>();
+	range->Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, num_entries, shader_register, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+	ranges.push_back(range);
+	param.InitAsDescriptorTable(1, ranges.back().get(), convertVisibility(visibility));
+	root_parameters.push_back(param);
+}
 void egx::RootSignature::AddSampler(const Sampler& sampler, int shader_register)
 {
 	auto sampler_desc = sampler.desc;

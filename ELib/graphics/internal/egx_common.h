@@ -30,21 +30,25 @@ namespace egx
 	class DescriptorHeap;
 	class Mesh;
 	class Model;
+	class TLAS;
 
 	enum class GPUBufferState
 	{
-		VertexBuffer,
-		IndexBuffer,
-		ConstantBuffer,
-		RenderTarget,
-		DepthWrite,
-		DepthRead,
-		NonPixelResource,
-		PixelResource,
-		CopyDest,
-		CopySource,
-		Present
-	}; 
+		VertexBuffer =			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
+		IndexBuffer =			D3D12_RESOURCE_STATE_INDEX_BUFFER,
+		ConstantBuffer =		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
+		RenderTarget =			D3D12_RESOURCE_STATE_RENDER_TARGET,
+		DepthWrite =			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		DepthRead =				D3D12_RESOURCE_STATE_DEPTH_READ,
+		NonPixelResource =		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		PixelResource =			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		CopyDest =				D3D12_RESOURCE_STATE_COPY_DEST,
+		CopySource =			D3D12_RESOURCE_STATE_COPY_SOURCE,
+		Present =				D3D12_RESOURCE_STATE_PRESENT,
+		UnorderedAccess =		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		AccelerationStructure = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE
+	};
+	inline GPUBufferState operator |(GPUBufferState lhs, GPUBufferState rhs) { return (GPUBufferState)((unsigned int)lhs | (unsigned int)rhs); }
 	
 	enum class Topology
 	{

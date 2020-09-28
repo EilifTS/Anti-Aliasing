@@ -150,6 +150,9 @@
     <ClInclude Include="graphics\tlas.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="graphics\rt_pipeline_state.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="graphics\internal\descriptor_heap.cpp">
@@ -225,6 +228,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="graphics\tlas.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\rt_pipeline_state.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -172,6 +172,7 @@
     <ClInclude Include="graphics\pipeline_state.h" />
     <ClInclude Include="graphics\render_target.h" />
     <ClInclude Include="graphics\root_signature.h" />
+    <ClInclude Include="graphics\rt_pipeline_state.h" />
     <ClInclude Include="graphics\sampler.h" />
     <ClInclude Include="graphics\shader.h" />
     <ClInclude Include="graphics\texture2d.h" />
@@ -212,6 +213,7 @@
     <ClCompile Include="graphics\pipeline_state.cpp" />
     <ClCompile Include="graphics\render_target.cpp" />
     <ClCompile Include="graphics\root_signature.cpp" />
+    <ClCompile Include="graphics\rt_pipeline_state.cpp" />
     <ClCompile Include="graphics\shader.cpp" />
     <ClCompile Include="graphics\texture2d.cpp" />
     <ClCompile Include="graphics\tlas.cpp" />

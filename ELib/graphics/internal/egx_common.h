@@ -31,6 +31,8 @@ namespace egx
 	class Mesh;
 	class Model;
 	class TLAS;
+	class RTPipelineState;
+	class ShaderLibrary;
 
 	enum class GPUBufferState
 	{

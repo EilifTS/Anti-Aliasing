@@ -1,9 +1,9 @@
-#include "rt_pipeline_state.h"
+#include "shader_library.h"
 #include <dxcapi.h>
-#include "internal/egx_internal.h"
+#include "../internal/egx_internal.h"
 #include <fstream>
 #include <sstream>
-#include "../io/console.h"
+#include "../../io/console.h"
 
 namespace
 {
@@ -64,4 +64,10 @@ namespace
         THROWIFFAILED(presult->GetResult(pblob), "Failed to get result");
         return out;
     }
+}
+
+
+void egx::ShaderLibrary::Compile(const std::string& file_path)
+{
+    blob = compileLibrary(file_path, "lib_6_3");
 }

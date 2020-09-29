@@ -147,10 +147,16 @@
     <ClInclude Include="misc\sequences.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="graphics\tlas.h">
+    <ClInclude Include="graphics\ray_tracing\rt_pipeline_state.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="graphics\rt_pipeline_state.h">
+    <ClInclude Include="graphics\ray_tracing\tlas.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="graphics\ray_tracing\shader_library.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="graphics\ray_tracing\shader_table.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -227,10 +233,16 @@
     <ClCompile Include="graphics\model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="graphics\tlas.cpp">
+    <ClCompile Include="graphics\ray_tracing\rt_pipeline_state.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="graphics\rt_pipeline_state.cpp">
+    <ClCompile Include="graphics\ray_tracing\tlas.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\ray_tracing\shader_library.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\ray_tracing\shader_table.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -21,10 +21,12 @@ namespace egx
 		inline void InitDescriptorTable(int shader_register, ShaderVisibility visibility) { return InitDescriptorTable(shader_register, 1, visibility); };
 		void InitDescriptorTable(int shader_register, int num_entries, ShaderVisibility visibility);
 		void InitConstantBufferTable(int shader_register, int num_entries, ShaderVisibility visibility);
+		void InitUnorderedAccessTable(int shader_register, int num_entries, ShaderVisibility visibility);
 
 		void AddSampler(const Sampler& sampler, int shader_register);
 
-		void Finalize(Device& dev);
+		inline void Finalize(Device& dev) { Finalize(dev, false); };
+		void Finalize(Device& dev, bool is_local);
 
 	private:
 		ComPtr<ID3D12RootSignature> root_signature;

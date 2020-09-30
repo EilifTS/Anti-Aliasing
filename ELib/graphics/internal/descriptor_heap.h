@@ -11,7 +11,7 @@ namespace egx
 	class DescriptorHeap
 	{
 	public:
-		DescriptorHeap(ComPtr<ID3D12Device6> device, DescriptorType type, int max_descriptors);
+		DescriptorHeap(ComPtr<ID3D12Device5> device, DescriptorType type, int max_descriptors);
 		D3D12_CPU_DESCRIPTOR_HANDLE GetNextHandle();
 		D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle(D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle);
 

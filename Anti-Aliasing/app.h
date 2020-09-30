@@ -4,12 +4,13 @@
 
 #include "graphics/egx.h"
 #include "graphics/camera.h"
-#include "graphics/tlas.h"
 
 #include "aa/fxaa/fxaa.h"
 #include "aa/taa/taa.h"
 #include "deferred_rendering/deferred_renderer.h"
 #include "io/texture_io.h"
+
+#include "ray_tracer/ray_tracer.h"
 
 enum class AAMode
 {
@@ -45,5 +46,5 @@ private:
 	TAA taa;
 
 	// Ray tracing
-	egx::TLAS tlas;
+	RayTracer ray_tracer;
 };

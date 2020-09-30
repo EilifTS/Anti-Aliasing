@@ -12,6 +12,8 @@
 #include "index_buffer.h"
 #include "device.h"
 #include "internal/descriptor_heap.h"
+#include "ray_tracing/shader_table.h"
+#include "ray_tracing/rt_pipeline_state.h"
 
 egx::CommandContext::CommandContext(Device& dev, const ema::point2D& window_size)
 	: current_bb(nullptr), window_size(window_size)
@@ -59,6 +61,12 @@ void egx::CommandContext::SetPipelineState(PipelineState& pipeline_state)
 	auto* pso = pipeline_state.pso.Get();
 	assert(pso != nullptr);
 	command_list->SetPipelineState(pso);
+}
+void egx::CommandContext::SetRTPipelineState(RTPipelineState& pipeline_state)
+{
+	auto* pso = pipeline_state.state_object.Get();
+	assert(pso != nullptr);
+	command_list->SetPipelineState1(pso);
 }
 
 void egx::CommandContext::SetRenderTarget(RenderTarget& target)
@@ -189,6 +197,28 @@ void egx::CommandContext::Draw(int vertex_count)
 void egx::CommandContext::DrawIndexed(int index_count)
 {
 	command_list->DrawIndexedInstanced(index_count, 1, 0, 0, 0);
+}
+
+void egx::CommandContext::DispatchRays(const ema::point2D& dims, ShaderTable& shader_table)
+{
+	D3D12_DISPATCH_RAYS_DESC dis_desc = {};
+	dis_desc.Width = dims.x;
+	dis_desc.Height = dims.y;
+	dis_desc.Depth = 1;
+
+	auto start_addess = shader_table.shader_table_heap->buffer->GetGPUVirtualAddress();
+	dis_desc.RayGenerationShaderRecord.StartAddress = start_addess;
+	dis_desc.RayGenerationShaderRecord.SizeInBytes = shader_table.ray_gen_entry_size;
+	
+	dis_desc.MissShaderTable.StartAddress = start_addess + shader_table.ray_gen_table_size;
+	dis_desc.MissShaderTable.StrideInBytes = shader_table.miss_entry_size;
+	dis_desc.MissShaderTable.SizeInBytes = shader_table.miss_table_size;
+
+	dis_desc.HitGroupTable.StartAddress = start_addess + shader_table.ray_gen_table_size + shader_table.miss_table_size;
+	dis_desc.HitGroupTable.StrideInBytes = shader_table.hit_entry_size;
+	dis_desc.HitGroupTable.SizeInBytes = shader_table.hit_table_size;
+
+	command_list->DispatchRays(&dis_desc);
 }
 
 void egx::CommandContext::copyBufferFromUploadHeap(GPUBuffer& dest, UploadHeap& src)

@@ -16,6 +16,7 @@ namespace egx
 		void ClearDepthStencil(DepthBuffer& buffer);
 
 		void SetPipelineState(PipelineState& pipeline_state);
+		void SetRTPipelineState(RTPipelineState& pipeline_state);
 
 		void SetRenderTarget(RenderTarget& target);
 		void SetRenderTarget(RenderTarget& target, DepthBuffer& buffer);
@@ -46,6 +47,8 @@ namespace egx
 
 		void Draw(int vertex_count);
 		void DrawIndexed(int index_count);
+
+		void DispatchRays(const ema::point2D& dims, ShaderTable& shader_table);
 
 		inline RenderTarget& GetCurrentBackBuffer() { return *current_bb; };
 

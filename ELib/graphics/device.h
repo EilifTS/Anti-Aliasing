@@ -2,6 +2,7 @@
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
+#pragma comment(lib, "dxcompiler.lib")
 
 #include <dxgi1_6.h>
 #include <vector>
@@ -44,7 +45,7 @@ namespace egx
 
 		ComPtr<IDXGIAdapter4> adapter;			// Graphics card
 		ComPtr<IDXGIOutput> adapter_output;		// Monitor
-		ComPtr<ID3D12Device6> device;
+		ComPtr<ID3D12Device5> device;
 		ComPtr<ID3D12CommandQueue> command_queue;
 		ComPtr<IDXGISwapChain4> swap_chain;
 		
@@ -77,6 +78,7 @@ namespace egx
 		friend Mesh;
 		friend TLAS;
 		friend RTPipelineState;
+		friend UnorderedAccessBuffer;
 		friend std::shared_ptr<egx::Texture2D> eio::LoadTextureFromFile(egx::Device& dev, egx::CommandContext& context, const std::string& file_name, bool use_srgb);
 	};
 }

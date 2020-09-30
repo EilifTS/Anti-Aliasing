@@ -18,7 +18,7 @@ namespace
 #if defined(_DEBUG)
 		// Enable the D3D12 debug layer.
 		{
-			ComPtr<ID3D12Debug> debug_controller;
+			ComPtr<ID3D12Debug3> debug_controller;
 			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug_controller))))
 			{
 				debug_controller->EnableDebugLayer();
@@ -128,18 +128,18 @@ namespace
 
 		return { (int)refreshrate_numerator, (int)refreshrate_denominator };
 	}
-	ComPtr<ID3D12Device6> createDevice(ComPtr<IDXGIAdapter4> adapter)
+	ComPtr<ID3D12Device5> createDevice(ComPtr<IDXGIAdapter4> adapter)
 	{
 		ComPtr<ID3D12Device> d3d12Device;
-		ComPtr<ID3D12Device6> d3d12Device6;
+		ComPtr<ID3D12Device5> d3d12Device5;
 		THROWIFFAILED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device)), "Could not create dx12 device");
-		d3d12Device.As(&d3d12Device6);
+		d3d12Device.As(&d3d12Device5);
 
 
 		// Enable debug messages in debug mode.
 #if defined(_DEBUG)
 		ComPtr<ID3D12InfoQueue> pInfoQueue;
-		if (SUCCEEDED(d3d12Device6.As(&pInfoQueue)))
+		if (SUCCEEDED(d3d12Device5.As(&pInfoQueue)))
 		{
 			pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
 			pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
@@ -147,9 +147,9 @@ namespace
 		}
 #endif
 		eio::Console::Log("Created: Device");
-		return d3d12Device6;
+		return d3d12Device5;
 	}
-	void checkForRayTracingSupport(ComPtr<ID3D12Device6> dev)
+	void checkForRayTracingSupport(ComPtr<ID3D12Device5> dev)
 	{
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 features = {};
 		HRESULT hr = dev->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &features, sizeof(features));

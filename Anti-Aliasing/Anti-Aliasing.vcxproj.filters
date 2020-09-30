@@ -39,6 +39,9 @@
     <ClCompile Include="deferred_rendering\tone_mapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ray_tracer\ray_tracer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.h">
@@ -65,6 +68,9 @@
     <ClInclude Include="deferred_rendering\tone_mapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ray_tracer\ray_tracer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\fxaa\fxaa_ps.hlsl" />
@@ -83,6 +89,7 @@
     <FxCompile Include="shaders\deferred\motion_vector_vs.hlsl" />
     <FxCompile Include="shaders\taa\taa_ps.hlsl" />
     <FxCompile Include="shaders\taa\taa_vs.hlsl" />
+    <FxCompile Include="shaders\ray_tracing\shader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fxaa\fxaa_header.hlsli" />

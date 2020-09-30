@@ -130,6 +130,12 @@
       </SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Lib>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
+    <PostBuildEvent>
+      <Command>xcopy /y /d "$(ProjectDir)external\*" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -179,6 +185,7 @@
     <ClInclude Include="graphics\shader.h" />
     <ClInclude Include="graphics\texture2d.h" />
     <ClInclude Include="graphics\ray_tracing\tlas.h" />
+    <ClInclude Include="graphics\unordered_access_buffer.h" />
     <ClInclude Include="graphics\vertex_buffer.h" />
     <ClInclude Include="io\console.h" />
     <ClInclude Include="io\game_clock.h" />
@@ -221,6 +228,7 @@
     <ClCompile Include="graphics\shader.cpp" />
     <ClCompile Include="graphics\texture2d.cpp" />
     <ClCompile Include="graphics\ray_tracing\tlas.cpp" />
+    <ClCompile Include="graphics\unordered_access_buffer.cpp" />
     <ClCompile Include="io\console.cpp" />
     <ClCompile Include="io\game_clock.cpp" />
     <ClCompile Include="io\internal\WICTextureLoader12.cpp" />

@@ -43,6 +43,15 @@ void egx::RootSignature::InitConstantBufferTable(int shader_register, int num_en
 	param.InitAsDescriptorTable(1, ranges.back().get(), convertVisibility(visibility));
 	root_parameters.push_back(param);
 }
+void egx::RootSignature::InitUnorderedAccessTable(int shader_register, int num_entries, ShaderVisibility visibility)
+{
+	CD3DX12_ROOT_PARAMETER1 param;
+	std::shared_ptr<CD3DX12_DESCRIPTOR_RANGE1> range = std::make_shared<CD3DX12_DESCRIPTOR_RANGE1>();
+	range->Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, num_entries, shader_register, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
+	ranges.push_back(range);
+	param.InitAsDescriptorTable(1, ranges.back().get(), convertVisibility(visibility));
+	root_parameters.push_back(param);
+}
 void egx::RootSignature::AddSampler(const Sampler& sampler, int shader_register)
 {
 	auto sampler_desc = sampler.desc;
@@ -51,7 +60,7 @@ void egx::RootSignature::AddSampler(const Sampler& sampler, int shader_register)
 	samplers.push_back(sampler_desc);
 }
 
-void egx::RootSignature::Finalize(Device& dev)
+void egx::RootSignature::Finalize(Device& dev, bool is_local)
 {
 	D3D12_FEATURE_DATA_ROOT_SIGNATURE feature_data = {};
 	feature_data.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
@@ -67,6 +76,7 @@ void egx::RootSignature::Finalize(Device& dev)
 		D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
 		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
+	if (is_local) root_flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_desc;
 	root_desc.Init_1_1((UINT)root_parameters.size(), root_parameters.data(), (UINT)samplers.size(), samplers.data(), root_flags);

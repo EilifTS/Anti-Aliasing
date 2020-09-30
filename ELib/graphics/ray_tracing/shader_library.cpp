@@ -51,9 +51,11 @@ namespace
             // Log error message
             ComPtr<IDxcBlobEncoding> perror;
             THROWIFFAILED(presult->GetErrorBuffer(&perror), "Failed to get errorbuffer");
-            std::wstringstream wss((const wchar_t*)perror->GetBufferPointer());
-            auto wserror = wss.str();
-            std::string serror(wserror.begin(), wserror.end());
+            std::vector<char> error_chars(perror->GetBufferSize() + 1);
+            memcpy(error_chars.data(), perror->GetBufferPointer(), perror->GetBufferSize());
+            error_chars[perror->GetBufferSize()] = 0;
+            std::string serror(error_chars.data());
+
             eio::Console::Log("Failed to compile " + filename);
             eio::Console::Log(serror);
             throw std::runtime_error("Failed to compile" + filename);

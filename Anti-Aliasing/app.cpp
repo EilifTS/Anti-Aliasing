@@ -20,7 +20,8 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	renderer(dev, context, im.Window().WindowSize(), far_plane),
 	fxaa(dev, im.Window().WindowSize()),
 	taa(dev, im.Window().WindowSize(), 16),
-	aa_mode(AAMode::TAA)
+	aa_mode(AAMode::TAA),
+	ray_tracer(dev, context, im.Window().WindowSize())
 {
 	camera.SetPosition({ 10.0f, 1.0f, 0.0f });
 	camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.5f });
@@ -69,7 +70,8 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 		pmesh->BuildAccelerationStructure(dev, context);
 	}
 	std::vector<std::shared_ptr<egx::Model>> models_vector = { sponza_model, knight_model1, knight_model2, knight_model3 };
-	tlas.Build(dev, context, models_vector);
+	ray_tracer.UpdateTLAS(dev, context, models_vector);
+	ray_tracer.UpdateShaderTable(dev);
 }
 
 void App::Update(eio::InputManager& im)
@@ -135,6 +137,7 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	knight_model2->UpdateBuffer(dev, context);
 	knight_model3->UpdateBuffer(dev, context);
 
+	/* Disable rasterizer
 	renderer.PrepareFrame(dev, context);
 	renderer.RenderModel(dev, context, camera, *sponza_model);
 	//renderer.RenderModel(dev, context, camera, *knight_model3);
@@ -150,6 +153,13 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 		taa.Apply(dev, context, renderer.GetGBuffer().DepthBuffer(), renderer.GetMotionVectors(), target1, target2, camera);
 	else if(aa_mode == AAMode::FXAA)
 		fxaa.Apply(dev, context, target1, target2);
+		*/
+
+	auto& trace_result = ray_tracer.Trace(dev, context);
+
+	context.SetTransitionBuffer(trace_result, egx::GPUBufferState::CopySource);
+	context.SetTransitionBuffer(target2, egx::GPUBufferState::CopyDest);
+	context.CopyBuffer(trace_result, target2);
 
 	auto& back_buffer = context.GetCurrentBackBuffer();
 	renderer.ApplyToneMapping(dev, context, target2, back_buffer);

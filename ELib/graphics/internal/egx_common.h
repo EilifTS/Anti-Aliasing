@@ -33,6 +33,8 @@ namespace egx
 	class TLAS;
 	class RTPipelineState;
 	class ShaderLibrary;
+	class ShaderTable;
+	class UnorderedAccessBuffer;
 
 	enum class GPUBufferState
 	{

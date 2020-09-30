@@ -6,17 +6,17 @@
 #include <stdexcept>
 #include <assert.h>
 
-void egx::RTPipelineState::AddLibrary(ShaderLibrary& lib, const std::vector<std::string>& exports)
+void egx::RTPipelineState::AddLibrary(ShaderLibrary& lib, const std::vector<std::wstring>& exports)
 {
 	libraries.emplace_back(library(lib, exports));
 }
 
 
-void egx::RTPipelineState::AddHitGroup(const std::string& hit_group_name, const std::string& closest_hit_symbol)
+void egx::RTPipelineState::AddHitGroup(const std::wstring& hit_group_name, const std::wstring& closest_hit_symbol)
 {
-	hit_groups.emplace_back(hitGroup(hit_group_name, closest_hit_symbol, "", ""));
+	hit_groups.emplace_back(hitGroup(hit_group_name, closest_hit_symbol, L"", L""));
 }
-void egx::RTPipelineState::AddHitGroup(const std::string& hit_group_name, const std::string& closest_hit_symbol, const std::string& any_hit_symbol, const std::string& intersection_symbol)
+void egx::RTPipelineState::AddHitGroup(const std::wstring& hit_group_name, const std::wstring& closest_hit_symbol, const std::wstring& any_hit_symbol, const std::wstring& intersection_symbol)
 {
 	hit_groups.emplace_back(hitGroup(hit_group_name, closest_hit_symbol, any_hit_symbol, intersection_symbol));
 }
@@ -38,7 +38,7 @@ void egx::RTPipelineState::Finalize(Device& dev)
 
 	std::vector<D3D12_STATE_SUBOBJECT> subobjects(subobject_count);
 	int current_index = 0;
-
+	
 	// Create subobjects for libraries
 	for (const auto& lib : libraries)
 	{
@@ -72,7 +72,7 @@ void egx::RTPipelineState::Finalize(Device& dev)
 	// And create associations with payload definition
 	std::vector<std::wstring> exported_symbols = {};
 	buildShaderExportList(exported_symbols);
-
+	
 	// Get pointers
 	std::vector<LPCWSTR> exported_symbols_pointers(exported_symbols.size());
 	for (int i = 0; i < (int)exported_symbols.size(); i++)
@@ -89,7 +89,7 @@ void egx::RTPipelineState::Finalize(Device& dev)
 	shader_payload_assoc_subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
 	shader_payload_assoc_subobject.pDesc = &shader_payload_assoc;
 	subobjects[current_index++] = shader_payload_assoc_subobject;
-
+	
 	// Create subobjects for root signature definition and association
 	for (rsAssociation& assoc : rs_associations)
 	{
@@ -99,14 +99,8 @@ void egx::RTPipelineState::Finalize(Device& dev)
 		
 		subobjects[current_index++] = rs_subobject;
 
-		// Get exports
-		std::vector<LPCWSTR> export_pointers(assoc.symbols.size());
-		for (int i = 0; i < (int)assoc.symbols.size(); i++)
-			export_pointers[i] = assoc.symbols[i].c_str();
-		const WCHAR** rs_exports = export_pointers.data();
-
-		assoc.association.NumExports = (unsigned int)export_pointers.size();
-		assoc.association.pExports = rs_exports;
+		assoc.association.NumExports = (unsigned int)assoc.symbols.size();
+		assoc.association.pExports = assoc.symbol_pointers.data();
 		assoc.association.pSubobjectToAssociate = &subobjects[(long long)current_index - 1];
 
 		D3D12_STATE_SUBOBJECT rs_assoc_subobject = {};
@@ -115,7 +109,7 @@ void egx::RTPipelineState::Finalize(Device& dev)
 
 		subobjects[current_index++] = rs_assoc_subobject;
 	}
-
+	
 	// Create pipeline subobject
 	D3D12_RAYTRACING_PIPELINE_CONFIG pipeline_config = {};
 	pipeline_config.MaxTraceRecursionDepth = max_recursion_depth;
@@ -126,14 +120,16 @@ void egx::RTPipelineState::Finalize(Device& dev)
 	subobjects[current_index++] = pipeline_config_subobject;
 
 	assert(current_index == subobject_count);
-
+	
 	// Create the pipeline state object
 	D3D12_STATE_OBJECT_DESC pipeline_desc = {};
 	pipeline_desc.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
-	pipeline_desc.NumSubobjects = (unsigned int)subobject_count;
+	pipeline_desc.NumSubobjects = (unsigned int)current_index;
 	pipeline_desc.pSubobjects = subobjects.data();
 
 	THROWIFFAILED(dev.device->CreateStateObject(&pipeline_desc, IID_PPV_ARGS(&state_object)), "Failed to create ray tracing pipeline state object");
+
+	THROWIFFAILED(state_object->QueryInterface(IID_PPV_ARGS(&state_object_props)), "Failed to query pipeline state properties");
 }
 
 void egx::RTPipelineState::buildShaderExportList(std::vector<std::wstring>& exported_symbols)
@@ -210,13 +206,11 @@ void egx::RTPipelineState::buildShaderExportList(std::vector<std::wstring>& expo
 	}
 }
 
-egx::RTPipelineState::library::library(ShaderLibrary& lib, const std::vector<std::string>& exports)
-	: export_descs(exports.size()), export_symbols(exports.size()), byte_code(lib.blob)
+egx::RTPipelineState::library::library(ComPtr<ID3DBlob> lib, const std::vector<std::wstring>& exports)
+	: export_descs(exports.size()), export_symbols(exports), byte_code(lib)
 {
 	for (int i = 0; i < (int)exports.size(); i++)
 	{
-		export_symbols[i] = std::wstring(exports[i].begin(), exports[i].end());
-
 		export_descs[i] = {};
 		export_descs[i].Name = export_symbols[i].c_str();
 		export_descs[i].ExportToRename = nullptr;
@@ -224,23 +218,23 @@ egx::RTPipelineState::library::library(ShaderLibrary& lib, const std::vector<std
 	}
 
 	// Create library descriptor
-	lib_desc.DXILLibrary.BytecodeLength = lib.blob->GetBufferSize();
-	lib_desc.DXILLibrary.pShaderBytecode = lib.blob->GetBufferPointer();
+	lib_desc.DXILLibrary.BytecodeLength = lib->GetBufferSize();
+	lib_desc.DXILLibrary.pShaderBytecode = lib->GetBufferPointer();
 	lib_desc.NumExports = (unsigned int)exports.size();
 	lib_desc.pExports = export_descs.data();
 }
 
 egx::RTPipelineState::hitGroup::hitGroup(
-	const std::string& hit_group_name,
-	const std::string& closest_hit_symbol,
-	const std::string& any_hit_symbol,
-	const std::string& intersection_symbol)
+	const std::wstring& hit_group_name,
+	const std::wstring& closest_hit_symbol,
+	const std::wstring& any_hit_symbol,
+	const std::wstring& intersection_symbol)
+	: hit_group_name(hit_group_name),
+	closest_hit_symbol(closest_hit_symbol),
+	any_hit_symbol(any_hit_symbol),
+	intersection_symbol(intersection_symbol)
 {
-	this->hit_group_name		= std::wstring(hit_group_name.begin(),		hit_group_name.end());
-	this->closest_hit_symbol	= std::wstring(closest_hit_symbol.begin(),	closest_hit_symbol.end());
-	this->any_hit_symbol		= std::wstring(any_hit_symbol.begin(),		any_hit_symbol.end());
-	this->intersection_symbol	= std::wstring(intersection_symbol.begin(), intersection_symbol.end());
-
+	desc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
 	desc.HitGroupExport = this->hit_group_name.c_str();
 	desc.ClosestHitShaderImport = this->closest_hit_symbol.empty() ? nullptr : this->closest_hit_symbol.c_str();
 	desc.AnyHitShaderImport = this->any_hit_symbol.empty() ? nullptr : this->any_hit_symbol.c_str();
@@ -248,8 +242,20 @@ egx::RTPipelineState::hitGroup::hitGroup(
 }
 
 egx::RTPipelineState::rsAssociation::rsAssociation(RootSignature& rs, const std::vector<std::string>& symbols)
-	: rs(rs.root_signature), symbols(symbols.size()), association()
+	: rs(rs.root_signature), symbols(symbols.size()), symbol_pointers(symbols.size()), association()
 {
 	for (int i = 0; i < (int)symbols.size(); i++)
+	{
 		this->symbols[i] = std::wstring(symbols[i].begin(), symbols[i].end());
+		this->symbol_pointers[i] = this->symbols[i].c_str();
+	}
+}
+
+egx::RTPipelineState::rsAssociation::rsAssociation(const rsAssociation& rsa)
+	:rs(rsa.rs), symbols(rsa.symbols), symbol_pointers(symbols.size()), association(rsa.association)
+{
+	for (int i = 0; i < (int)symbols.size(); i++)
+	{
+		this->symbol_pointers[i] = this->symbols[i].c_str();
+	}
 }

@@ -18,7 +18,7 @@ namespace
 	}
 }
 
-egx::DescriptorHeap::DescriptorHeap(ComPtr<ID3D12Device6> device, DescriptorType type, int max_descriptors)
+egx::DescriptorHeap::DescriptorHeap(ComPtr<ID3D12Device5> device, DescriptorType type, int max_descriptors)
 	: descriptor_size(0), max_descriptors(max_descriptors), num_descriptors(0)
 {
 	auto dx_type = convertType(type);

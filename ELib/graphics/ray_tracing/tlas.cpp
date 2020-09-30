@@ -1,9 +1,9 @@
 #include "tlas.h"
-#include "internal/egx_internal.h"
-#include "device.h"
-#include "command_context.h"
-#include "../math/mat4.h"
-#include "mesh.h"
+#include "../internal/egx_internal.h"
+#include "../device.h"
+#include "../command_context.h"
+#include "../../math/mat4.h"
+#include "../mesh.h"
 
 void egx::TLAS::Build(Device& dev, CommandContext& context, std::vector<std::shared_ptr<Model>>& models)
 {
@@ -78,4 +78,14 @@ void egx::TLAS::Build(Device& dev, CommandContext& context, std::vector<std::sha
     context.command_list->BuildRaytracingAccelerationStructure(&as_desc, 0, nullptr);
 
     context.SetUABarrier(*result_buffer);
+
+    // Create shader resource view
+    D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+    srv_desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+    srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srv_desc.RaytracingAccelerationStructure.Location = result_buffer->buffer->GetGPUVirtualAddress();
+
+    srv_cpu = dev.buffer_heap->GetNextHandle();
+    dev.device->CreateShaderResourceView(result_buffer->buffer.Get(), &srv_desc, srv_cpu);
+    srv_gpu = dev.buffer_heap->GetGPUHandle(srv_cpu);
 }

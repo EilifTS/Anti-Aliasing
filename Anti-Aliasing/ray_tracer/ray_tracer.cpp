@@ -22,9 +22,9 @@ RayTracer::RayTracer(egx::Device& dev, egx::CommandContext& context, const ema::
 
 	pipeline_state.AddLibrary(lib, { L"raygeneration", L"miss", L"closesthit" });
 	pipeline_state.AddHitGroup(L"HitGroup1", L"closesthit");
-	pipeline_state.AddRootSignatureAssociation(ray_gen_rs, { "raygeneration" });
-	pipeline_state.AddRootSignatureAssociation(miss_rs, { "miss" });
-	pipeline_state.AddRootSignatureAssociation(hit_rs, { "HitGroup1" });
+	pipeline_state.AddRootSignatureAssociation(ray_gen_rs, { L"raygeneration" });
+	pipeline_state.AddRootSignatureAssociation(miss_rs, { L"miss" });
+	pipeline_state.AddRootSignatureAssociation(hit_rs, { L"HitGroup1" });
 	pipeline_state.SetMaxPayloadSize(4 * sizeof(float));
 	pipeline_state.SetMaxAttributeSize(2 * sizeof(float));
 	pipeline_state.SetMaxRecursionDepth(1);

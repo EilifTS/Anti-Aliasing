@@ -8,22 +8,22 @@
 
 void egx::RTPipelineState::AddLibrary(ShaderLibrary& lib, const std::vector<std::wstring>& exports)
 {
-	libraries.emplace_back(library(lib, exports));
+	libraries.emplace_back(lib, exports);
 }
 
 
 void egx::RTPipelineState::AddHitGroup(const std::wstring& hit_group_name, const std::wstring& closest_hit_symbol)
 {
-	hit_groups.emplace_back(hitGroup(hit_group_name, closest_hit_symbol, L"", L""));
+	hit_groups.emplace_back(hit_group_name, closest_hit_symbol, L"", L"");
 }
 void egx::RTPipelineState::AddHitGroup(const std::wstring& hit_group_name, const std::wstring& closest_hit_symbol, const std::wstring& any_hit_symbol, const std::wstring& intersection_symbol)
 {
-	hit_groups.emplace_back(hitGroup(hit_group_name, closest_hit_symbol, any_hit_symbol, intersection_symbol));
+	hit_groups.emplace_back(hit_group_name, closest_hit_symbol, any_hit_symbol, intersection_symbol);
 }
 
-void egx::RTPipelineState::AddRootSignatureAssociation(RootSignature& rs, const std::vector<std::string>& symbols)
+void egx::RTPipelineState::AddRootSignatureAssociation(RootSignature& rs, const std::vector<std::wstring>& symbols)
 {
-	rs_associations.emplace_back(rsAssociation(rs, symbols));
+	rs_associations.emplace_back(rs, symbols);
 }
 
 void egx::RTPipelineState::Finalize(Device& dev)
@@ -95,10 +95,10 @@ void egx::RTPipelineState::Finalize(Device& dev)
 	{
 		D3D12_STATE_SUBOBJECT rs_subobject = {};
 		rs_subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE;
-		rs_subobject.pDesc = assoc.rs.Get();
+		rs_subobject.pDesc = assoc.rs.GetAddressOf();
 		
 		subobjects[current_index++] = rs_subobject;
-
+		
 		assoc.association.NumExports = (unsigned int)assoc.symbols.size();
 		assoc.association.pExports = assoc.symbol_pointers.data();
 		assoc.association.pSubobjectToAssociate = &subobjects[(long long)current_index - 1];
@@ -119,7 +119,7 @@ void egx::RTPipelineState::Finalize(Device& dev)
 	pipeline_config_subobject.pDesc = &pipeline_config;
 	subobjects[current_index++] = pipeline_config_subobject;
 
-	assert(current_index == subobject_count);
+	//assert(current_index == subobject_count);
 	
 	// Create the pipeline state object
 	D3D12_STATE_OBJECT_DESC pipeline_desc = {};
@@ -241,12 +241,11 @@ egx::RTPipelineState::hitGroup::hitGroup(
 	desc.IntersectionShaderImport = this->intersection_symbol.empty() ? nullptr : this->intersection_symbol.c_str();
 }
 
-egx::RTPipelineState::rsAssociation::rsAssociation(RootSignature& rs, const std::vector<std::string>& symbols)
-	: rs(rs.root_signature), symbols(symbols.size()), symbol_pointers(symbols.size()), association()
+egx::RTPipelineState::rsAssociation::rsAssociation(RootSignature& rs, const std::vector<std::wstring>& symbols)
+	: rs(rs.root_signature), symbols(symbols), symbol_pointers(symbols.size()), association()
 {
 	for (int i = 0; i < (int)symbols.size(); i++)
 	{
-		this->symbols[i] = std::wstring(symbols[i].begin(), symbols[i].end());
 		this->symbol_pointers[i] = this->symbols[i].c_str();
 	}
 }

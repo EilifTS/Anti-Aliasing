@@ -47,7 +47,7 @@ void egx::RootSignature::InitUnorderedAccessTable(int shader_register, int num_e
 {
 	CD3DX12_ROOT_PARAMETER1 param;
 	std::shared_ptr<CD3DX12_DESCRIPTOR_RANGE1> range = std::make_shared<CD3DX12_DESCRIPTOR_RANGE1>();
-	range->Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, num_entries, shader_register, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
+	range->Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, num_entries, shader_register, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE);
 	ranges.push_back(range);
 	param.InitAsDescriptorTable(1, ranges.back().get(), convertVisibility(visibility));
 	root_parameters.push_back(param);
@@ -70,11 +70,11 @@ void egx::RootSignature::Finalize(Device& dev, bool is_local)
 	}
 	
 	// Only allow vertex and pixel shaders for now
-	D3D12_ROOT_SIGNATURE_FLAGS root_flags =
-		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-		D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-		D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+	D3D12_ROOT_SIGNATURE_FLAGS root_flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+	//	D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+	//	D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+	//	D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+	//	D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
 	if (is_local) root_flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
 

@@ -21,6 +21,7 @@ private:
 	ema::point2D window_size;
 	egx::UnorderedAccessBuffer output_buffer;
 	egx::TLAS tlas;
+	egx::RootSignature compute_rs;
 	egx::RootSignature ray_gen_rs;
 	egx::RootSignature miss_rs;
 	egx::RootSignature hit_rs;

@@ -14,11 +14,13 @@ void egx::TLAS::Build(Device& dev, CommandContext& context, std::vector<std::sha
         instance_count += (int)pmodel->GetMeshes().size();
     }
 
+    instance_count = 1;
+
     // First, get the size of the TLAS buffers and create them
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs = {};
     inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
     inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
-    inputs.NumDescs = 1;
+    inputs.NumDescs = instance_count;
     inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
@@ -53,6 +55,7 @@ void egx::TLAS::Build(Device& dev, CommandContext& context, std::vector<std::sha
         ema::mat4 m = pmodel->CalculateWorldMatrix();
         for (auto pmesh : pmodel->GetMeshes())
         {
+            if (index > 0) break;
             // Initialize the instance desc
             pInstance_buffer[index].InstanceID = 0;
             pInstance_buffer[index].InstanceContributionToHitGroupIndex = 0;

@@ -19,6 +19,7 @@ namespace egx
 		void AddHitGroup(const std::wstring& hit_group_name, const std::wstring& closest_hit_symbol);
 		void AddHitGroup(const std::wstring& hit_group_name, const std::wstring& closest_hit_symbol, const std::wstring& any_hit_symbol, const std::wstring& intersection_symbol);
 		void AddRootSignatureAssociation(RootSignature& rs, const std::vector<std::wstring>& symbols);
+		void AddGlobalRootSignature(RootSignature& rs);
 		void SetMaxPayloadSize(int new_value) { max_payload_size = new_value; };
 		void SetMaxAttributeSize(int new_value) { max_attribute_size = new_value; };
 		void SetMaxRecursionDepth(int new_value) { max_recursion_depth = new_value; };
@@ -80,6 +81,7 @@ namespace egx
 		int max_payload_size = 0;
 		int max_attribute_size = 0;
 		int max_recursion_depth = 0;
+		ComPtr<ID3D12RootSignature> global_rs;
 
 		ComPtr<ID3D12StateObject> state_object;
 		ComPtr<ID3D12StateObjectProperties> state_object_props;

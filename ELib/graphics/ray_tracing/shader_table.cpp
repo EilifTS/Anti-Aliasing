@@ -70,6 +70,11 @@ void egx::ShaderTable::Finalize(Device& dev, RTPipelineState& pipeline_state)
 	miss_entry_size = getShaderRecordSize(miss_entries);
 	hit_entry_size = getShaderRecordSize(hit_entries);
 
+	int max_size = max(max(ray_gen_entry_size, miss_entry_size), hit_entry_size);
+	ray_gen_entry_size = max_size;
+	miss_entry_size = max_size;
+	hit_entry_size = max_size;
+
 	ray_gen_table_size = ray_gen_entry_size * (int)ray_gen_entries.size();
 	miss_table_size = miss_entry_size * (int)miss_entries.size();
 	hit_table_size = hit_entry_size * (int)hit_entries.size();

@@ -15,6 +15,7 @@ namespace egx
 
 			//void AddConstant();
 			//void AddConstantBuffer();
+			//void AddRootSRV(Texture2D& start_texture);
 			void AddDescriptorTable(Texture2D& start_texture);
 			void AddUnorderedAccessTable(UnorderedAccessBuffer& start_buffer);
 			void AddAccelerationStructure(TLAS& tlas);

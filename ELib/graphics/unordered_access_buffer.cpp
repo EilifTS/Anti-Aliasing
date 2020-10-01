@@ -12,7 +12,7 @@ egx::UnorderedAccessBuffer::UnorderedAccessBuffer(Device& dev, TextureFormat for
 		1,
 		D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-		nullptr)
+		nullptr, GPUBufferState::UnorderedAccess)
 {
 
 }
@@ -23,6 +23,6 @@ void egx::UnorderedAccessBuffer::CreateUnorderedAccessView(Device& dev)
 
 	uav_cpu = dev.buffer_heap->GetNextHandle();
 
-	dev.device->CreateUnorderedAccessView(buffer.Get(),nullptr, &desc, uav_cpu);
+	dev.device->CreateUnorderedAccessView(buffer.Get(), nullptr, &desc, uav_cpu);
 	uav_gpu = dev.buffer_heap->GetGPUHandle(uav_cpu);
 }

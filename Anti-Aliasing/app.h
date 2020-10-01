@@ -26,24 +26,24 @@ public:
 	void Render(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im);
 
 private:
-	egx::FPCamera camera;
-	egx::RenderTarget target1;
-	egx::RenderTarget target2;
+	//egx::FPCamera camera;
+	//egx::RenderTarget target1;
+	//egx::RenderTarget target2;
 
 	eio::TextureLoader texture_loader;
 	egx::MaterialManager mat_manager;
-	DeferrdRenderer renderer;
+	//DeferrdRenderer renderer;
 
 	// Models
 	std::shared_ptr<egx::Model> sponza_model;
-	std::shared_ptr<egx::Model> knight_model1;
-	std::shared_ptr<egx::Model> knight_model2;
-	std::shared_ptr<egx::Model> knight_model3;
+	//std::shared_ptr<egx::Model> knight_model1;
+	//std::shared_ptr<egx::Model> knight_model2;
+	//std::shared_ptr<egx::Model> knight_model3;
 
 	// Anti aliasing
 	AAMode aa_mode;
-	FXAA fxaa;
-	TAA taa;
+	//FXAA fxaa;
+	//TAA taa;
 
 	// Ray tracing
 	RayTracer ray_tracer;

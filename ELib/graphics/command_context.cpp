@@ -161,6 +161,12 @@ void egx::CommandContext::SetRootSignature(RootSignature& root_signature)
 	assert(root_sig != nullptr);
 	command_list->SetGraphicsRootSignature(root_sig);
 }
+void egx::CommandContext::SetComputeRootSignature(RootSignature& root_signature)
+{
+	auto* root_sig = root_signature.root_signature.Get();
+	assert(root_sig != nullptr);
+	command_list->SetComputeRootSignature(root_sig);
+}
 void egx::CommandContext::SetRootConstant(int root_index, int num_constants, void* constant_data)
 {
 	command_list->SetGraphicsRoot32BitConstants(root_index, num_constants, constant_data, 0);

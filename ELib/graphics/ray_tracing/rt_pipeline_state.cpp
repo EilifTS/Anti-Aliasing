@@ -26,6 +26,11 @@ void egx::RTPipelineState::AddRootSignatureAssociation(RootSignature& rs, const 
 	rs_associations.emplace_back(rs, symbols);
 }
 
+void egx::RTPipelineState::AddGlobalRootSignature(RootSignature& rs)
+{ 
+	global_rs = rs.root_signature.Get();
+}
+
 void egx::RTPipelineState::Finalize(Device& dev)
 {
 	int subobject_count =
@@ -34,6 +39,7 @@ void egx::RTPipelineState::Finalize(Device& dev)
 		1 +									// Shader config
 		1 +									// Shader payload assoc
 		2 * (int)rs_associations.size() +	// RS sig dec + assoc
+		1 +									// Global root signature
 		1;									// Pipeline subobject
 
 	std::vector<D3D12_STATE_SUBOBJECT> subobjects(subobject_count);
@@ -119,7 +125,13 @@ void egx::RTPipelineState::Finalize(Device& dev)
 	pipeline_config_subobject.pDesc = &pipeline_config;
 	subobjects[current_index++] = pipeline_config_subobject;
 
-	//assert(current_index == subobject_count);
+	// Global root signature
+	D3D12_STATE_SUBOBJECT global_rs_subobject;
+	global_rs_subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
+	global_rs_subobject.pDesc = global_rs.GetAddressOf();
+	subobjects[current_index++] = global_rs_subobject;
+
+	assert(current_index == subobject_count);
 	
 	// Create the pipeline state object
 	D3D12_STATE_OBJECT_DESC pipeline_desc = {};

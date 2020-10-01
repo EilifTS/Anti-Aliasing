@@ -32,7 +32,7 @@ namespace egx
 
 	public:
 		// Descriptor heaps
-		static const int max_descriptors_in_heap = 128;
+		static const int max_descriptors_in_heap = 256;
 		std::unique_ptr<DescriptorHeap> buffer_heap;
 		std::unique_ptr<DescriptorHeap> sampler_heap;
 		std::unique_ptr<DescriptorHeap> rtv_heap;

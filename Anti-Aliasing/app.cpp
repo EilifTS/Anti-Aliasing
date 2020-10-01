@@ -137,23 +137,23 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	knight_model2->UpdateBuffer(dev, context);
 	knight_model3->UpdateBuffer(dev, context);
 
-	/* Disable rasterizer
+	/*// Disable rasterizer
 	renderer.PrepareFrame(dev, context);
 	renderer.RenderModel(dev, context, camera, *sponza_model);
-	//renderer.RenderModel(dev, context, camera, *knight_model3);
-	//renderer.RenderModel(dev, context, camera, *knight_model1);
-	//renderer.RenderModel(dev, context, camera, *knight_model2);
-	//renderer.RenderMotionVectors(dev, context, camera, *knight_model1);
-	//renderer.RenderMotionVectors(dev, context, camera, *knight_model2);
-	//renderer.RenderMotionVectors(dev, context, camera, *knight_model3);
+	renderer.RenderModel(dev, context, camera, *knight_model3);
+	renderer.RenderModel(dev, context, camera, *knight_model1);
+	renderer.RenderModel(dev, context, camera, *knight_model2);
+	renderer.RenderMotionVectors(dev, context, camera, *knight_model1);
+	renderer.RenderMotionVectors(dev, context, camera, *knight_model2);
+	renderer.RenderMotionVectors(dev, context, camera, *knight_model3);
 	renderer.RenderLight(dev, context, camera, target1);
 	renderer.PrepareFrameEnd();
 
 	if (aa_mode == AAMode::TAA)
 		taa.Apply(dev, context, renderer.GetGBuffer().DepthBuffer(), renderer.GetMotionVectors(), target1, target2, camera);
 	else if(aa_mode == AAMode::FXAA)
-		fxaa.Apply(dev, context, target1, target2);
-		*/
+		fxaa.Apply(dev, context, target1, target2);*/
+		
 
 	auto& trace_result = ray_tracer.Trace(dev, context);
 

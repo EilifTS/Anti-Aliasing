@@ -41,12 +41,15 @@ namespace egx
 		std::vector<Entry> hit_entries;
 		std::shared_ptr<UploadHeap> shader_table_heap;
 
-		int ray_gen_entry_size = 0;
+		int ray_gen_table_start = 0;
 		int ray_gen_table_size = 0;
-		int miss_entry_size = 0;
+		int ray_gen_entry_size = 0;
+		int miss_table_start = 0;
 		int miss_table_size = 0;
-		int hit_entry_size = 0;
+		int miss_entry_size = 0;
+		int hit_table_start = 0;
 		int hit_table_size = 0;
+		int hit_entry_size = 0;
 
 	private:
 		friend CommandContext;

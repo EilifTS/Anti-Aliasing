@@ -74,39 +74,50 @@ void egx::ShaderTable::Finalize(Device& dev, RTPipelineState& pipeline_state)
 	miss_table_size = miss_entry_size * (int)miss_entries.size();
 	hit_table_size = hit_entry_size * (int)hit_entries.size();
 
-	int table_size = ray_gen_table_size + miss_table_size + hit_table_size;
-	table_size = Align(table_size, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+	int aligned_ray_gen_table_size = Align(ray_gen_table_size, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+	int aligned_miss_table_size = Align(miss_table_size, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+	int aligned_hit_table_size = Align(hit_table_size, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+
+	ray_gen_table_start = 0;
+	miss_table_start = aligned_ray_gen_table_size;
+	hit_table_start = miss_table_start + aligned_miss_table_size;
+
+	int table_size = hit_table_start + aligned_hit_table_size;
 
 	shader_table_heap = std::make_shared<UploadHeap>(dev, table_size);
 
 	uint8_t* ptr = (uint8_t*)shader_table_heap->Map();
 
+	uint8_t* lptr = ptr + ray_gen_table_start;
 	for (const auto& e : ray_gen_entries)
 	{
 		void* id = pipeline_state.state_object_props->GetShaderIdentifier(e.name.c_str());
-		memcpy(ptr, id, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+		memcpy(lptr, id, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 
-		memcpy(ptr + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, e.root_arguments.data(), e.root_arguments.size() * 8);
-		ptr += ray_gen_entry_size;
+		memcpy(lptr + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, e.root_arguments.data(), e.root_arguments.size() * 8);
+		lptr += ray_gen_entry_size;
 	}
 
+	lptr = ptr + miss_table_start;
 	for (const auto& e : miss_entries)
 	{
 		void* id = pipeline_state.state_object_props->GetShaderIdentifier(e.name.c_str());
-		memcpy(ptr, id, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+		memcpy(lptr, id, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 
-		memcpy(ptr + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, e.root_arguments.data(), e.root_arguments.size() * 8);
-		ptr += miss_entry_size;
+		memcpy(lptr + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, e.root_arguments.data(), e.root_arguments.size() * 8);
+		lptr += miss_entry_size;
 	}
 
+	lptr = ptr + hit_table_start;
 	for (const auto& e : hit_entries)
 	{
 		void* id = pipeline_state.state_object_props->GetShaderIdentifier(e.name.c_str());
-		memcpy(ptr, id, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+		memcpy(lptr, id, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 
-		memcpy(ptr + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, e.root_arguments.data(), e.root_arguments.size() * 8);
-		ptr += hit_entry_size;
+		memcpy(lptr + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, e.root_arguments.data(), e.root_arguments.size() * 8);
+		lptr += hit_entry_size;
 	}
+	ptr += hit_table_size;
 
 	shader_table_heap->Unmap();
 }

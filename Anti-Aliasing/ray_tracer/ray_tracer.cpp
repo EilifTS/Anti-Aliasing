@@ -20,10 +20,10 @@ RayTracer::RayTracer(egx::Device& dev, egx::CommandContext& context, const ema::
 	egx::ShaderLibrary lib;
 	lib.Compile("shaders/ray_tracing/shader.hlsl");
 
-	pipeline_state.AddLibrary(lib, { L"raygeneration", L"miss", L"closesthit" });
-	pipeline_state.AddHitGroup(L"HitGroup1", L"closesthit");
-	pipeline_state.AddRootSignatureAssociation(ray_gen_rs, { L"raygeneration" });
-	pipeline_state.AddRootSignatureAssociation(miss_rs, { L"miss" });
+	pipeline_state.AddLibrary(lib, { L"RayGenerationShader", L"MissShader", L"ClosestHitShader" });
+	pipeline_state.AddHitGroup(L"HitGroup1", L"ClosestHitShader");
+	pipeline_state.AddRootSignatureAssociation(ray_gen_rs, { L"RayGenerationShader" });
+	pipeline_state.AddRootSignatureAssociation(miss_rs, { L"MissShader" });
 	pipeline_state.AddRootSignatureAssociation(hit_rs, { L"HitGroup1" });
 	pipeline_state.SetMaxPayloadSize(4 * sizeof(float));
 	pipeline_state.SetMaxAttributeSize(2 * sizeof(float));

@@ -207,14 +207,14 @@ void egx::CommandContext::DispatchRays(const ema::point2D& dims, ShaderTable& sh
 	dis_desc.Depth = 1;
 
 	auto start_addess = shader_table.shader_table_heap->buffer->GetGPUVirtualAddress();
-	dis_desc.RayGenerationShaderRecord.StartAddress = start_addess;
+	dis_desc.RayGenerationShaderRecord.StartAddress = start_addess + shader_table.ray_gen_table_start;
 	dis_desc.RayGenerationShaderRecord.SizeInBytes = shader_table.ray_gen_entry_size;
 	
-	dis_desc.MissShaderTable.StartAddress = start_addess + shader_table.ray_gen_table_size;
+	dis_desc.MissShaderTable.StartAddress = start_addess + shader_table.miss_table_start;
 	dis_desc.MissShaderTable.StrideInBytes = shader_table.miss_entry_size;
 	dis_desc.MissShaderTable.SizeInBytes = shader_table.miss_table_size;
 
-	dis_desc.HitGroupTable.StartAddress = start_addess + shader_table.ray_gen_table_size + shader_table.miss_table_size;
+	dis_desc.HitGroupTable.StartAddress = start_addess + shader_table.hit_table_start;
 	dis_desc.HitGroupTable.StrideInBytes = shader_table.hit_entry_size;
 	dis_desc.HitGroupTable.SizeInBytes = shader_table.hit_table_size;
 

@@ -86,6 +86,6 @@ void egx::TLAS::Build(Device& dev, CommandContext& context, std::vector<std::sha
     srv_desc.RaytracingAccelerationStructure.Location = result_buffer->buffer->GetGPUVirtualAddress();
 
     srv_cpu = dev.buffer_heap->GetNextHandle();
-    dev.device->CreateShaderResourceView(result_buffer->buffer.Get(), &srv_desc, srv_cpu);
+    dev.device->CreateShaderResourceView(nullptr, &srv_desc, srv_cpu);
     srv_gpu = dev.buffer_heap->GetGPUHandle(srv_cpu);
 }

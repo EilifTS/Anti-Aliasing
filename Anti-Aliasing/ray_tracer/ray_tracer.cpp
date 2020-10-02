@@ -13,7 +13,7 @@ RayTracer::RayTracer(egx::Device& dev, egx::CommandContext& context, const ema::
 	// Add scene and output buffer
 	compute_rs.Finalize(dev);
 	ray_gen_rs.InitUnorderedAccessTable(0, 1, egx::ShaderVisibility::All);
-	//ray_gen_rs.InitDescriptorTable(0);
+	ray_gen_rs.InitDescriptorTable(0);
 	//ray_gen_rs.InitShaderResource(0);
 	ray_gen_rs.Finalize(dev, true); // Set local
 	miss_rs.Finalize(dev, true);
@@ -45,7 +45,7 @@ void RayTracer::UpdateShaderTable(egx::Device& dev)
 {
 	auto& program1 = shader_table.AddRayGenerationProgram(L"RayGenerationShader");
 	program1.AddUnorderedAccessTable(output_buffer);
-	//program1.AddAccelerationStructure(tlas);
+	program1.AddAccelerationStructure(tlas);
 	auto& program2 = shader_table.AddMissProgram(L"MissShader");
 	auto& program3 = shader_table.AddHitProgram(L"HitGroup1");
 	shader_table.Finalize(dev, pipeline_state);
@@ -54,6 +54,7 @@ void RayTracer::UpdateShaderTable(egx::Device& dev)
 
 egx::UnorderedAccessBuffer& RayTracer::Trace(egx::Device& dev, egx::CommandContext& context)
 {
+	context.SetDescriptorHeap(*(dev.buffer_heap));
 	context.SetTransitionBuffer(output_buffer, egx::GPUBufferState::UnorderedAccess);
 	context.SetComputeRootSignature(compute_rs);
 	context.SetRTPipelineState(pipeline_state);

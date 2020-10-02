@@ -35,9 +35,10 @@ void RayGenerationShader()
     ray.TMax = 100000;
 
     RayPayload payload;
-    //TraceRay(rtscene, 0 /*rayFlags*/, 0xFF, 0 /* ray index*/, 0, 0, ray, payload);
-    float3 col = linearToSrgb(float3(0.5, 0.5, 0.5));//payload.color;
-    rtoutput[launchIndex.xy] = float4(col, 1);
+    TraceRay(rtscene, 0 /*rayFlags*/, 0xFF, 0 /* ray index*/, 0, 0, ray, payload);
+    //float3 col = linearToSrgb(float3(0.5, 1.0, 0.5));//payload.color;
+    float3 col = payload.color;
+    rtoutput[launchIndex.xy] = float4(col, 1.0);
 }
 
 
@@ -56,5 +57,6 @@ void ClosestHitShader(inout RayPayload payload, in BuiltInTriangleIntersectionAt
     const float3 B = float3(0, 1, 0);
     const float3 C = float3(0, 0, 1);
 
-    payload.color = A * barycentrics.x + B * barycentrics.y + C * barycentrics.z;
+    payload.color = saturate(dot(barycentrics, barycentrics)).xxx;
+    //payload.color = A * barycentrics.x + B * barycentrics.y + C * barycentrics.z;
 }

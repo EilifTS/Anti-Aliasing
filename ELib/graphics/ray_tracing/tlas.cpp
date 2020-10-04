@@ -50,7 +50,7 @@ void egx::TLAS::Build(Device& dev, CommandContext& context, std::vector<std::sha
     int index = 0;
     for (auto pmodel : models)
     {
-        ema::mat4 m = pmodel->CalculateWorldMatrix();
+        ema::mat4 m = pmodel->CalculateWorldMatrix().Transpose();
         for (auto pmesh : pmodel->GetMeshes())
         {
             // Initialize the instance desc
@@ -64,12 +64,10 @@ void egx::TLAS::Build(Device& dev, CommandContext& context, std::vector<std::sha
             index++;
         }
     }
-
-    // Unmap
     instances_buffer->Unmap();
 
     // Create the TLAS
-    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC as_desc = {};
+    as_desc = {};
     as_desc.Inputs = inputs;
     as_desc.Inputs.InstanceDescs = instances_buffer->buffer->GetGPUVirtualAddress();
     as_desc.DestAccelerationStructureData = result_buffer->buffer->GetGPUVirtualAddress();
@@ -88,4 +86,25 @@ void egx::TLAS::Build(Device& dev, CommandContext& context, std::vector<std::sha
     srv_cpu = dev.buffer_heap->GetNextHandle();
     dev.device->CreateShaderResourceView(nullptr, &srv_desc, srv_cpu);
     srv_gpu = dev.buffer_heap->GetGPUHandle(srv_cpu);
+}
+
+
+void egx::TLAS::ReBuild(CommandContext& context, std::vector<std::shared_ptr<Model>>& models)
+{
+    D3D12_RAYTRACING_INSTANCE_DESC* pInstance_buffer = (D3D12_RAYTRACING_INSTANCE_DESC*)instances_buffer->Map();
+    int index = 0;
+    for (auto pmodel : models)
+    {
+        ema::mat4 m = pmodel->CalculateWorldMatrix().Transpose();
+        for (auto pmesh : pmodel->GetMeshes())
+        {
+            memcpy(pInstance_buffer[index].Transform, &m, sizeof(pInstance_buffer[index].Transform));
+            index++;
+        }
+    }
+    instances_buffer->Unmap();
+
+    context.command_list->BuildRaytracingAccelerationStructure(&as_desc, 0, nullptr);
+
+    context.SetUABarrier(*result_buffer);
 }

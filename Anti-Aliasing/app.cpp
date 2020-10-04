@@ -54,10 +54,10 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	knight_model3->SetRotation(ema::vec3(0.0f, 0.0f, 3.141692f));
 	//knight_model3->SetStatic(true);
 
-	//mat_manager.DisableDiffuseTextures();
-	//mat_manager.DisableNormalMaps();
-	//mat_manager.DisableSpecularMaps();
-	//mat_manager.DisableMaskTextures();
+	mat_manager.DisableDiffuseTextures();
+	mat_manager.DisableNormalMaps();
+	mat_manager.DisableSpecularMaps();
+	mat_manager.DisableMaskTextures();
 	mat_manager.LoadMaterialAssets(dev, context, texture_loader);
 
 	// Create acceleration structures
@@ -69,9 +69,10 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	{
 		pmesh->BuildAccelerationStructure(dev, context);
 	}
+
 	std::vector<std::shared_ptr<egx::Model>> models_vector = { sponza_model, knight_model1, knight_model2, knight_model3 };
-	ray_tracer.UpdateTLAS(dev, context, models_vector);
-	ray_tracer.UpdateShaderTable(dev);
+	ray_tracer.BuildTLAS(dev, context, models_vector);
+	ray_tracer.UpdateShaderTable(dev, camera.GetBuffer());
 }
 
 void App::Update(eio::InputManager& im)
@@ -131,13 +132,17 @@ void App::Update(eio::InputManager& im)
 }
 void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 {
+	std::vector<std::shared_ptr<egx::Model>> models_vector = { sponza_model, knight_model1, knight_model2, knight_model3 };
+	ray_tracer.ReBuildTLAS(context, models_vector);
+
 	camera.UpdateBuffer(dev, context);
 	sponza_model->UpdateBuffer(dev, context);
 	knight_model1->UpdateBuffer(dev, context);
 	knight_model2->UpdateBuffer(dev, context);
 	knight_model3->UpdateBuffer(dev, context);
 
-	bool use_rasterizer = true;
+
+	bool use_rasterizer = false;
 	if (use_rasterizer)
 	{
 		renderer.PrepareFrame(dev, context);

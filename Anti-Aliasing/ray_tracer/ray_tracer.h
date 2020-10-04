@@ -12,8 +12,9 @@ class RayTracer
 public:
 	RayTracer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& window_size);
 
-	void UpdateTLAS(egx::Device& dev, egx::CommandContext& context, std::vector<std::shared_ptr<egx::Model>>& models);
-	void UpdateShaderTable(egx::Device& dev);
+	void BuildTLAS(egx::Device& dev, egx::CommandContext& context, std::vector<std::shared_ptr<egx::Model>>& models);
+	void ReBuildTLAS(egx::CommandContext& context, std::vector<std::shared_ptr<egx::Model>>& models);
+	void UpdateShaderTable(egx::Device& dev, egx::ConstantBuffer& camera_buffer);
 
 	egx::UnorderedAccessBuffer& Trace(egx::Device& dev, egx::CommandContext& context);
 

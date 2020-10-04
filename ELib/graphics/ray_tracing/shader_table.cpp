@@ -4,6 +4,7 @@
 #include "../unordered_access_buffer.h"
 #include "../internal/egx_internal.h"
 #include "../internal/upload_heap.h"
+#include "../constant_buffer.h"
 #include "tlas.h"
 
 namespace
@@ -23,6 +24,12 @@ egx::ShaderTable::Entry::Entry(const std::wstring& name)
 	: name(name), root_arguments(), byte_size((int)D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES)
 {
 
+}
+
+void egx::ShaderTable::Entry::AddConstantBuffer(ConstantBuffer& buffer)
+{
+	byte_size += 8;
+	root_arguments.push_back((void*)buffer.buffer->GetGPUVirtualAddress());
 }
 
 void egx::ShaderTable::Entry::AddDescriptorTable(Texture2D& start_texture)
@@ -69,11 +76,6 @@ void egx::ShaderTable::Finalize(Device& dev, RTPipelineState& pipeline_state)
 	ray_gen_entry_size = getShaderRecordSize(ray_gen_entries);
 	miss_entry_size = getShaderRecordSize(miss_entries);
 	hit_entry_size = getShaderRecordSize(hit_entries);
-
-	int max_size = max(max(ray_gen_entry_size, miss_entry_size), hit_entry_size);
-	ray_gen_entry_size = max_size;
-	miss_entry_size = max_size;
-	hit_entry_size = max_size;
 
 	ray_gen_table_size = ray_gen_entry_size * (int)ray_gen_entries.size();
 	miss_table_size = miss_entry_size * (int)miss_entries.size();

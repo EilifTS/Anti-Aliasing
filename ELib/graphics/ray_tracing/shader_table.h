@@ -14,7 +14,7 @@ namespace egx
 			Entry(const std::wstring& name);
 
 			//void AddConstant();
-			//void AddConstantBuffer();
+			void AddConstantBuffer(ConstantBuffer& buffer);
 			//void AddRootSRV(Texture2D& start_texture);
 			void AddDescriptorTable(Texture2D& start_texture);
 			void AddUnorderedAccessTable(UnorderedAccessBuffer& start_buffer);

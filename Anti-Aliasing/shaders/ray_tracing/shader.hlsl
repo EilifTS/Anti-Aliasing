@@ -1,15 +1,16 @@
 RaytracingAccelerationStructure rtscene : register(t0);
 RWTexture2D<float4> rtoutput : register(u0);
 
-float3 linearToSrgb(float3 c)
+cbuffer CameraBuffer : register(b0)
 {
-    // Based on http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
-    float3 sq1 = sqrt(c);
-    float3 sq2 = sqrt(sq1);
-    float3 sq3 = sqrt(sq2);
-    float3 srgb = 0.662002687 * sq1 + 0.684122060 * sq2 - 0.323583601 * sq3 - 0.0225411470 * c;
-    return srgb;
+    matrix view_matrix;
+    matrix inv_view_matrix;
+    matrix projection_matrix;
+    matrix inv_projection_matrix;
+    matrix projection_matrix_no_jitter;
+    matrix inv_projection_matrix_no_jitter;
 }
+
 struct RayPayload
 {
     float3 color;
@@ -25,11 +26,12 @@ void RayGenerationShader()
     float2 dims = float2(launchDim.xy);
 
     float2 d = ((crd / dims) * 2.f - 1.f);
-    float aspectRatio = dims.x / dims.y;
+    float4 clip_pos = float4(d * float2(1.0f, -1.0f), 0.0f, 1.0f);
+    float4 view_pos = mul(clip_pos, inv_projection_matrix_no_jitter);
 
     RayDesc ray;
-    ray.Origin = float3(0, 0, -2);
-    ray.Direction = normalize(float3(d.x * aspectRatio, -d.y, 1));
+    ray.Origin = mul(float4(0.0, 0.0, 0.0, 1.0), inv_view_matrix).xyz;
+    ray.Direction = normalize(mul(view_pos, (float3x3)inv_view_matrix));
 
     ray.TMin = 0;
     ray.TMax = 100000;

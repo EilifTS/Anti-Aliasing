@@ -12,8 +12,11 @@ namespace egx
 		TLAS() : srv_cpu(), srv_gpu() {};
 
 		void Build(Device& dev, CommandContext& context, std::vector<std::shared_ptr<Model>>& models);
+		void ReBuild(CommandContext& context, std::vector<std::shared_ptr<Model>>& models);
 
 	private:
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC as_desc;
+
 		std::unique_ptr<UploadHeap> instances_buffer;
 		std::unique_ptr<GPUBuffer> scratch_buffer;
 		std::unique_ptr<GPUBuffer> result_buffer;

@@ -17,11 +17,12 @@ namespace
         auto wfilename = convert_to_wstring(filename);
         auto wtarget_string = convert_to_wstring(target_string);
 
-        ComPtr<IDxcCompiler> pcompiler;
+        ComPtr<IDxcCompiler2> pcompiler;
         ComPtr<IDxcLibrary> plibrary;
-
-        THROWIFFAILED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pcompiler)), "Failed to create DXC copiler");
-        THROWIFFAILED(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&plibrary)), "Failed to create DXC copiler");
+        ComPtr<IDxcIncludeHandler> pinclude_handler;
+        
+        THROWIFFAILED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pcompiler)), "Failed to create DXC compiler");
+        THROWIFFAILED(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&plibrary)), "Failed to create DXC Library");
 
         // Open and read the file
         std::ifstream shader_file(filename);
@@ -41,7 +42,7 @@ namespace
         // Compile
         ComPtr<IDxcOperationResult> presult;
         THROWIFFAILED(pcompiler->Compile(ptext_blob.Get(), wfilename.c_str(), L"", wtarget_string.c_str(), nullptr, 0, nullptr, 0, nullptr, &presult),
-            "Failed to compile shader" + filename);
+            "Failed to compile shader " + filename);
 
         // Verify the result
         HRESULT hr = 0;
@@ -58,7 +59,7 @@ namespace
 
             eio::Console::Log("Failed to compile " + filename);
             eio::Console::Log(serror);
-            throw std::runtime_error("Failed to compile" + filename);
+            throw std::runtime_error("Failed to compile " + filename);
         }
 
         ComPtr<ID3DBlob> out;

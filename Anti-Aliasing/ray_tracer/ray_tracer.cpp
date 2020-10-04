@@ -14,6 +14,7 @@ RayTracer::RayTracer(egx::Device& dev, egx::CommandContext& context, const ema::
 	compute_rs.Finalize(dev);
 	ray_gen_rs.InitUnorderedAccessTable(0, 1, egx::ShaderVisibility::All);
 	ray_gen_rs.InitDescriptorTable(0);
+	ray_gen_rs.InitConstantBuffer(0);
 	//ray_gen_rs.InitShaderResource(0);
 	ray_gen_rs.Finalize(dev, true); // Set local
 	miss_rs.Finalize(dev, true);
@@ -36,16 +37,21 @@ RayTracer::RayTracer(egx::Device& dev, egx::CommandContext& context, const ema::
 	
 }
 
-void RayTracer::UpdateTLAS(egx::Device& dev, egx::CommandContext& context, std::vector<std::shared_ptr<egx::Model>>& models)
+void RayTracer::BuildTLAS(egx::Device& dev, egx::CommandContext& context, std::vector<std::shared_ptr<egx::Model>>& models)
 {
 	tlas.Build(dev, context, models);
 }
+void RayTracer::ReBuildTLAS(egx::CommandContext& context, std::vector<std::shared_ptr<egx::Model>>& models)
+{
+	tlas.ReBuild(context, models);
+}
 
-void RayTracer::UpdateShaderTable(egx::Device& dev)
+void RayTracer::UpdateShaderTable(egx::Device& dev, egx::ConstantBuffer& camera_buffer)
 {
 	auto& program1 = shader_table.AddRayGenerationProgram(L"RayGenerationShader");
 	program1.AddUnorderedAccessTable(output_buffer);
 	program1.AddAccelerationStructure(tlas);
+	program1.AddConstantBuffer(camera_buffer);
 	auto& program2 = shader_table.AddMissProgram(L"MissShader");
 	auto& program3 = shader_table.AddHitProgram(L"HitGroup1");
 	shader_table.Finalize(dev, pipeline_state);

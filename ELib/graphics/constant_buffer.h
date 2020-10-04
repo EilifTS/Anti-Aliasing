@@ -12,5 +12,6 @@ namespace egx
 	private:
 		D3D12_CPU_DESCRIPTOR_HANDLE cbv;
 		friend CommandContext;
+		friend ShaderTable;
 	};
 }

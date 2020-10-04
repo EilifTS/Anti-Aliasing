@@ -28,5 +28,6 @@ namespace egx
 
 		friend CommandContext;
 		friend Mesh;
+		friend ShaderTable;
 	};
 }

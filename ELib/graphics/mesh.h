@@ -47,6 +47,7 @@ namespace egx
 		inline const Material& GetMaterial() const { return material; };
 
 		void BuildAccelerationStructure(Device& dev, CommandContext& context);
+		inline int GetInstanceID() const { return instance_id; };
 
 	private:
 		VertexBuffer vertex_buffer;
@@ -57,6 +58,7 @@ namespace egx
 		// Ray tracing
 		std::unique_ptr<GPUBuffer> blas_scratch;
 		std::unique_ptr<GPUBuffer> blas_result;
+		int instance_id = -1;
 
 	private:
 		friend TLAS;

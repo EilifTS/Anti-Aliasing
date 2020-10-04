@@ -48,14 +48,23 @@ void egx::TLAS::Build(Device& dev, CommandContext& context, std::vector<std::sha
     D3D12_RAYTRACING_INSTANCE_DESC* pInstance_buffer = (D3D12_RAYTRACING_INSTANCE_DESC*)instances_buffer->Map();
 
     int index = 0;
+    int next_instance_id = 0;
     for (auto pmodel : models)
     {
         ema::mat4 m = pmodel->CalculateWorldMatrix().Transpose();
         for (auto pmesh : pmodel->GetMeshes())
         {
+            // Get instance id
+            int instance_id = pmesh->instance_id;
+            if (instance_id == -1)
+            {
+                instance_id = next_instance_id++;
+                pmesh->instance_id = instance_id;
+            }
+
             // Initialize the instance desc
-            pInstance_buffer[index].InstanceID = 0;
-            pInstance_buffer[index].InstanceContributionToHitGroupIndex = 0;
+            pInstance_buffer[index].InstanceID = instance_id;
+            pInstance_buffer[index].InstanceContributionToHitGroupIndex = instance_id;
             pInstance_buffer[index].Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
 
             memcpy(pInstance_buffer[index].Transform, &m, sizeof(pInstance_buffer[index].Transform));

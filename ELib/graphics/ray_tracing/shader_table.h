@@ -19,6 +19,8 @@ namespace egx
 			void AddDescriptorTable(Texture2D& start_texture);
 			void AddUnorderedAccessTable(UnorderedAccessBuffer& start_buffer);
 			void AddAccelerationStructure(TLAS& tlas);
+			void AddVertexBuffer(VertexBuffer& buffer);
+			void AddIndexBuffer(IndexBuffer& buffer);
 
 			int GetByteSize() const;
 

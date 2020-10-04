@@ -14,7 +14,7 @@ public:
 
 	void BuildTLAS(egx::Device& dev, egx::CommandContext& context, std::vector<std::shared_ptr<egx::Model>>& models);
 	void ReBuildTLAS(egx::CommandContext& context, std::vector<std::shared_ptr<egx::Model>>& models);
-	void UpdateShaderTable(egx::Device& dev, egx::ConstantBuffer& camera_buffer);
+	void UpdateShaderTable(egx::Device& dev, egx::ConstantBuffer& camera_buffer, std::vector<std::shared_ptr<egx::Mesh>>& meshes);
 
 	egx::UnorderedAccessBuffer& Trace(egx::Device& dev, egx::CommandContext& context);
 

@@ -35,6 +35,8 @@ private:
 	DeferrdRenderer renderer;
 
 	// Models
+	std::vector<std::shared_ptr<egx::Mesh>> sponza_mesh;
+	std::vector<std::shared_ptr<egx::Mesh>> knight_mesh;
 	std::shared_ptr<egx::Model> sponza_model;
 	std::shared_ptr<egx::Model> knight_model1;
 	std::shared_ptr<egx::Model> knight_model2;

@@ -6,6 +6,8 @@
 #include "../internal/upload_heap.h"
 #include "../constant_buffer.h"
 #include "tlas.h"
+#include "../vertex_buffer.h"
+#include "../index_buffer.h"
 
 namespace
 {
@@ -48,6 +50,17 @@ void egx::ShaderTable::Entry::AddAccelerationStructure(TLAS& tlas)
 {
 	byte_size += 8;
 	root_arguments.push_back((void*)tlas.srv_gpu.ptr);
+}
+void egx::ShaderTable::Entry::AddVertexBuffer(VertexBuffer& buffer)
+{
+	byte_size += 8;
+	root_arguments.push_back((void*)buffer.buffer->GetGPUVirtualAddress());
+}
+
+void egx::ShaderTable::Entry::AddIndexBuffer(IndexBuffer& buffer)
+{
+	byte_size += 8;
+	root_arguments.push_back((void*)buffer.buffer->GetGPUVirtualAddress());
 }
 
 int egx::ShaderTable::Entry::GetByteSize() const

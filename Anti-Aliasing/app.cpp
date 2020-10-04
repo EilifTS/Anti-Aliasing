@@ -34,12 +34,12 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	target2.CreateRenderTargetView(dev);
 
 	// Load assets
-	auto sponza_mesh = eio::LoadMeshFromOBJB(dev, context, "models/sponza", mat_manager);
+	sponza_mesh = eio::LoadMeshFromOBJB(dev, context, "models/sponza", mat_manager);
 	sponza_model = std::make_shared<egx::Model>(dev, sponza_mesh);
 	sponza_model->SetScale(0.01f);
 	sponza_model->SetStatic(true);
 
-	auto knight_mesh = eio::LoadMeshFromOBJB(dev, context, "models/knight", mat_manager);
+	knight_mesh = eio::LoadMeshFromOBJB(dev, context, "models/knight", mat_manager);
 	knight_model1 = std::make_shared<egx::Model>(dev, knight_mesh);
 	knight_model2 = std::make_shared<egx::Model>(dev, knight_mesh);
 	knight_model3 = std::make_shared<egx::Model>(dev, knight_mesh);
@@ -72,7 +72,10 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 
 	std::vector<std::shared_ptr<egx::Model>> models_vector = { sponza_model, knight_model1, knight_model2, knight_model3 };
 	ray_tracer.BuildTLAS(dev, context, models_vector);
-	ray_tracer.UpdateShaderTable(dev, camera.GetBuffer());
+
+	std::vector<std::shared_ptr<egx::Mesh>> mesh_vector(sponza_mesh);
+	mesh_vector.insert(std::end(mesh_vector), std::begin(knight_mesh), std::end(knight_mesh));
+	ray_tracer.UpdateShaderTable(dev, camera.GetBuffer(), mesh_vector);
 }
 
 void App::Update(eio::InputManager& im)

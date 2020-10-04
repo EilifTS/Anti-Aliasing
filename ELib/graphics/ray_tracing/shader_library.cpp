@@ -39,9 +39,22 @@ namespace
         THROWIFFAILED(plibrary->CreateBlobWithEncodingFromPinned((LPBYTE)shader.c_str(), (uint32_t)shader.size(), 0, &ptext_blob),
             "Failed to create blob from pinned");
 
+        // Command line arguments
+        const wchar_t* pargs[] =
+        {
+//                      L"-Zpr",            // Row-major matrices
+                        L"-WX",             // Warnings as errors
+#ifdef _DEBUG
+                        L"-Zi",             // Debug info
+                        L"-Od",             // Disable optimizations
+#else
+                        L"-O3",             // Optimization level 3
+#endif
+        };
+
         // Compile
         ComPtr<IDxcOperationResult> presult;
-        THROWIFFAILED(pcompiler->Compile(ptext_blob.Get(), wfilename.c_str(), L"", wtarget_string.c_str(), nullptr, 0, nullptr, 0, nullptr, &presult),
+        THROWIFFAILED(pcompiler->Compile(ptext_blob.Get(), wfilename.c_str(), L"", wtarget_string.c_str(), pargs, _countof(pargs), nullptr, 0, nullptr, &presult),
             "Failed to compile shader " + filename);
 
         // Verify the result

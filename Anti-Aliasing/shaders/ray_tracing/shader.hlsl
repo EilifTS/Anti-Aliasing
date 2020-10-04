@@ -71,12 +71,12 @@ void ClosestHitShader(inout RayPayload payload, in BuiltInTriangleIntersectionAt
     int vertex_id1 = indices[triangle_id + 1];
     int vertex_id2 = indices[triangle_id + 2];
 
-    //float3 normal0 = mul(vertices[vertex_id0].normal, ObjectToWorld());
-    //float3 normal1 = mul(vertices[vertex_id1].normal, ObjectToWorld());
-    //float3 normal2 = mul(vertices[vertex_id2].normal, ObjectToWorld());
-    float3 normal0 = vertices[vertex_id0].normal;
-    float3 normal1 = vertices[vertex_id1].normal;
-    float3 normal2 = vertices[vertex_id2].normal;
+    float3 normal0 = mul(vertices[vertex_id0].normal, (float3x3)ObjectToWorld4x3());
+    float3 normal1 = mul(vertices[vertex_id1].normal, (float3x3)ObjectToWorld4x3());
+    float3 normal2 = mul(vertices[vertex_id2].normal, (float3x3)ObjectToWorld4x3());
+    //float3 normal0 = vertices[vertex_id0].normal;
+    //float3 normal1 = vertices[vertex_id1].normal;
+    //float3 normal2 = vertices[vertex_id2].normal;
 
     float3 normal = normalize(normal0 * barycentrics.x + normal1 * barycentrics.y + normal2 * barycentrics.z);
 

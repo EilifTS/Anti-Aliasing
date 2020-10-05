@@ -89,7 +89,9 @@
     <FxCompile Include="shaders\deferred\motion_vector_vs.hlsl" />
     <FxCompile Include="shaders\taa\taa_ps.hlsl" />
     <FxCompile Include="shaders\taa\taa_vs.hlsl" />
-    <FxCompile Include="shaders\ray_tracing\shader.hlsl" />
+    <FxCompile Include="shaders\ray_tracing\ray_gen.hlsl" />
+    <FxCompile Include="shaders\ray_tracing\miss.hlsl" />
+    <FxCompile Include="shaders\ray_tracing\closest_hit.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fxaa\fxaa_header.hlsli" />

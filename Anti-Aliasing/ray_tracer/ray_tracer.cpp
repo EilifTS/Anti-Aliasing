@@ -10,6 +10,10 @@ RayTracer::RayTracer(egx::Device& dev, egx::CommandContext& context, const ema::
 {
 	output_buffer.CreateUnorderedAccessView(dev);
 
+	// Create samplers
+	auto sampler = egx::Sampler::LinearWrap();
+	sampler.SetVisibility(egx::ShaderVisibility::All);
+
 	// Setup root signatures
 	compute_rs.Finalize(dev);
 	ray_gen_rs.InitUnorderedAccessTable(0, 1, egx::ShaderVisibility::All); // Output
@@ -19,22 +23,36 @@ RayTracer::RayTracer(egx::Device& dev, egx::CommandContext& context, const ema::
 
 	miss_rs.Finalize(dev, true);
 
-	hit_rs.InitShaderResource(1); // Vertex Bufffer
-	hit_rs.InitShaderResource(2); // Index Buffer
+	hit_rs.InitShaderResource(0); // Vertex Bufffer
+	hit_rs.InitShaderResource(1); // Index Buffer
+	hit_rs.InitConstantBuffer(0); // Camera Buffer
+	hit_rs.InitConstantBuffer(1); // Material buffer
+	hit_rs.InitDescriptorTable(2); // Diffuse color texture
+	hit_rs.InitDescriptorTable(3); // Normal map
+	hit_rs.InitDescriptorTable(4); // Specular map
+	hit_rs.InitDescriptorTable(5); // Mask texture
+	hit_rs.InitDescriptorTable(6); // Mask texture
+	hit_rs.AddSampler(sampler, 0);
 	hit_rs.Finalize(dev, true);
 
-	egx::ShaderLibrary lib;
-	lib.Compile("shaders/ray_tracing/shader.hlsl");
+	egx::ShaderLibrary lib1;
+	egx::ShaderLibrary lib2;
+	egx::ShaderLibrary lib3;
+	lib1.Compile("shaders/ray_tracing/ray_gen.hlsl");
+	lib2.Compile("shaders/ray_tracing/miss.hlsl");
+	lib3.Compile("shaders/ray_tracing/closest_hit.hlsl");
 
-	pipeline_state.AddLibrary(lib, { L"RayGenerationShader", L"MissShader", L"ClosestHitShader" });
+	pipeline_state.AddLibrary(lib1, { L"RayGenerationShader" });
+	pipeline_state.AddLibrary(lib2, { L"MissShader" });
+	pipeline_state.AddLibrary(lib3, { L"ClosestHitShader" });
 	pipeline_state.AddHitGroup(L"HitGroup1", L"ClosestHitShader");
 	pipeline_state.AddRootSignatureAssociation(ray_gen_rs, { L"RayGenerationShader" });
 	pipeline_state.AddRootSignatureAssociation(miss_rs, { L"MissShader" });
 	pipeline_state.AddRootSignatureAssociation(hit_rs, { L"HitGroup1" });
 	pipeline_state.AddGlobalRootSignature(compute_rs);
-	pipeline_state.SetMaxPayloadSize(3 * sizeof(float));
+	pipeline_state.SetMaxPayloadSize(3 * sizeof(float) + sizeof(int));
 	pipeline_state.SetMaxAttributeSize(2 * sizeof(float));
-	pipeline_state.SetMaxRecursionDepth(1);
+	pipeline_state.SetMaxRecursionDepth(2);
 	pipeline_state.Finalize(dev);
 
 	
@@ -61,9 +79,31 @@ void RayTracer::UpdateShaderTable(egx::Device& dev, egx::ConstantBuffer& camera_
 	for (auto mesh : meshes)
 	{
 		assert(mesh->GetInstanceID() == test_instance_id++);
+		const auto& material = mesh->GetMaterial();
+
 		auto& program3 = shader_table.AddHitProgram(L"HitGroup1");
 		program3.AddVertexBuffer(mesh->GetVertexBuffer());
 		program3.AddIndexBuffer(mesh->GetIndexBuffer());
+		program3.AddConstantBuffer(camera_buffer);
+		program3.AddConstantBuffer(material.GetBuffer());
+
+		if (material.HasDiffuseTexture())
+			program3.AddDescriptorTable(material.GetDiffuseTexture());
+		else
+			program3.AddNullDescriptor();
+		if(material.HasNormalMap())
+			program3.AddDescriptorTable(material.GetNormalMap()); 
+		else
+			program3.AddNullDescriptor();
+		if(material.HasSpecularMap())
+			program3.AddDescriptorTable(material.GetSpecularMap());
+		else
+			program3.AddNullDescriptor();
+		if(material.HasMaskTexture())
+			program3.AddDescriptorTable(material.GetMaskTexture());
+		else
+			program3.AddNullDescriptor();
+		program3.AddAccelerationStructure(tlas);
 	}
 	shader_table.Finalize(dev, pipeline_state);
 }

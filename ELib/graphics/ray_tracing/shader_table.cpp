@@ -28,13 +28,13 @@ egx::ShaderTable::Entry::Entry(const std::wstring& name)
 
 }
 
-void egx::ShaderTable::Entry::AddConstantBuffer(ConstantBuffer& buffer)
+void egx::ShaderTable::Entry::AddConstantBuffer(const ConstantBuffer& buffer)
 {
 	byte_size += 8;
 	root_arguments.push_back((void*)buffer.buffer->GetGPUVirtualAddress());
 }
 
-void egx::ShaderTable::Entry::AddDescriptorTable(Texture2D& start_texture)
+void egx::ShaderTable::Entry::AddDescriptorTable(const Texture2D& start_texture)
 {
 	byte_size += 8;
 	root_arguments.push_back((void*)start_texture.getSRVGPU().ptr);
@@ -61,6 +61,12 @@ void egx::ShaderTable::Entry::AddIndexBuffer(IndexBuffer& buffer)
 {
 	byte_size += 8;
 	root_arguments.push_back((void*)buffer.buffer->GetGPUVirtualAddress());
+}
+
+void egx::ShaderTable::Entry::AddNullDescriptor()
+{
+	byte_size += 8;
+	root_arguments.push_back(nullptr);
 }
 
 int egx::ShaderTable::Entry::GetByteSize() const

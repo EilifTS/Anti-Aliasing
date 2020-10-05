@@ -16,6 +16,7 @@ namespace
 	{
 		ema::mat4 view_to_shadowmap_matrix;
 		ema::vec4 light_dir;
+		ema::vec4 ws_light_dir;
 		float roughness;
 	};
 }
@@ -93,6 +94,7 @@ void LightManager::PrepareFrame(egx::Device& dev, egx::CommandContext& context)
 	ShadowMapConstBufferType smcbt;
 	smcbt.view_to_shadowmap_matrix = view_to_shadowmap_matrix;
 	smcbt.light_dir = light_dir.GetNormalized();
+	smcbt.ws_light_dir = ema::vec4(shadow_map_light_dir, 1.0f);
 	r = fmod(r + 0.01f, 1.0f);
 	smcbt.roughness = r;
 	egx::CPUBuffer cpu_buffer(&smcbt, (int)sizeof(smcbt));

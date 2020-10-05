@@ -228,6 +228,7 @@
     <ClCompile Include="graphics\render_target.cpp" />
     <ClCompile Include="graphics\root_signature.cpp" />
     <ClCompile Include="graphics\ray_tracing\rt_pipeline_state.cpp" />
+    <ClCompile Include="graphics\sampler.cpp" />
     <ClCompile Include="graphics\shader.cpp" />
     <ClCompile Include="graphics\texture2d.cpp" />
     <ClCompile Include="graphics\ray_tracing\tlas.cpp" />

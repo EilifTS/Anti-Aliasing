@@ -50,6 +50,7 @@ namespace egx
 		{
 			desc.MipLODBias = bias;
 		};
+		void SetVisibility(ShaderVisibility visibility);
 
 		inline static Sampler LinearClamp()
 		{

@@ -54,9 +54,9 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	knight_model3->SetRotation(ema::vec3(0.0f, 0.0f, 3.141692f));
 	//knight_model3->SetStatic(true);
 
-	mat_manager.DisableDiffuseTextures();
-	mat_manager.DisableNormalMaps();
-	mat_manager.DisableSpecularMaps();
+	//mat_manager.DisableDiffuseTextures();
+	//mat_manager.DisableNormalMaps();
+	//mat_manager.DisableSpecularMaps();
 	mat_manager.DisableMaskTextures();
 	mat_manager.LoadMaterialAssets(dev, context, texture_loader);
 

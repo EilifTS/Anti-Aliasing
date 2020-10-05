@@ -14,13 +14,14 @@ namespace egx
 			Entry(const std::wstring& name);
 
 			//void AddConstant();
-			void AddConstantBuffer(ConstantBuffer& buffer);
+			void AddConstantBuffer(const ConstantBuffer& buffer);
 			//void AddRootSRV(Texture2D& start_texture);
-			void AddDescriptorTable(Texture2D& start_texture);
+			void AddDescriptorTable(const Texture2D& start_texture);
 			void AddUnorderedAccessTable(UnorderedAccessBuffer& start_buffer);
 			void AddAccelerationStructure(TLAS& tlas);
 			void AddVertexBuffer(VertexBuffer& buffer);
 			void AddIndexBuffer(IndexBuffer& buffer);
+			void AddNullDescriptor();
 
 			int GetByteSize() const;
 

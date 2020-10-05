@@ -75,7 +75,7 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 
 	std::vector<std::shared_ptr<egx::Mesh>> mesh_vector(sponza_mesh);
 	mesh_vector.insert(std::end(mesh_vector), std::begin(knight_mesh), std::end(knight_mesh));
-	ray_tracer.UpdateShaderTable(dev, camera.GetBuffer(), mesh_vector);
+	ray_tracer.UpdateShaderTable(dev, camera.GetBuffer(), taa.GetJitterBuffer(), mesh_vector);
 }
 
 void App::Update(eio::InputManager& im)
@@ -158,19 +158,21 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 		renderer.RenderMotionVectors(dev, context, camera, *knight_model3);
 		renderer.RenderLight(dev, context, camera, target1);
 		renderer.PrepareFrameEnd();
-
-		if (aa_mode == AAMode::TAA)
-			taa.Apply(dev, context, renderer.GetGBuffer().DepthBuffer(), renderer.GetMotionVectors(), target1, target2, camera);
-		else if (aa_mode == AAMode::FXAA)
-			fxaa.Apply(dev, context, target1, target2);
 	}
 	else
 	{
+		renderer.PrepareFrame(dev, context);
+		renderer.PrepareFrameEnd();
 		auto& trace_result = ray_tracer.Trace(dev, context);
 		context.SetTransitionBuffer(trace_result, egx::GPUBufferState::CopySource);
-		context.SetTransitionBuffer(target2, egx::GPUBufferState::CopyDest);
-		context.CopyBuffer(trace_result, target2);
+		context.SetTransitionBuffer(target1, egx::GPUBufferState::CopyDest);
+		context.CopyBuffer(trace_result, target1);
 	}
+
+	if (aa_mode == AAMode::TAA)
+		taa.Apply(dev, context, renderer.GetGBuffer().DepthBuffer(), renderer.GetMotionVectors(), target1, target2, camera);
+	else if (aa_mode == AAMode::FXAA)
+		fxaa.Apply(dev, context, target1, target2);
 
 	auto& back_buffer = context.GetCurrentBackBuffer();
 	renderer.ApplyToneMapping(dev, context, target2, back_buffer);

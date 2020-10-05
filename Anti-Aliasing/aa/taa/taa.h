@@ -9,6 +9,8 @@ class TAA
 public:
 	TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count);
 
+	egx::ConstantBuffer& GetJitterBuffer() { return jitter_buffer; };
+
 	const ema::vec2& GetJitter() const { return jitter.Get(current_index); };
 	const ema::vec2& GetNextJitter() const { return jitter.Get((current_index + 1) % sample_count); };
 	void Update(
@@ -45,6 +47,19 @@ private:
 	ema::mat4 clip_to_prev_clip;
 	ema::vec4 window_size;
 
+	// Ray tracing
+	static const int max_jitters = 128;
+	struct jitterBufferType
+	{
+		int jitter_count;
+		int sample_count;
+		int current_index;
+		int placeholder;
+		ema::vec4 jitters[max_jitters];
+	};
+	jitterBufferType jbt;
+	egx::ConstantBuffer jitter_buffer;
+
 	// Shader macros
 	egx::ShaderMacroList macro_list;
 	bool recompile_shaders = false;
@@ -73,4 +88,6 @@ private:
 	void initializeFormatConverter(egx::Device& dev);
 
 	void recompileShaders(egx::Device& dev);
+
+	void updateJitterBuffer(egx::Device& dev, egx::CommandContext& context);
 };

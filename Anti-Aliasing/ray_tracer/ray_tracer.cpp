@@ -19,6 +19,7 @@ RayTracer::RayTracer(egx::Device& dev, egx::CommandContext& context, const ema::
 	ray_gen_rs.InitUnorderedAccessTable(0, 1, egx::ShaderVisibility::All); // Output
 	ray_gen_rs.InitDescriptorTable(0); // Acceleration structure
 	ray_gen_rs.InitConstantBuffer(0); // Camera buffer
+	ray_gen_rs.InitConstantBuffer(1); // Jitter buffer
 	ray_gen_rs.Finalize(dev, true);
 
 	miss_rs.Finalize(dev, true);
@@ -70,12 +71,13 @@ void RayTracer::ReBuildTLAS(egx::CommandContext& context, std::vector<std::share
 	tlas.ReBuild(context, models);
 }
 
-void RayTracer::UpdateShaderTable(egx::Device& dev, egx::ConstantBuffer& camera_buffer, std::vector<std::shared_ptr<egx::Mesh>>& meshes)
+void RayTracer::UpdateShaderTable(egx::Device& dev, egx::ConstantBuffer& camera_buffer, egx::ConstantBuffer& jitter_buffer, std::vector<std::shared_ptr<egx::Mesh>>& meshes)
 {
 	auto& program1 = shader_table.AddRayGenerationProgram(L"RayGenerationShader");
 	program1.AddUnorderedAccessTable(output_buffer);
 	program1.AddAccelerationStructure(tlas);
 	program1.AddConstantBuffer(camera_buffer);
+	program1.AddConstantBuffer(jitter_buffer);
 	auto& program2 = shader_table.AddMissProgram(L"MissShader");
 	auto& program3 = shader_table.AddMissProgram(L"ShadowMiss");
 

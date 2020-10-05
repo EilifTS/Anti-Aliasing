@@ -28,10 +28,6 @@ egx::Camera::Camera(Device& dev, CommandContext& context, const ema::vec2& windo
 void egx::Camera::UpdateBuffer(Device& dev, CommandContext& context)
 {
 	// Swap buffers
-	auto temp = last_buffer;
-	last_buffer = curr_buffer;
-	curr_buffer = temp;
-
 	cameraBufferType cbt;
 	cbt.view_matrix = view_matrix.Transpose();
 	cbt.inv_view_matrix = inv_view_matrix.Transpose();
@@ -39,6 +35,11 @@ void egx::Camera::UpdateBuffer(Device& dev, CommandContext& context)
 	cbt.inv_projection_matrix = inv_projection_matrix.Transpose();
 	cbt.projection_matrix_no_jitter = projection_matrix_no_jitter.Transpose();
 	cbt.inv_projection_matrix_no_jitter = inv_projection_matrix_no_jitter.Transpose();
+
+
+	context.SetTransitionBuffer(*curr_buffer, GPUBufferState::CopySource);
+	context.SetTransitionBuffer(*last_buffer, GPUBufferState::CopyDest);
+	context.CopyBuffer(*curr_buffer, *last_buffer);
 
 	CPUBuffer cpu_buffer(&cbt, (int)sizeof(cbt));
 	context.SetTransitionBuffer(*curr_buffer, GPUBufferState::CopyDest);

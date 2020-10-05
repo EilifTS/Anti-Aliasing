@@ -8,8 +8,8 @@ namespace
 		ema::mat4 clip_to_prev_frame_clip;
 	};
 
-	static const int   sample_count_presets[5] = {          2,     4,     8,     16, 32 };
-	static const std::string alpha_presets[5]  = { "0.5", "0.3", "0.2", "0.13", "0.05" };
+	static const int sample_count_presets[5]	= {    2,     4,     8,     16,     32 };
+	static const std::string alpha_presets[5]	= { "0.5", "0.3", "0.2", "0.13", "0.05" };
 }
 
 TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count)
@@ -19,12 +19,23 @@ TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count)
 	history_buffer(dev, egx::TextureFormat::FLOAT16x4, window_size),
 	temp_target(dev, egx::TextureFormat::FLOAT16x4, window_size),
 	taa_buffer(dev, (int)sizeof(taaBufferType)),
+	jitter_buffer(dev, (int)sizeof(jitterBufferType)),
 	window_size((float)window_size.x, (float)window_size.y, 1.0f / (float)window_size.x, 1.0f / (float)window_size.y)
 {
 	history_buffer.CreateShaderResourceView(dev);
 	temp_target.CreateRenderTargetView(dev);
 	initializeTAA(dev);
 	initializeFormatConverter(dev);
+
+	// Initialize jitter buffer
+	jbt.jitter_count = max_jitters;
+	jbt.sample_count = sample_count;
+	Jitter jitter = Jitter::Halton(2, 3, max_jitters);
+	for (int i = 0; i < max_jitters; i++)
+	{
+		auto ji = jitter.Get(i);
+		jbt.jitters[i] = ema::vec4(ji.x, ji.y, 0.0f, 0.0f);
+	}
 }
 
 void TAA::Update(
@@ -106,6 +117,8 @@ void TAA::Apply(
 	context.SetTransitionBuffer(taa_buffer, egx::GPUBufferState::CopyDest);
 	dev.ScheduleUpload(context, cpu_buffer, taa_buffer);
 	context.SetTransitionBuffer(taa_buffer, egx::GPUBufferState::ConstantBuffer);
+
+	updateJitterBuffer(dev, context);
 
 	context.SetTransitionBuffer(depth_stencil_buffer, egx::GPUBufferState::PixelResource);
 	context.SetTransitionBuffer(new_frame, egx::GPUBufferState::PixelResource);
@@ -254,4 +267,14 @@ void TAA::recompileShaders(egx::Device& dev)
 	taa_ps.SetPixelShader(PS);
 	taa_ps.Finalize(dev);
 	recompile_shaders = false;
+}
+
+
+void TAA::updateJitterBuffer(egx::Device& dev, egx::CommandContext& context)
+{
+	jbt.current_index = current_index;
+	egx::CPUBuffer cpu_buffer(&jbt, sizeof(jbt));
+	context.SetTransitionBuffer(jitter_buffer, egx::GPUBufferState::CopyDest);
+	dev.ScheduleUpload(context, cpu_buffer, jitter_buffer);
+	context.SetTransitionBuffer(jitter_buffer, egx::GPUBufferState::ConstantBuffer);
 }

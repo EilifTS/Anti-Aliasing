@@ -12,20 +12,16 @@ struct RayPayload
     int depth;
 };
 
-cbuffer CameraBuffer : register(b0)
+struct ShadowPayload
 {
-    matrix view_matrix;
-    matrix inv_view_matrix;
-    matrix projection_matrix;
-    matrix inv_projection_matrix;
-    matrix projection_matrix_no_jitter;
-    matrix inv_projection_matrix_no_jitter;
-}
+    bool hit;
+};
 
-cbuffer MaterialBuffer : register(b1)
+cbuffer MaterialBuffer : register(b0)
 {
     float4 diffuse_color;
     float material_specular_exponent;
+    float material_reflectance;
     int use_diffuse_texture;
     int use_normal_map;
     int use_specular_map;
@@ -73,6 +69,35 @@ float specular_spec(float3 n, float3 l, float3 v, float3 h, float r)
     return D * G * F * 0.25;
 }
 
+bool TraceShadowRay(float3 pos, float3 dir)
+{
+    RayDesc ray;
+    ray.Origin = pos;
+    ray.Direction = dir;
+
+    ray.TMin = 0.01;
+    ray.TMax = 100000;
+
+    ShadowPayload new_payload;
+    TraceRay(rtscene, 0, 0xFF, 1, 0, 1, ray, new_payload);
+    return new_payload.hit;
+}
+
+float3 TraceReflectionRay(float3 pos, float3 dir, int depth)
+{
+    RayDesc ray;
+    ray.Origin = pos;
+    ray.Direction = dir;
+
+    ray.TMin = 0.01;
+    ray.TMax = 100000;
+
+    RayPayload payload;
+    payload.depth = depth;
+    TraceRay(rtscene, 0, 0xFF, 0, 0, 0, ray, payload);
+    return payload.color;
+}
+
 [shader("closesthit")]
 void ClosestHitShader(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attribs)
 {
@@ -84,23 +109,20 @@ void ClosestHitShader(inout RayPayload payload, in BuiltInTriangleIntersectionAt
     VertexType vertex1 = vertices[indices[triangle_id + 1]];
     VertexType vertex2 = vertices[indices[triangle_id + 2]];
 
-    float3 ms_position = vertex0.position * barycentrics.x + vertex1.position * barycentrics.y + vertex2.position * barycentrics.z;
     float3 ms_normal = vertex0.normal * barycentrics.x + vertex1.normal * barycentrics.y + vertex2.normal * barycentrics.z;
     float4 ms_tangent = vertex0.tangent * barycentrics.x + vertex1.tangent * barycentrics.y + vertex2.tangent * barycentrics.z;
     float2 uv = vertex0.uv * barycentrics.x + vertex1.uv * barycentrics.y + vertex2.uv * barycentrics.z;
 
-    float3 ws_position = mul(float4(ms_position, 1.0), ObjectToWorld4x3());
+    float3 ws_position = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
     float3 ws_normal = normalize(mul(ms_normal, (float3x3)ObjectToWorld4x3()));
     float3 ws_tangent = normalize(mul(ms_tangent.xyz, (float3x3)ObjectToWorld4x3()));
     float3 ws_bitangent = cross(ws_tangent, ws_normal) * ms_tangent.w;
 
-    // Get camera position
-    float3 ws_cam_position = inv_view_matrix[3].xyz;
-    float3 view_direction = normalize(ws_cam_position - ws_position);
+    float3 view_direction = -normalize(WorldRayDirection());
 
     // Calculate normal
     float3 n = ws_normal;
-    if (use_normal_map == 2)
+    if (use_normal_map == 1)
     {
         float3 normal_sample = material_normal_map_texture.SampleLevel(linear_wrap, uv, 0).xyx;
         normal_sample = float3((normal_sample.xy * 2.0 - 1.0) * float2(1.0, -1.0), normal_sample.z);
@@ -122,41 +144,37 @@ void ClosestHitShader(inout RayPayload payload, in BuiltInTriangleIntersectionAt
 
     // Light calculation
     float3 color = 0.2 * albedo_color;
-    float shadow_factor = 1.0;
+    float3 l = -normalize(float3(0.15f, -1.0f, 0.15f));
+    float3 v = view_direction;
+
+    // Trace shadows
+    bool in_shadow = TraceShadowRay(ws_position, l);
+    float shadow_factor = in_shadow ? 0.0 : 1.0;
+
 
     if (shadow_factor > 0.0)
     {
         // Empirical model
         float roughness = 0.8 - 0.7 * specular_intensity;
-        float shinyness = 0.0 + 1.0 * specular_intensity;
+        float shinyness = 0.0 + 0.2 * specular_intensity;
 
-        float3 l = -normalize(float3(0.15f, -1.0f, 0.15f));
-        float3 v = view_direction;
         float3 h = normalize(l + v);
         float nl = dot(n, l);
 
         float diffuse = 1.0f;
 
-        float3 specular = float3(0.0, 0.0, 0.0);
-        if (payload.depth == 1)
-        {
-            RayDesc ray;
-            ray.Origin = ws_position;
-            ray.Direction = -(v - 2 * dot(v, n) * n);
-
-            ray.TMin = 0.01;
-            ray.TMax = 100000;
-
-            RayPayload new_payload;
-            new_payload.depth = payload.depth + 1;
-            TraceRay(rtscene, 0, 0xFF, 0, 0, 0, ray, new_payload);
-            //float specular = specular_spec(n, l, v, h, roughness);
-            specular = new_payload.color;
-        }
+        float specular = specular_spec(n, l, v, h, roughness);
         
         color += saturate(nl) * shadow_factor * (lerp(diffuse * albedo_color, specular, shinyness));
     }
 
-    payload.color = color.rgb;
-    //payload.color = nl.xxx;
+
+    // Trace reflection
+    if (payload.depth < 2 && material_reflectance > 0.0)
+    {
+        float3 reflected_color = TraceReflectionRay(ws_position, -(v - 2 * dot(v, n) * n), payload.depth + 1);
+        color = lerp(color, reflected_color, material_reflectance * specular_intensity);
+    }
+
+    payload.color = color;
 }

@@ -113,6 +113,12 @@ namespace
 				ss >> c.x >> c.y >> c.z;
 				current_material.SetDiffuseColor(c);
 			}
+			else if (identifier == "r") // Diffuse color
+			{
+				float r;
+				ss >> r;
+				current_material.SetReflectance(r);
+			}
 			else if (identifier == "map_Kd")
 			{
 				std::string diffuse_map_file_path;

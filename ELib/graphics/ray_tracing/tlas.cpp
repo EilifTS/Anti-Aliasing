@@ -64,7 +64,7 @@ void egx::TLAS::Build(Device& dev, CommandContext& context, std::vector<std::sha
 
             // Initialize the instance desc
             pInstance_buffer[index].InstanceID = instance_id;
-            pInstance_buffer[index].InstanceContributionToHitGroupIndex = instance_id;
+            pInstance_buffer[index].InstanceContributionToHitGroupIndex = instance_id * 2;
             pInstance_buffer[index].Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
 
             memcpy(pInstance_buffer[index].Transform, &m, sizeof(pInstance_buffer[index].Transform));

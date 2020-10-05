@@ -30,6 +30,7 @@ namespace egx
 
 		inline void SetDiffuseColor(const ema::vec3& new_value) { diffuse_color = new_value; };
 		inline void SetSpecularExponent(float new_value) { specular_exponent = new_value; };
+		inline void SetReflectance(float new_value) { reflectance = new_value; };
 		inline void SetDiffuseMapName(const std::string& new_name) { diffuse_map_name = new_name; }
 		inline void SetNormalMapName(const std::string& new_name) { normal_map_name = new_name; }
 		inline void SetSpecularMapName(const std::string& new_name) { specular_map_name = new_name; }
@@ -42,6 +43,7 @@ namespace egx
 		{
 			ema::vec4 diffuse_color;
 			float specular_exponent;
+			float reflectance = 0.0f;
 			int use_diffuse_texture;
 			int use_normal_map;
 			int use_specular_map;
@@ -53,6 +55,7 @@ namespace egx
 
 		ema::vec3 diffuse_color;
 		float specular_exponent;
+		float reflectance;
 
 		std::string diffuse_map_name;
 		std::string normal_map_name;

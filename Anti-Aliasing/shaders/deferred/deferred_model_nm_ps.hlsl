@@ -4,6 +4,7 @@ cbuffer MaterialBuffer : register(b2)
 {
 	float4 diffuse_color;
 	float material_specular_exponent;
+	float material_reflectance;
 	int use_diffuse_texture;
 	int use_normal_map;
 	int use_specular_map;

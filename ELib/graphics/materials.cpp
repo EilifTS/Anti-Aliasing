@@ -13,6 +13,7 @@ void egx::Material::LoadAssets(Device& dev, CommandContext& context, eio::Textur
 	MaterialConstBufferType mcbt;
 	mcbt.diffuse_color = ema::vec4(diffuse_color, 1.0);
 	mcbt.specular_exponent = specular_exponent;
+	mcbt.reflectance = reflectance;
 	mcbt.use_diffuse_texture = (int)HasDiffuseTexture();
 	mcbt.use_normal_map = (int)HasNormalMap();
 	mcbt.use_specular_map = (int)HasSpecularMap();

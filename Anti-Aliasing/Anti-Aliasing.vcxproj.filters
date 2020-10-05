@@ -92,6 +92,7 @@
     <FxCompile Include="shaders\ray_tracing\ray_gen.hlsl" />
     <FxCompile Include="shaders\ray_tracing\miss.hlsl" />
     <FxCompile Include="shaders\ray_tracing\closest_hit.hlsl" />
+    <FxCompile Include="shaders\ray_tracing\shadow_ray.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fxaa\fxaa_header.hlsli" />

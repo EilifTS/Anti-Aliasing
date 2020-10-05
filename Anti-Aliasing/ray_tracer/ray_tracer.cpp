@@ -25,8 +25,7 @@ RayTracer::RayTracer(egx::Device& dev, egx::CommandContext& context, const ema::
 
 	hit_rs.InitShaderResource(0); // Vertex Bufffer
 	hit_rs.InitShaderResource(1); // Index Buffer
-	hit_rs.InitConstantBuffer(0); // Camera Buffer
-	hit_rs.InitConstantBuffer(1); // Material buffer
+	hit_rs.InitConstantBuffer(0); // Material buffer
 	hit_rs.InitDescriptorTable(2); // Diffuse color texture
 	hit_rs.InitDescriptorTable(3); // Normal map
 	hit_rs.InitDescriptorTable(4); // Specular map
@@ -38,21 +37,25 @@ RayTracer::RayTracer(egx::Device& dev, egx::CommandContext& context, const ema::
 	egx::ShaderLibrary lib1;
 	egx::ShaderLibrary lib2;
 	egx::ShaderLibrary lib3;
+	egx::ShaderLibrary lib4;
 	lib1.Compile("shaders/ray_tracing/ray_gen.hlsl");
 	lib2.Compile("shaders/ray_tracing/miss.hlsl");
 	lib3.Compile("shaders/ray_tracing/closest_hit.hlsl");
+	lib4.Compile("shaders/ray_tracing/shadow_ray.hlsl");
 
 	pipeline_state.AddLibrary(lib1, { L"RayGenerationShader" });
 	pipeline_state.AddLibrary(lib2, { L"MissShader" });
 	pipeline_state.AddLibrary(lib3, { L"ClosestHitShader" });
+	pipeline_state.AddLibrary(lib4, { L"ShadowMiss", L"ShadowCHS" });
 	pipeline_state.AddHitGroup(L"HitGroup1", L"ClosestHitShader");
+	pipeline_state.AddHitGroup(L"ShadowHitGroup", L"ShadowCHS");
 	pipeline_state.AddRootSignatureAssociation(ray_gen_rs, { L"RayGenerationShader" });
-	pipeline_state.AddRootSignatureAssociation(miss_rs, { L"MissShader" });
+	pipeline_state.AddRootSignatureAssociation(miss_rs, { L"MissShader", L"ShadowMiss", L"ShadowHitGroup" });
 	pipeline_state.AddRootSignatureAssociation(hit_rs, { L"HitGroup1" });
 	pipeline_state.AddGlobalRootSignature(compute_rs);
 	pipeline_state.SetMaxPayloadSize(3 * sizeof(float) + sizeof(int));
 	pipeline_state.SetMaxAttributeSize(2 * sizeof(float));
-	pipeline_state.SetMaxRecursionDepth(2);
+	pipeline_state.SetMaxRecursionDepth(3);
 	pipeline_state.Finalize(dev);
 
 	
@@ -74,6 +77,7 @@ void RayTracer::UpdateShaderTable(egx::Device& dev, egx::ConstantBuffer& camera_
 	program1.AddAccelerationStructure(tlas);
 	program1.AddConstantBuffer(camera_buffer);
 	auto& program2 = shader_table.AddMissProgram(L"MissShader");
+	auto& program3 = shader_table.AddMissProgram(L"ShadowMiss");
 
 	int test_instance_id = 0;
 	for (auto mesh : meshes)
@@ -81,29 +85,31 @@ void RayTracer::UpdateShaderTable(egx::Device& dev, egx::ConstantBuffer& camera_
 		assert(mesh->GetInstanceID() == test_instance_id++);
 		const auto& material = mesh->GetMaterial();
 
-		auto& program3 = shader_table.AddHitProgram(L"HitGroup1");
-		program3.AddVertexBuffer(mesh->GetVertexBuffer());
-		program3.AddIndexBuffer(mesh->GetIndexBuffer());
-		program3.AddConstantBuffer(camera_buffer);
-		program3.AddConstantBuffer(material.GetBuffer());
+		auto& program4 = shader_table.AddHitProgram(L"HitGroup1");
+		program4.AddVertexBuffer(mesh->GetVertexBuffer());
+		program4.AddIndexBuffer(mesh->GetIndexBuffer());
+		program4.AddConstantBuffer(material.GetBuffer());
 
 		if (material.HasDiffuseTexture())
-			program3.AddDescriptorTable(material.GetDiffuseTexture());
+			program4.AddDescriptorTable(material.GetDiffuseTexture());
 		else
-			program3.AddNullDescriptor();
+			program4.AddNullDescriptor();
 		if(material.HasNormalMap())
-			program3.AddDescriptorTable(material.GetNormalMap()); 
+			program4.AddDescriptorTable(material.GetNormalMap());
 		else
-			program3.AddNullDescriptor();
+			program4.AddNullDescriptor();
 		if(material.HasSpecularMap())
-			program3.AddDescriptorTable(material.GetSpecularMap());
+			program4.AddDescriptorTable(material.GetSpecularMap());
 		else
-			program3.AddNullDescriptor();
+			program4.AddNullDescriptor();
 		if(material.HasMaskTexture())
-			program3.AddDescriptorTable(material.GetMaskTexture());
+			program4.AddDescriptorTable(material.GetMaskTexture());
 		else
-			program3.AddNullDescriptor();
-		program3.AddAccelerationStructure(tlas);
+			program4.AddNullDescriptor();
+		program4.AddAccelerationStructure(tlas);
+
+		// Shadow hit group
+		auto& program5 = shader_table.AddHitProgram(L"ShadowHitGroup");
 	}
 	shader_table.Finalize(dev, pipeline_state);
 }

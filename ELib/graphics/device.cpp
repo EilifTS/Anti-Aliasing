@@ -149,12 +149,18 @@ namespace
 		eio::Console::Log("Created: Device");
 		return d3d12Device5;
 	}
-	void checkForRayTracingSupport(ComPtr<ID3D12Device5> dev)
+	bool checkForRayTracingSupport(ComPtr<ID3D12Device5> dev)
 	{
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 features = {};
 		HRESULT hr = dev->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &features, sizeof(features));
 		if (FAILED(hr) || features.RaytracingTier == D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
-			throw std::runtime_error("ERROR: Raytracing not supported");
+		{
+			eio::Console::Log("Device does not support ray tracing");
+			return false;
+		}
+
+		eio::Console::Log("Device supports ray tracing");
+		return true;
 	}
 	bool checkTearingSupport(ComPtr<IDXGIFactory7> factory)
 	{
@@ -246,7 +252,7 @@ egx::Device::Device(const Window& window, const eio::InputManager& im, bool v_sy
 	adapter_output = getAdapterOutput(adapter);
 	auto refreshrate = getAdapterRefreshRate(adapter_output, im.Window().WindowSize());
 	device = createDevice(adapter);
-	checkForRayTracingSupport(device);
+	supports_rt = checkForRayTracingSupport(device);
 	command_queue = createCommandQueue(device);
 	bool allow_tearing = checkTearingSupport(factory);
 	swap_chain = createSwapChain(window.Handle(), factory, command_queue, im.Window().WindowSize(), frame_count, allow_tearing);

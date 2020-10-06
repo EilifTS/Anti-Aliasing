@@ -22,6 +22,8 @@ namespace egx
 	public:
 		Device(const Window& window, const eio::InputManager& im, bool v_sync);
 
+		bool SupportsRayTracing() const { return supports_rt; };
+
 		void WaitForGPU();
 		void PrepareNextFrame();
 
@@ -42,6 +44,7 @@ namespace egx
 		static const int frame_count = 3;
 		bool v_sync;
 		bool use_warp;
+		bool supports_rt;
 
 		ComPtr<IDXGIAdapter4> adapter;			// Graphics card
 		ComPtr<IDXGIOutput> adapter_output;		// Monitor

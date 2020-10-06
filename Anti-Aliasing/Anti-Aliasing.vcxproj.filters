@@ -42,6 +42,9 @@
     <ClCompile Include="ray_tracer\ray_tracer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="aa\ssaa\ssaa.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.h">
@@ -71,6 +74,9 @@
     <ClInclude Include="ray_tracer\ray_tracer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="aa\ssaa\ssaa.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\fxaa\fxaa_ps.hlsl" />
@@ -93,6 +99,8 @@
     <FxCompile Include="shaders\ray_tracing\miss.hlsl" />
     <FxCompile Include="shaders\ray_tracing\closest_hit.hlsl" />
     <FxCompile Include="shaders\ray_tracing\shadow_ray.hlsl" />
+    <FxCompile Include="shaders\ssaa\ssaa_ps.hlsl" />
+    <FxCompile Include="shaders\ssaa\ssaa_vs.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fxaa\fxaa_header.hlsli" />

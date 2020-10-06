@@ -162,7 +162,7 @@ float4 PS(PSInput input) : SV_TARGET
 			mv_offset = offset_se;
 			frontmost_depth = depth_se;
 		}
-		if (frontmost_depth < clip_depth)
+		if (frontmost_depth > clip_depth)
 		{
 			mv_offset = float2(0.0, 0.0);
 		}
@@ -235,9 +235,12 @@ float4 PS(PSInput input) : SV_TARGET
 
 #endif // TAA_USE_HISTORY_RECTIFICATION
 
-
-	float alpha = TAA_ALPHA;
+	float velocity = length((prev_frame_uv - input.uv) * window_size);
+	float velocity_f = saturate(velocity / 40);
+	float alpha = lerp(0.025, 0.2, velocity_f);
+	//float alpha = TAA_ALPHA;
 	if (refresh_history) alpha = 1.0;
 
+	//return velocity_f.xxxx;
 	return lerp(history, new_sample, alpha);
 }

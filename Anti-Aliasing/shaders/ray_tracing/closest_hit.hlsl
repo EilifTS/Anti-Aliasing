@@ -79,7 +79,7 @@ bool TraceShadowRay(float3 pos, float3 dir)
     ray.TMax = 100000;
 
     ShadowPayload new_payload;
-    TraceRay(rtscene, 0, 0xFF, 1, 0, 1, ray, new_payload);
+    TraceRay(rtscene, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, 1, 0, 1, ray, new_payload);
     return new_payload.hit;
 }
 

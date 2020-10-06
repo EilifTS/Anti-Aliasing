@@ -81,8 +81,7 @@ private:
 	void applyFormatConversion(
 		egx::Device& dev,
 		egx::CommandContext& context,
-		egx::RenderTarget& target,
-		egx::Texture2D& motion_vectors);
+		egx::RenderTarget& target);
 
 	void initializeTAA(egx::Device& dev);
 	void initializeFormatConverter(egx::Device& dev);

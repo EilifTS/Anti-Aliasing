@@ -9,7 +9,7 @@ namespace
 	};
 
 	static const int sample_count_presets[5]	= {    2,     4,     8,     16,     32 };
-	static const std::string alpha_presets[5]	= { "0.5", "0.3", "0.2", "0.13", "0.05" };
+	static const std::string alpha_presets[5]	= { "0.5", "0.3", "0.2", "0.013", "0.05" };
 }
 
 TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count)
@@ -128,7 +128,7 @@ void TAA::Apply(
 	context.SetTransitionBuffer(target, egx::GPUBufferState::RenderTarget);
 
 	applyTAA(dev, context, depth_stencil_buffer, motion_vectors, new_frame, camera);
-	applyFormatConversion(dev, context, target, motion_vectors);
+	applyFormatConversion(dev, context, target);
 }
 
 void TAA::applyTAA(
@@ -142,7 +142,6 @@ void TAA::applyTAA(
 	context.SetRootSignature(taa_rs);
 	context.SetPipelineState(taa_ps);
 
-	context.SetDescriptorHeap(*dev.buffer_heap);
 	context.SetRootConstant(0, 4, &window_size);
 	context.SetRootConstantBuffer(1, taa_buffer);
 	context.SetRootDescriptorTable(2, new_frame);
@@ -163,8 +162,7 @@ void TAA::applyTAA(
 void TAA::applyFormatConversion(
 	egx::Device& dev,
 	egx::CommandContext& context,
-	egx::RenderTarget& target,
-	egx::Texture2D& motion_vectors)
+	egx::RenderTarget& target)
 {
 	// Convert format
 	context.SetTransitionBuffer(history_buffer, egx::GPUBufferState::CopyDest);
@@ -176,7 +174,6 @@ void TAA::applyFormatConversion(
 	context.SetPipelineState(format_converter_ps);
 
 	context.SetRootDescriptorTable(0, history_buffer);
-	context.SetRootDescriptorTable(1, motion_vectors);
 
 	context.SetRenderTarget(target);
 
@@ -226,7 +223,6 @@ void TAA::initializeFormatConverter(egx::Device& dev)
 {
 	// Create root signature
 	format_converter_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel);
-	format_converter_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel); // Motion vectors for debugging
 	format_converter_rs.AddSampler(egx::Sampler::LinearClamp(), 0);
 	format_converter_rs.Finalize(dev);
 

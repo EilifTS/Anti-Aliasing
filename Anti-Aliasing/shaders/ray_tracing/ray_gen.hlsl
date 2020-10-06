@@ -59,7 +59,7 @@ void RayGenerationShader()
 
     RayPayload payload;
     payload.depth = 1;
-    TraceRay(rtscene, 0 /*rayFlags*/, 0xFF, 0 /* ray index*/, 0, 0, ray, payload);
+    TraceRay(rtscene, 0, 0xFF, 0, 0, 0, ray, payload);
     float3 col = payload.color;
 
 

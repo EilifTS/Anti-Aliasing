@@ -28,6 +28,7 @@ newmtl vase_round
 	Kd 0.5880 0.5880 0.5880
 	Ks 0.0000 0.0000 0.0000
 	Ke 0.0000 0.0000 0.0000
+	r 1.0000
 	map_Ka textures\vase_round.png
 	map_Kd textures\vase_round.png
 	map_bump textures\vase_round_ddn.png

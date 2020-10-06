@@ -13,7 +13,7 @@ namespace
 }
 
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
-	: 
+	:
 	camera(dev, context, ema::vec2(im.Window().WindowSize()), near_plane, far_plane, 3.141592f / 3.0f, 2.0f, 0.001f),
 	target1(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
 	target2(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
@@ -21,8 +21,9 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	fxaa(dev, im.Window().WindowSize()),
 	taa(dev, im.Window().WindowSize(), 16),
 	ssaa(dev, im.Window().WindowSize(), 256),
-	aa_mode(AAMode::SSAA),
-	render_mode(RenderMode::Rasterizer)
+	aa_mode(AAMode::TAA),
+	render_mode(RenderMode::Rasterizer),
+	scene_update_mode(SceneUpdateMode::OnDemand)
 {
 	initializeInternals(dev);
 	initializeAssets(dev, context);
@@ -33,62 +34,82 @@ void App::Update(eio::InputManager& im)
 {
 	handleInput(im);
 
-	float time = (float)((double)im.Clock().GetTime() / 1000000.0);
-	updateScene(time);
+	if (scene_update_mode != SceneUpdateMode::OnDemand || progress_frame == true)
+	{
+		float time = (float)((double)im.Clock().GetTime() / 1000000.0);
+
+		if (progress_frame)
+		{
+			virtual_time += 1.0f / 60.0f;
+			time = virtual_time;
+		}
+
+		updateScene(time);
+	}
 }
 void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 {
 	context.SetDescriptorHeap(*dev.buffer_heap);
 	camera.UpdateBuffer(dev, context);
 
-	if (aa_mode != AAMode::SSAA)
+	// Only update target2 if in Realtime mode or if in demand mode and progress frame is true
+	if (scene_update_mode != SceneUpdateMode::OnDemand || progress_frame == true)
 	{
-		if (render_mode == RenderMode::Rasterizer)
-			renderRasterizer(dev, context);
-		else
-			renderRayTracer(dev, context);
-
-		if (aa_mode == AAMode::None)
+		if (aa_mode != AAMode::SSAA)
 		{
-			context.SetTransitionBuffer(target1, egx::GPUBufferState::CopySource);
-			context.SetTransitionBuffer(target2, egx::GPUBufferState::CopyDest);
-			context.CopyBuffer(target1, target2);
-		}
-		if (aa_mode == AAMode::TAA)
-			taa.Apply(dev, context, renderer.GetGBuffer().DepthBuffer(), renderer.GetMotionVectors(), target1, target2, camera);
-		else if (aa_mode == AAMode::FXAA)
-			fxaa.Apply(dev, context, target1, target2);
-	}
-	else
-	{
-		ssaa.PrepareForRender(context);
-		for (int i = 0; i < ssaa.GetSampleCount(); i++)
-		{
-			camera.SetJitter(ssaa.GetJitter());
-			camera.Update();
-			camera.UpdateBuffer(dev, context);
 			if (render_mode == RenderMode::Rasterizer)
 				renderRasterizer(dev, context);
 			else
 				renderRayTracer(dev, context);
-			ssaa.AddSample(context, target1);
+
+			if (aa_mode == AAMode::None)
+			{
+				context.SetTransitionBuffer(target1, egx::GPUBufferState::CopySource);
+				context.SetTransitionBuffer(target2, egx::GPUBufferState::CopyDest);
+				context.CopyBuffer(target1, target2);
+			}
+			if (aa_mode == AAMode::TAA)
+				taa.Apply(dev, context, renderer.GetGBuffer().DepthBuffer(), renderer.GetMotionVectors(), target1, target2, camera);
+			else if (aa_mode == AAMode::FXAA)
+				fxaa.Apply(dev, context, target1, target2);
 		}
-		ssaa.Finish(context, target2);
+		else
+		{
+			ssaa.PrepareForRender(context);
+			for (int i = 0; i < ssaa.GetSampleCount(); i++)
+			{
+				camera.SetJitter(ssaa.GetJitter());
+				camera.Update();
+				camera.UpdateBuffer(dev, context);
+				if (render_mode == RenderMode::Rasterizer)
+					renderRasterizer(dev, context);
+				else
+					renderRayTracer(dev, context);
+				ssaa.AddSample(context, target1);
+			}
+			ssaa.Finish(context, target2);
+		}
 	}
 	
 
 	auto& back_buffer = context.GetCurrentBackBuffer();
 	renderer.ApplyToneMapping(dev, context, target2, back_buffer);
-
+	progress_frame = false;
 }
 
 
 void App::initializeInternals(egx::Device& dev)
 {
-	camera.SetPosition({ 10.0f, 1.0f, 0.0f });
-	camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.5f });
-	//camera.SetPosition({ 700.0f, 300.0f, 0.0f });
-	//camera.SetRotation({ 0.0f, 1.3f, -3.141592f * 0.5f });
+	if (scene_update_mode == SceneUpdateMode::Realtime)
+	{
+		camera.SetPosition({ 10.0f, 1.0f, 0.0f });
+		camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.5f });
+	}
+	else
+	{
+		camera.SetPosition({ -10.0f, 1.0f, 0.0f });
+		camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.3f });
+	}
 
 	target1.CreateShaderResourceView(dev);
 	target1.CreateRenderTargetView(dev);
@@ -154,24 +175,41 @@ void App::initializeRayTracing(egx::Device& dev, egx::CommandContext& context, c
 
 void App::handleInput(eio::InputManager& im)
 {
-	camera.HandleInput(im);
-	if (im.Keyboard().IsKeyReleased('Q'))
+	if(scene_update_mode == SceneUpdateMode::Realtime)
+		camera.HandleInput(im);
+	else
 	{
-		if (aa_mode == AAMode::FXAA)
+		if (im.Keyboard().IsKeyReleased(39)) // Right arrow
 		{
-			aa_mode = AAMode::TAA;
-			renderer.SetSampler(true);
-		}
-		else if (aa_mode == AAMode::TAA)
-		{
-			aa_mode = AAMode::FXAA;
-			renderer.SetSampler(false);
+			progress_frame = true;
 		}
 	}
-	if (aa_mode == AAMode::FXAA)
-		fxaa.HandleInput(im);
-	else if (aa_mode == AAMode::TAA)
-		taa.HandleInput(im);
+
+	if (im.Keyboard().IsKeyReleased('1'))
+	{
+		aa_mode = AAMode::None;
+		renderer.SetSampler(false);
+	}
+	
+	if (im.Keyboard().IsKeyReleased('2'))
+	{
+		aa_mode = AAMode::FXAA;
+		renderer.SetSampler(false);
+	}
+	if (im.Keyboard().IsKeyReleased('3'))
+	{
+		aa_mode = AAMode::TAA;
+		renderer.SetSampler(true);
+	}
+	if (im.Keyboard().IsKeyReleased('4'))
+	{
+		aa_mode = AAMode::SSAA;
+		renderer.SetSampler(false);
+	}
+	//if (aa_mode == AAMode::FXAA)
+	//	fxaa.HandleInput(im);
+	//else if (aa_mode == AAMode::TAA)
+	//	taa.HandleInput(im);
 }
 void App::updateScene(float t)
 {

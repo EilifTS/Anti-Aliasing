@@ -1,5 +1,7 @@
 #include "keyboard_state.h"
 #include <string.h>
+#include "console.h"
+#include "../misc/string_helpers.h"
 
 namespace
 {
@@ -52,5 +54,6 @@ void eio::KeyboardState::setKeyDown(unsigned char key)
 }
 void eio::KeyboardState::setKeyUp(unsigned char key)
 {
+	eio::Console::Log("Key pressed: " + emisc::ToString((int)key));
 	setChar(key_states, key, false);
 }

@@ -44,8 +44,10 @@ private:
 
 	// Mode
 	AAMode aa_mode;
-	SceneUpdateMode scene_update_mode;
 	RenderMode render_mode;
+	SceneUpdateMode scene_update_mode;
+	bool progress_frame = true;
+	float virtual_time = 0.0f;
 
 	// Assets
 	eio::TextureLoader texture_loader;

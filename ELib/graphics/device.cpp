@@ -259,7 +259,8 @@ egx::Device::Device(const Window& window, const eio::InputManager& im, bool v_sy
 
 	// Init upload heaps
 	upload_heaps.reserve(frame_count);
-	for (int i = 0; i < frame_count; i++)
+	upload_heaps.emplace_back(*this, first_frame_heap_chunk_size);
+	for (int i = 1; i < frame_count; i++)
 		upload_heaps.emplace_back(*this, heap_chunk_size);
 
 	buffer_heap = std::make_unique<DescriptorHeap>(device, DescriptorType::Buffer, max_descriptors_in_heap);
@@ -381,7 +382,7 @@ void egx::Device::Present(CommandContext& context)
 	context.command_list->Close();
 	context.command_list->Reset(command_allocators[current_frame].Get(), nullptr);
 	context.current_bb = &(back_buffers[current_frame]);
-	upload_heaps[current_frame].Clear();
+	upload_heaps[current_frame].Clear(*this, heap_chunk_size);
 	
 }
 

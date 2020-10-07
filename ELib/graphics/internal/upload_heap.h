@@ -34,7 +34,7 @@ namespace egx
 		UploadHeap& GetCurrentHeap() { return heaps.back(); };
 
 
-		void Clear();
+		void Clear(Device& dev, int new_chunk_size);
 
 	private:
 		int heap_size;

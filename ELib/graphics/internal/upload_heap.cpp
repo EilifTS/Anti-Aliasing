@@ -69,16 +69,26 @@ void* egx::DynamicUploadHeap::ReserveSpace(Device& dev, int space)
 	return reserved_ptr;
 }
 
-void egx::DynamicUploadHeap::Clear()
+void egx::DynamicUploadHeap::Clear(Device& dev, int new_chunk_size)
 {
-	if (heaps.size() == 1)
+	if (new_chunk_size != heap_size)
 	{
-		heaps.back().Unmap();
+		heap_size = new_chunk_size;
+		heaps.erase(std::begin(heaps), std::end(heaps));
+		heaps.emplace_back(dev, heap_size);
 	}
 	else
 	{
-		heaps.erase(std::begin(heaps) + 1, std::end(heaps));
+		if (heaps.size() == 1)
+		{
+			heaps.back().Unmap();
+		}
+		else
+		{
+			heaps.erase(std::begin(heaps) + 1, std::end(heaps));
+		}
 	}
+	
 	remaining_space = heap_size;
 	current_ptr = heaps.back().Map();
 	current_res_offset = 0;

@@ -192,7 +192,7 @@ void TAA::initializeTAA(egx::Device& dev)
 	taa_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel); // New sample texture
 	taa_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel); // History buffer
 	taa_rs.InitDescriptorTable(2, egx::ShaderVisibility::Pixel); // Motion vectors
-	taa_rs.InitDescriptorTable(3, 2, egx::ShaderVisibility::Pixel); // Depth and stencil buffer
+	taa_rs.InitDescriptorTable(3, egx::ShaderVisibility::Pixel); // Depth buffer
 	taa_rs.AddSampler(egx::Sampler::LinearClamp(), 0);
 	taa_rs.Finalize(dev);
 

@@ -137,7 +137,6 @@ void DeferrdRenderer::RenderMotionVectors(egx::Device& dev, egx::CommandContext&
 	context.SetViewport();
 	context.SetScissor();
 	context.SetPrimitiveTopology(egx::Topology::TriangleList);
-	context.SetStencilRefrenceValue(1);
 
 	for (auto pmesh : model.GetMeshes())
 	{
@@ -153,15 +152,21 @@ void DeferrdRenderer::RenderMotionVectors(egx::Device& dev, egx::CommandContext&
 	}
 }
 
-void DeferrdRenderer::SetSampler(bool biased)
+void DeferrdRenderer::SetSampler(TextureSampler sampler)
 {
-	if (biased)
+	switch (sampler)
 	{
-		macro_list.SetMacro("SAMPLER", "linear_wrap_biased");
-	}
-	else
-	{
-		macro_list.SetMacro("SAMPLER", "linear_wrap");
+	case DeferrdRenderer::TextureSampler::SSAABias:
+		macro_list.SetMacro("SAMPLER", "linear_wrap_ssaa_bias");
+		break;
+	case DeferrdRenderer::TextureSampler::TAABias:
+		macro_list.SetMacro("SAMPLER", "linear_wrap_taa_bias");
+		break;
+	case DeferrdRenderer::TextureSampler::NoBias:
+		macro_list.SetMacro("SAMPLER", "linear_wrap_no_bias");
+		break;
+	default:
+		break;
 	}
 	recompile_shaders = true;
 }
@@ -169,8 +174,10 @@ void DeferrdRenderer::SetSampler(bool biased)
 void DeferrdRenderer::initializeModelRenderer(egx::Device& dev)
 {
 	// Create root signature
-	auto biased_sampler = egx::Sampler::LinearWrap();
-	biased_sampler.SetMipMapBias(-1.0f);
+	auto taa_sampler = egx::Sampler::LinearWrap();
+	taa_sampler.SetMipMapBias(-1.0f);
+	auto ssaa_sampler = egx::Sampler::LinearWrap();
+	ssaa_sampler.SetMipMapBias(-4.0f); // 0.5 * log2(num_samples) (num_samples = 256)
 
 	model_rs.InitConstantBuffer(0); // Camera buffer
 	model_rs.InitConstantBuffer(1); // Model buffer
@@ -180,7 +187,8 @@ void DeferrdRenderer::initializeModelRenderer(egx::Device& dev)
 	model_rs.InitDescriptorTable(2, egx::ShaderVisibility::Pixel); // Specular
 	model_rs.InitDescriptorTable(3, egx::ShaderVisibility::Pixel); // Mask
 	model_rs.AddSampler(egx::Sampler::LinearWrap(), 0);
-	model_rs.AddSampler(biased_sampler, 1);
+	model_rs.AddSampler(taa_sampler, 1);
+	model_rs.AddSampler(ssaa_sampler, 2);
 	model_rs.Finalize(dev);
 
 	// Create Shaders
@@ -269,7 +277,7 @@ void DeferrdRenderer::initializeMotionVectorRenderer(egx::Device& dev)
 
 	motion_vector_ps.SetBlendState(egx::BlendState::NoBlend());
 	motion_vector_ps.SetRasterState(egx::RasterState::Default());
-	motion_vector_ps.SetDepthStencilState(egx::DepthStencilState::MotionVectorWriteStencil());
+	motion_vector_ps.SetDepthStencilState(egx::DepthStencilState::DepthEqual());
 	motion_vector_ps.Finalize(dev);
 }
 

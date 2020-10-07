@@ -107,7 +107,7 @@ void App::initializeInternals(egx::Device& dev)
 	}
 	else
 	{
-		camera.SetPosition({ -10.0f, 1.0f, 0.0f });
+		camera.SetPosition({ -8.0f, 1.0f, 0.0f });
 		camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.3f });
 	}
 
@@ -188,23 +188,38 @@ void App::handleInput(eio::InputManager& im)
 	if (im.Keyboard().IsKeyReleased('1'))
 	{
 		aa_mode = AAMode::None;
-		renderer.SetSampler(false);
+		renderer.SetSampler(DeferrdRenderer::TextureSampler::NoBias);
 	}
 	
 	if (im.Keyboard().IsKeyReleased('2'))
 	{
 		aa_mode = AAMode::FXAA;
-		renderer.SetSampler(false);
+		renderer.SetSampler(DeferrdRenderer::TextureSampler::NoBias);
 	}
 	if (im.Keyboard().IsKeyReleased('3'))
 	{
 		aa_mode = AAMode::TAA;
-		renderer.SetSampler(true);
+		renderer.SetSampler(DeferrdRenderer::TextureSampler::TAABias);
 	}
 	if (im.Keyboard().IsKeyReleased('4'))
 	{
 		aa_mode = AAMode::SSAA;
-		renderer.SetSampler(false);
+
+		renderer.SetSampler(DeferrdRenderer::TextureSampler::SSAABias);
+	}
+	if (im.Keyboard().IsKeyReleased('5'))
+	{
+		if(scene_update_mode == SceneUpdateMode::Realtime)
+			scene_update_mode = SceneUpdateMode::OnDemand;
+		else
+			scene_update_mode = SceneUpdateMode::Realtime;
+	}
+	if (im.Keyboard().IsKeyReleased('6'))
+	{
+		if (render_mode == RenderMode::Rasterizer)
+			render_mode = RenderMode::RayTracer;
+		else
+			render_mode = RenderMode::Rasterizer;
 	}
 	//if (aa_mode == AAMode::FXAA)
 	//	fxaa.HandleInput(im);

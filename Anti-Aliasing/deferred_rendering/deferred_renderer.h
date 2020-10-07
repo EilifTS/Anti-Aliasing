@@ -24,7 +24,12 @@ public:
 	GBuffer& GetGBuffer() { return g_buffer; };
 	egx::Texture2D& GetMotionVectors() { return motion_vectors; };
 
-	void SetSampler(bool biased);
+
+	enum class TextureSampler
+	{
+		SSAABias, TAABias, NoBias
+	};
+	void SetSampler(TextureSampler sampler);
 
 private:
 	GBuffer g_buffer;

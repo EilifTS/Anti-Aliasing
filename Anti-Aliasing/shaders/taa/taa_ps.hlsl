@@ -24,7 +24,6 @@ Texture2D			new_sample_tex		: register(t0);
 Texture2D			history_buffer		: register(t1);
 Texture2D<float2>	motion_vectors		: register(t2);
 Texture2D<float>	depth_buffer		: register(t3);
-Texture2D<int2>		stencil_buffer		: register(t4);
 SamplerState		linear_clamp		: register(s0);
 
 cbuffer constants : register(b0)
@@ -121,53 +120,58 @@ float4 PS(PSInput input) : SV_TARGET
 {
 	int2 pixel_pos = (int2)input.position.xy;
 	float clip_depth = depth_buffer.Sample(linear_clamp, input.uv);
-	int stencil = stencil_buffer.Load(int3(input.position.xy, 0)).y;
 	float4 clip_position = float4(float3(input.clip_position, clip_depth), 1.0f);
 
+	// Dialate forground objects
+	float2 offset_nw = rec_window_size * float2(-1.0, -1.0);
+	float2 offset_ne = rec_window_size * float2(1.0, -1.0);
+	float2 offset_sw = rec_window_size * float2(-1.0, 1.0);
+	float2 offset_se = rec_window_size * float2(1.0, 1.0);
+	float depth_nw = depth_buffer.Sample(linear_clamp, input.uv + offset_nw);
+	float depth_ne = depth_buffer.Sample(linear_clamp, input.uv + offset_ne);
+	float depth_sw = depth_buffer.Sample(linear_clamp, input.uv + offset_sw);
+	float depth_se = depth_buffer.Sample(linear_clamp, input.uv + offset_se);
+
+	float2 velocity_offset = offset_nw;
+	float frontmost_depth = depth_nw;
+	if (frontmost_depth > depth_ne)
+	{
+		velocity_offset = offset_ne;
+		frontmost_depth = depth_ne;
+	}
+	if (frontmost_depth > depth_sw)
+	{
+		velocity_offset = offset_sw;
+		frontmost_depth = depth_sw;
+	}
+	if (frontmost_depth > depth_se)
+	{
+		velocity_offset = offset_se;
+		frontmost_depth = depth_se;
+	}
+	if (frontmost_depth > clip_depth)
+	{
+		velocity_offset = float2(0.0, 0.0);
+	}
+	else
+	{
+		clip_position.z = frontmost_depth;
+	}
 
 	// Calculate uv in history buffer
 	float2 prev_frame_uv = float2(0.0, 0.0);
-	if (stencil == 0) // Static object pixel
-	{
-		float4 prev_frame_pos = mul(clip_position, clip_to_prev_frame_clip_matrix);
-		prev_frame_pos /= prev_frame_pos.w;
-		prev_frame_uv = prev_frame_pos.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
-	}
-	else // Dynamic object pixel
-	{
-		// Dialate forground objects
-		float2 offset_nw = rec_window_size * float2(-2.0, -2.0);
-		float2 offset_ne = rec_window_size * float2( 2.0, -2.0);
-		float2 offset_sw = rec_window_size * float2(-2.0,  2.0);
-		float2 offset_se = rec_window_size * float2( 2.0,  2.0);
-		float depth_nw = depth_buffer.Sample(linear_clamp, input.uv + offset_nw);
-		float depth_ne = depth_buffer.Sample(linear_clamp, input.uv + offset_ne);
-		float depth_sw = depth_buffer.Sample(linear_clamp, input.uv + offset_sw);
-		float depth_se = depth_buffer.Sample(linear_clamp, input.uv + offset_se);
 
-		float2 mv_offset = offset_nw;
-		float frontmost_depth = depth_nw;
-		if (frontmost_depth < depth_ne)
-		{
-			mv_offset = offset_ne;
-			frontmost_depth = depth_ne;
-		}
-		if (frontmost_depth < depth_sw)
-		{
-			mv_offset = offset_sw;
-			frontmost_depth = depth_sw;
-		}
-		if (frontmost_depth < depth_se)
-		{
-			mv_offset = offset_se;
-			frontmost_depth = depth_se;
-		}
-		if (frontmost_depth > clip_depth)
-		{
-			mv_offset = float2(0.0, 0.0);
-		}
+	// Static object pixel
+	float4 prev_frame_pos = mul(clip_position, clip_to_prev_frame_clip_matrix);
+	prev_frame_pos /= prev_frame_pos.w;
+	prev_frame_uv = prev_frame_pos.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
+	
+	// Dynamic object pixel
+	float2 motion_vector = motion_vectors.Sample(linear_clamp, input.uv + velocity_offset);
+	if (motion_vector.x != 0.0 || motion_vector.y != 0.0)
+	{
+		prev_frame_uv = input.uv + motion_vector;
 
-		prev_frame_uv = input.uv + motion_vectors.Sample(linear_clamp, input.uv + mv_offset);
 	}
 
 	// Sample history
@@ -236,11 +240,11 @@ float4 PS(PSInput input) : SV_TARGET
 #endif // TAA_USE_HISTORY_RECTIFICATION
 
 	float velocity = length((prev_frame_uv - input.uv) * window_size);
-	float velocity_f = saturate(velocity / 40);
+	float velocity_f = saturate(velocity / 20);
 	float alpha = lerp(0.025, 0.2, velocity_f);
-	//float alpha = TAA_ALPHA;
+
 	if (refresh_history) alpha = 1.0;
 
-	//return velocity_f.xxxx;
+	//return float4(motion_vector, 0.0, 1.0);
 	return lerp(history, new_sample, alpha);
 }

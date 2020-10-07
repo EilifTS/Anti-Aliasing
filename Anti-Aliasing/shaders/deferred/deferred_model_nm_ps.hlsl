@@ -14,11 +14,13 @@ Texture2D material_diffuse_color_texture : register(t0);
 Texture2D material_normal_map_texture : register(t1);
 Texture2D material_specular_map_texture : register(t2);
 Texture2D material_mask_texture : register(t3);
-SamplerState linear_wrap : register(s0);
-SamplerState linear_wrap_biased : register(s1);
+
+SamplerState linear_wrap_no_bias : register(s0);
+SamplerState linear_wrap_taa_bias : register(s1);
+SamplerState linear_wrap_ssaa_bias : register(s2);
 
 #ifndef SAMPLER
-#define SAMPLER linear_wrap_biased
+#define SAMPLER linear_wrap_taa_bias
 #endif
 
 struct PSInput

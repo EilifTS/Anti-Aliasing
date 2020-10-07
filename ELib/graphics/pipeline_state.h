@@ -102,7 +102,22 @@ namespace egx
 			out.BackFace = defaultStencilOp;
 			return out;
 		}
-		static inline DepthStencilState MotionVectorWriteStencil()
+		static inline DepthStencilState DepthEqual()
+		{
+			DepthStencilState out;
+			out.DepthEnable = TRUE;
+			out.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+			out.DepthFunc = D3D12_COMPARISON_FUNC_EQUAL;
+			out.StencilEnable = FALSE;
+			out.StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK;
+			out.StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK;
+			const D3D12_DEPTH_STENCILOP_DESC defaultStencilOp =
+			{ D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS };
+			out.FrontFace = defaultStencilOp;
+			out.BackFace = defaultStencilOp;
+			return out;
+		}
+		static inline DepthStencilState WriteStencil()
 		{
 			DepthStencilState out;
 			out.DepthEnable = TRUE;

@@ -3,6 +3,7 @@
 
 DeferrdRenderer::DeferrdRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size, float far_plane)
 	: g_buffer(dev, size, far_plane),
+	size(size),
 	light_manager(dev, context),
 	tone_mapper(dev),
 	motion_vectors(dev, egx::TextureFormat::FLOAT16x2, size)
@@ -55,8 +56,8 @@ void DeferrdRenderer::RenderDepthOnly(egx::Device& dev, egx::CommandContext& con
 	context.SetRootConstantBuffer(1, model.GetModelBuffer());
 
 	// Set scissor and viewport
-	context.SetViewport();
-	context.SetScissor();
+	context.SetViewport(size);
+	context.SetScissor(size);
 	context.SetPrimitiveTopology(egx::Topology::TriangleList);
 
 	for (auto pmesh : model.GetMeshes())
@@ -70,7 +71,6 @@ void DeferrdRenderer::RenderDepthOnly(egx::Device& dev, egx::CommandContext& con
 			// Set material
 			const auto& material = pmesh->GetMaterial();
 			context.SetRootConstantBuffer(2, material.GetBuffer());
-			context.SetDescriptorHeap(*dev.buffer_heap);
 
 			if (material.HasMaskTexture())
 				context.SetRootDescriptorTable(3, material.GetMaskTexture());
@@ -96,8 +96,8 @@ void DeferrdRenderer::RenderModel(egx::Device& dev, egx::CommandContext& context
 	context.SetRootConstantBuffer(1, model.GetModelBuffer());
 
 	// Set scissor and viewport
-	context.SetViewport();
-	context.SetScissor();
+	context.SetViewport(size);
+	context.SetScissor(size);
 	context.SetPrimitiveTopology(egx::Topology::TriangleList);
 
 	for (auto pmesh : model.GetMeshes())
@@ -111,7 +111,6 @@ void DeferrdRenderer::RenderModel(egx::Device& dev, egx::CommandContext& context
 			// Set material
 			const auto& material = pmesh->GetMaterial();
 			context.SetRootConstantBuffer(2, material.GetBuffer());
-			context.SetDescriptorHeap(*dev.buffer_heap);
 
 			if (material.HasDiffuseTexture())
 				context.SetRootDescriptorTable(3, material.GetDiffuseTexture());
@@ -152,8 +151,8 @@ void DeferrdRenderer::RenderLight(egx::Device& dev, egx::CommandContext& context
 	context.SetRootDescriptorTable(4, light_manager.GetShadowMap());
 
 	// Set scissor and viewport
-	context.SetViewport();
-	context.SetScissor();
+	context.SetViewport(size);
+	context.SetScissor(size);
 	context.SetPrimitiveTopology(egx::Topology::TriangleStrip);
 
 	// Draw
@@ -174,8 +173,8 @@ void DeferrdRenderer::RenderMotionVectors(egx::Device& dev, egx::CommandContext&
 	context.SetRootConstantBuffer(2, model.GetModelBuffer());
 
 	// Set scissor and viewport
-	context.SetViewport();
-	context.SetScissor();
+	context.SetViewport(size);
+	context.SetScissor(size);
 	context.SetPrimitiveTopology(egx::Topology::TriangleList);
 
 	for (auto pmesh : model.GetMeshes())

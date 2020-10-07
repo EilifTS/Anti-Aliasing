@@ -10,16 +10,20 @@ namespace
 {
 	const static float near_plane = 0.1f;
 	const static float far_plane = 1000.0f;
+
+	// Upsampling
+	static const int upsample_factor = 2;
 }
 
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	:
-	camera(dev, context, ema::vec2(im.Window().WindowSize()), near_plane, far_plane, 3.141592f / 3.0f, 2.0f, 0.001f),
-	target1(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
-	target2(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
-	renderer(dev, context, im.Window().WindowSize(), far_plane),
+	camera(dev, context, ema::vec2(im.Window().WindowSize()) / upsample_factor, near_plane, far_plane, 3.141592f / 3.0f, 2.0f, 0.001f),
+	renderer_target(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize() / upsample_factor),
+	aa_target(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize() / upsample_factor),
+	aa_target_upsampled(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
+	renderer(dev, context, im.Window().WindowSize() / upsample_factor, far_plane),
 	fxaa(dev, im.Window().WindowSize()),
-	taa(dev, im.Window().WindowSize(), 16),
+	taa(dev, im.Window().WindowSize(), 16, upsample_factor),
 	ssaa(dev, im.Window().WindowSize(), 256),
 	aa_mode(AAMode::TAA),
 	render_mode(RenderMode::Rasterizer),
@@ -52,6 +56,9 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	context.SetDescriptorHeap(*dev.buffer_heap);
 	camera.UpdateBuffer(dev, context);
 
+	// Use bigger render target if using temporal supersampling
+	auto& caa_target = (aa_mode == AAMode::TAA && upsample_factor != 1) ? aa_target_upsampled : aa_target;
+
 	// Only update target2 if in Realtime mode or if in demand mode and progress frame is true
 	if (scene_update_mode != SceneUpdateMode::OnDemand || progress_frame == true)
 	{
@@ -64,14 +71,14 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 
 			if (aa_mode == AAMode::None)
 			{
-				context.SetTransitionBuffer(target1, egx::GPUBufferState::CopySource);
-				context.SetTransitionBuffer(target2, egx::GPUBufferState::CopyDest);
-				context.CopyBuffer(target1, target2);
+				context.SetTransitionBuffer(renderer_target, egx::GPUBufferState::CopySource);
+				context.SetTransitionBuffer(caa_target, egx::GPUBufferState::CopyDest);
+				context.CopyBuffer(renderer_target, caa_target);
 			}
 			if (aa_mode == AAMode::TAA)
-				taa.Apply(dev, context, renderer.GetGBuffer().DepthBuffer(), renderer.GetMotionVectors(), target1, target2, camera);
+				taa.Apply(dev, context, renderer.GetGBuffer().DepthBuffer(), renderer.GetMotionVectors(), renderer_target, caa_target, camera);
 			else if (aa_mode == AAMode::FXAA)
-				fxaa.Apply(dev, context, target1, target2);
+				fxaa.Apply(dev, context, renderer_target, caa_target);
 		}
 		else
 		{
@@ -85,36 +92,42 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 					renderRasterizer(dev, context);
 				else
 					renderRayTracer(dev, context);
-				ssaa.AddSample(context, target1);
+				ssaa.AddSample(context, renderer_target);
 			}
-			ssaa.Finish(context, target2);
+			ssaa.Finish(context, caa_target);
 		}
 	}
 	
 
 	auto& back_buffer = context.GetCurrentBackBuffer();
-	renderer.ApplyToneMapping(dev, context, target2, back_buffer);
+	renderer.ApplyToneMapping(dev, context, caa_target, back_buffer);
 	progress_frame = false;
 }
-
 
 void App::initializeInternals(egx::Device& dev)
 {
 	if (scene_update_mode == SceneUpdateMode::Realtime)
 	{
+		// Default pos
 		camera.SetPosition({ 10.0f, 1.0f, 0.0f });
 		camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.5f });
 	}
 	else
 	{
-		camera.SetPosition({ -8.0f, 1.0f, 0.0f });
-		camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.3f });
+		// Look at moving knight pos
+		//camera.SetPosition({ -8.0f, 1.0f, 0.0f });
+		//camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.3f });
+		// Look at still knight pos
+		camera.SetPosition({ 5.0f, 1.0f, 0.0f });
+		camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.6f });
 	}
 
-	target1.CreateShaderResourceView(dev);
-	target1.CreateRenderTargetView(dev);
-	target2.CreateShaderResourceView(dev);
-	target2.CreateRenderTargetView(dev);
+	renderer_target.CreateShaderResourceView(dev);
+	renderer_target.CreateRenderTargetView(dev);
+	aa_target.CreateShaderResourceView(dev);
+	aa_target.CreateRenderTargetView(dev);
+	aa_target_upsampled.CreateShaderResourceView(dev);
+	aa_target_upsampled.CreateRenderTargetView(dev);
 }
 
 void App::initializeAssets(egx::Device& dev, egx::CommandContext& context)
@@ -259,7 +272,7 @@ void App::renderRasterizer(egx::Device& dev, egx::CommandContext& context)
 	for (auto pmodel : static_models) renderer.RenderModel(dev, context, camera, *pmodel);
 	for (auto pmodel : dynamic_models) renderer.RenderModel(dev, context, camera, *pmodel);
 	for (auto pmodel : dynamic_models) renderer.RenderMotionVectors(dev, context, camera, *pmodel);
-	renderer.RenderLight(dev, context, camera, target1);
+	renderer.RenderLight(dev, context, camera, renderer_target);
 	renderer.PrepareFrameEnd();
 }
 void App::renderRayTracer(egx::Device& dev, egx::CommandContext& context)
@@ -277,6 +290,6 @@ void App::renderRayTracer(egx::Device& dev, egx::CommandContext& context)
 
 	auto& trace_result = ray_tracer->Trace(dev, context);
 	context.SetTransitionBuffer(trace_result, egx::GPUBufferState::CopySource);
-	context.SetTransitionBuffer(target1, egx::GPUBufferState::CopyDest);
-	context.CopyBuffer(trace_result, target1);
+	context.SetTransitionBuffer(renderer_target, egx::GPUBufferState::CopyDest);
+	context.CopyBuffer(trace_result, renderer_target);
 }

@@ -1,21 +1,24 @@
 #include "taa.h"
 #include "graphics/cpu_buffer.h"
+#include "misc/string_helpers.h"
 
 namespace
 {
 	struct taaBufferType
 	{
 		ema::mat4 clip_to_prev_frame_clip;
+		ema::vec2 current_jitter;
 	};
 
 	static const int sample_count_presets[5]	= {    2,     4,     8,     16,     32 };
 	static const std::string alpha_presets[5]	= { "0.5", "0.3", "0.2", "0.013", "0.05" };
 }
 
-TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count)
+TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count, int upsample_factor)
 	: jitter(Jitter::Halton(2, 3, sample_count)),
 	sample_count(sample_count),
 	current_index(0),
+	upsample_factor(upsample_factor),
 	history_buffer(dev, egx::TextureFormat::FLOAT16x4, window_size),
 	temp_target(dev, egx::TextureFormat::FLOAT16x4, window_size),
 	taa_buffer(dev, (int)sizeof(taaBufferType)),
@@ -24,6 +27,8 @@ TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count)
 {
 	history_buffer.CreateShaderResourceView(dev);
 	temp_target.CreateRenderTargetView(dev);
+
+	macro_list.SetMacro("TAA_UPSAMPLE_FACTOR", emisc::ToString(upsample_factor));
 	initializeTAA(dev);
 	initializeFormatConverter(dev);
 
@@ -36,6 +41,7 @@ TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count)
 		auto ji = jitter.Get(i);
 		jbt.jitters[i] = ema::vec4(ji.x, ji.y, 0.0f, 0.0f);
 	}
+
 }
 
 void TAA::Update(
@@ -46,16 +52,11 @@ void TAA::Update(
 { 
 	current_index = (current_index + 1) % sample_count;
 
-	auto id1 = inv_view_matrix * prev_frame_view_matrix;
-	auto id2 = inv_proj_matrix_no_jitter * prev_frame_proj_matrix_no_jitter;
 	clip_to_prev_clip = (
 		inv_proj_matrix_no_jitter *
 		(inv_view_matrix *		// Paranthesis important for multiplication precision
 		prev_frame_view_matrix) *
 		prev_frame_proj_matrix_no_jitter);
-
-	ema::vec4 frame_pos(0.5f, 0.5f, 0.5f, 1.0f);
-	auto prev_frame_pos = frame_pos * clip_to_prev_clip;
 };
 
 void TAA::HandleInput(const eio::InputManager& im)
@@ -112,6 +113,7 @@ void TAA::Apply(
 	// Update constant buffer
 	taaBufferType taabt;
 	taabt.clip_to_prev_frame_clip = clip_to_prev_clip.Transpose();
+	taabt.current_jitter = jitter.Get(current_index);
 
 	egx::CPUBuffer cpu_buffer(&taabt, sizeof(taabt));
 	context.SetTransitionBuffer(taa_buffer, egx::GPUBufferState::CopyDest);
@@ -199,8 +201,8 @@ void TAA::initializeTAA(egx::Device& dev)
 	// Create Shaders
 	egx::Shader VS;
 	egx::Shader PS;
-	VS.CompileVertexShader("shaders/taa/taa_vs.hlsl");
-	PS.CompilePixelShader("shaders/taa/taa_ps.hlsl");
+	VS.CompileVertexShader("shaders/taa/taa_vs.hlsl", macro_list);
+	PS.CompilePixelShader("shaders/taa/taa_ps.hlsl", macro_list);
 
 	// Empty input layout
 	egx::InputLayout input_layout;

@@ -39,8 +39,9 @@ public:
 private:
 	// Internals
 	egx::FPCamera camera;
-	egx::RenderTarget target1;
-	egx::RenderTarget target2;
+	egx::RenderTarget renderer_target;
+	egx::RenderTarget aa_target;
+	egx::RenderTarget aa_target_upsampled;
 
 	// Mode
 	AAMode aa_mode;
@@ -68,6 +69,7 @@ private:
 	// Renderers
 	DeferrdRenderer renderer;
 	std::shared_ptr<RayTracer> ray_tracer;
+
 
 private:
 	void initializeInternals(egx::Device& dev);

@@ -35,6 +35,7 @@ public:
 private:
 	GBuffer g_buffer;
 	LightManager light_manager;
+	ema::point2D size;
 
 	egx::RootSignature depth_only_rs;
 	egx::PipelineState depth_only_ps;

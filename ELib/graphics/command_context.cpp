@@ -227,9 +227,9 @@ void egx::CommandContext::DispatchRays(const ema::point2D& dims, ShaderTable& sh
 	command_list->DispatchRays(&dis_desc);
 }
 
-void egx::CommandContext::copyBufferFromUploadHeap(GPUBuffer& dest, UploadHeap& src)
+void egx::CommandContext::copyBufferFromUploadHeap(GPUBuffer& dest, UploadHeap& src, int heap_offset)
 {
-	command_list->CopyBufferRegion(dest.buffer.Get(), 0, src.buffer.Get(), 0, dest.GetBufferSize());
+	command_list->CopyBufferRegion(dest.buffer.Get(), 0, src.buffer.Get(), heap_offset, dest.GetBufferSize());
 }
 
 void egx::CommandContext::copyTextureFromUploadHeap(GPUBuffer& dest, UploadHeap& src, int sub_res, const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& footprint)

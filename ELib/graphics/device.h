@@ -56,7 +56,8 @@ namespace egx
 		std::vector<ComPtr<ID3D12CommandAllocator>> command_allocators;
 		
 		// Upload
-		std::vector<UploadHeap> upload_heaps[frame_count];
+		int heap_chunk_size = 100 * (1024) * (1024); // 100MB
+		std::vector<DynamicUploadHeap> upload_heaps;
 
 		// Frame buffering
 		int current_frame;

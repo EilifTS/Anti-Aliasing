@@ -43,3 +43,43 @@ void egx::UploadHeap::Unmap()
 {
 	buffer->Unmap(0, nullptr);
 }
+
+egx::DynamicUploadHeap::DynamicUploadHeap(Device& dev, int heap_size)
+	: heap_size(heap_size), remaining_space(heap_size), current_res_offset(0)
+{
+	heaps.emplace_back(dev, heap_size);
+	current_ptr = heaps.back().Map();
+}
+
+void* egx::DynamicUploadHeap::ReserveSpace(Device& dev, int space)
+{
+	space = Align(space, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+	assert(space <= heap_size);
+	if (remaining_space < space)
+	{
+		heaps.back().Unmap();
+		heaps.emplace_back(dev, heap_size);
+		remaining_space = heap_size;
+		current_ptr = heaps.back().Map();
+	}
+	void* reserved_ptr = current_ptr;
+	current_res_offset = heap_size - remaining_space;
+	remaining_space -= space;
+	current_ptr = ((char*)current_ptr + space);
+	return reserved_ptr;
+}
+
+void egx::DynamicUploadHeap::Clear()
+{
+	if (heaps.size() == 1)
+	{
+		heaps.back().Unmap();
+	}
+	else
+	{
+		heaps.erase(std::begin(heaps) + 1, std::end(heaps));
+	}
+	remaining_space = heap_size;
+	current_ptr = heaps.back().Map();
+	current_res_offset = 0;
+}

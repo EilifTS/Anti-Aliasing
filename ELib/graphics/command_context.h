@@ -54,7 +54,7 @@ namespace egx
 		inline RenderTarget& GetCurrentBackBuffer() { return *current_bb; };
 
 	private:
-		void copyBufferFromUploadHeap(GPUBuffer& dest, UploadHeap& src);
+		void copyBufferFromUploadHeap(GPUBuffer& dest, UploadHeap& src, int heap_offset);
 		void copyTextureFromUploadHeap(GPUBuffer& dest, UploadHeap& src, int sub_res, const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& footprint);
 
 	private:

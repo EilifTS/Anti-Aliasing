@@ -257,6 +257,11 @@ egx::Device::Device(const Window& window, const eio::InputManager& im, bool v_sy
 	bool allow_tearing = checkTearingSupport(factory);
 	swap_chain = createSwapChain(window.Handle(), factory, command_queue, im.Window().WindowSize(), frame_count, allow_tearing);
 
+	// Init upload heaps
+	upload_heaps.reserve(frame_count);
+	for (int i = 0; i < frame_count; i++)
+		upload_heaps.emplace_back(*this, heap_chunk_size);
+
 	buffer_heap = std::make_unique<DescriptorHeap>(device, DescriptorType::Buffer, max_descriptors_in_heap);
 	sampler_heap = std::make_unique<DescriptorHeap>(device, DescriptorType::Sampler, max_descriptors_in_heap);
 	rtv_heap = std::make_unique<DescriptorHeap>(device, DescriptorType::RenderTarget, max_descriptors_in_heap);
@@ -318,23 +323,21 @@ void egx::Device::ScheduleUpload(CommandContext& context, const CPUBuffer& cpu_b
 		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints(dest_desc.MipLevels);
 
 		device->GetCopyableFootprints(&dest_desc, 0, dest_desc.MipLevels, 0, footprints.data(), nullptr, nullptr, &upload_heap_size);
-
+		
 		
 		int element_size = gpu_buffer.GetElementSize();
 
-		// Create an upload heap for the intermediate step
-		upload_heaps[current_frame].push_back(UploadHeap(*this, (int)upload_heap_size));
-		auto& upload_heap = upload_heaps[current_frame].back();
-
 		char* cpu_buffer_ptr = (char*)cpu_buffer.GetPtr();
-		char* upload_heap_ptr = (char*)upload_heap.Map();
+		char* upload_heap_ptr = (char*)upload_heaps[current_frame].ReserveSpace(*this, (int)upload_heap_size);
+
+		for (auto& fp : footprints) fp.Offset += upload_heaps[current_frame].GetCurrentReservationOffset();
 
 		// Copy over every row of the texture
 		UINT64 upload_heap_offset = 0;
 		UINT64 cpu_buffer_offset = 0;
 		for (auto& footprint : footprints)
 		{
-			upload_heap_offset = footprint.Offset;
+			upload_heap_offset = footprint.Offset - upload_heaps[current_frame].GetCurrentReservationOffset();
 			for (int y = 0; y < (int)footprint.Footprint.Height; y++)
 			{
 				memcpy(
@@ -344,24 +347,16 @@ void egx::Device::ScheduleUpload(CommandContext& context, const CPUBuffer& cpu_b
 			}
 			cpu_buffer_offset += (UINT64)footprint.Footprint.Width * footprint.Footprint.Height * element_size;
 		}
-		
-
-		upload_heap.Unmap();
 
 		for(int i = 0; i < (int)footprints.size(); i++)
-			context.copyTextureFromUploadHeap(gpu_buffer, upload_heap, i, footprints[i]);
+			context.copyTextureFromUploadHeap(gpu_buffer, upload_heaps[current_frame].GetCurrentHeap(), i, footprints[i]);
 	}
 	else // Buffers
 	{
-		// Create an upload heap for the intermediate step
-		upload_heaps[current_frame].push_back(UploadHeap(*this, gpu_buffer.GetBufferSize()));
-		auto& upload_heap = upload_heaps[current_frame].back();
-
-		void* upload_heap_ptr = upload_heap.Map();
+		void* upload_heap_ptr = (char*)upload_heaps[current_frame].ReserveSpace(*this, gpu_buffer.GetBufferSize());
 		memcpy(upload_heap_ptr, cpu_buffer.GetPtr(), (size_t)cpu_buffer.Size());
-		upload_heap.Unmap();
 
-		context.copyBufferFromUploadHeap(gpu_buffer, upload_heap);
+		context.copyBufferFromUploadHeap(gpu_buffer, upload_heaps[current_frame].GetCurrentHeap(), upload_heaps[current_frame].GetCurrentReservationOffset());
 	}
 
 }
@@ -386,7 +381,7 @@ void egx::Device::Present(CommandContext& context)
 	context.command_list->Close();
 	context.command_list->Reset(command_allocators[current_frame].Get(), nullptr);
 	context.current_bb = &(back_buffers[current_frame]);
-	upload_heaps[current_frame].clear();
+	upload_heaps[current_frame].Clear();
 	
 }
 

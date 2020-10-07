@@ -14,6 +14,7 @@ public:
 	void UpdateLight(egx::Camera& camera);
 
 	void PrepareFrame(egx::Device& dev, egx::CommandContext& context);
+	void RenderDepthOnly(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model);
 	void RenderModel(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model);
 	void RenderLight(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::RenderTarget& target);
 	void RenderMotionVectors(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model);
@@ -35,6 +36,9 @@ private:
 	GBuffer g_buffer;
 	LightManager light_manager;
 
+	egx::RootSignature depth_only_rs;
+	egx::PipelineState depth_only_ps;
+
 	egx::RootSignature model_rs;
 	egx::PipelineState model_ps;
 
@@ -52,6 +56,7 @@ private:
 	bool recompile_shaders;
 
 private:
+	void initializeDepthOnlyRenderer(egx::Device& dev);
 	void initializeModelRenderer(egx::Device& dev);
 	void initializeLightRenderer(egx::Device& dev);
 	void initializeMotionVectorRenderer(egx::Device& dev);

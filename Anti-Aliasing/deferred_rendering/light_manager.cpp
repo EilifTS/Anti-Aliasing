@@ -54,8 +54,8 @@ LightManager::LightManager(egx::Device& dev, egx::CommandContext& context)
 	// Create Shaders
 	egx::Shader VS;
 	egx::Shader PS;
-	VS.CompileVertexShader("shaders/deferred/shadow_map_vs.hlsl");
-	PS.CompilePixelShader("shaders/deferred/shadow_map_ps.hlsl");
+	VS.CompileVertexShader("shaders/deferred/depth_only_vs.hlsl");
+	PS.CompilePixelShader("shaders/deferred/depth_only_ps.hlsl");
 
 	// Get input layout
 	auto input_layout = egx::MeshVertex::GetInputLayout();

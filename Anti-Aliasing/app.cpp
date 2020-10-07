@@ -265,10 +265,16 @@ void App::renderRasterizer(egx::Device& dev, egx::CommandContext& context)
 void App::renderRayTracer(egx::Device& dev, egx::CommandContext& context)
 {
 	std::vector<std::shared_ptr<egx::Model>> models = { sponza_model, knight_model1, knight_model2, knight_model3 };
+	std::vector<std::shared_ptr<egx::Model>> dynamic_models = { knight_model1, knight_model2, knight_model3 };
 
+	for (auto pmodel : models) pmodel->UpdateBuffer(dev, context);
 	ray_tracer->ReBuildTLAS(context, models);
+
 	renderer.PrepareFrame(dev, context);
+	for (auto pmodel : models) renderer.RenderDepthOnly(dev, context, camera, *pmodel);
+	for (auto pmodel : dynamic_models) renderer.RenderMotionVectors(dev, context, camera, *pmodel);
 	renderer.PrepareFrameEnd();
+
 	auto& trace_result = ray_tracer->Trace(dev, context);
 	context.SetTransitionBuffer(trace_result, egx::GPUBufferState::CopySource);
 	context.SetTransitionBuffer(target1, egx::GPUBufferState::CopyDest);

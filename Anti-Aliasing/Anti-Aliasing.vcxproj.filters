@@ -85,8 +85,6 @@
     <FxCompile Include="shaders\deferred\deferred_light_ps.hlsl" />
     <FxCompile Include="shaders\deferred\deferred_model_nm_ps.hlsl" />
     <FxCompile Include="shaders\deferred\deferred_model_nm_vs.hlsl" />
-    <FxCompile Include="shaders\deferred\shadow_map_vs.hlsl" />
-    <FxCompile Include="shaders\deferred\shadow_map_ps.hlsl" />
     <FxCompile Include="shaders\deferred\tone_map_ps.hlsl" />
     <FxCompile Include="shaders\deferred\tone_map_vs.hlsl" />
     <FxCompile Include="shaders\taa\format_converter_ps.hlsl" />
@@ -101,6 +99,8 @@
     <FxCompile Include="shaders\ray_tracing\shadow_ray.hlsl" />
     <FxCompile Include="shaders\ssaa\ssaa_ps.hlsl" />
     <FxCompile Include="shaders\ssaa\ssaa_vs.hlsl" />
+    <FxCompile Include="shaders\deferred\depth_only_ps.hlsl" />
+    <FxCompile Include="shaders\deferred\depth_only_vs.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fxaa\fxaa_header.hlsli" />

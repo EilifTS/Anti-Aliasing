@@ -17,7 +17,6 @@ DeferrdRenderer::DeferrdRenderer(egx::Device& dev, egx::CommandContext& context,
 	initializeModelRenderer(dev);
 	initializeLightRenderer(dev);
 	initializeMotionVectorRenderer(dev);
-
 }
 
 void DeferrdRenderer::UpdateLight(egx::Camera& camera)
@@ -145,7 +144,6 @@ void DeferrdRenderer::RenderLight(egx::Device& dev, egx::CommandContext& context
 	// Set root values
 	context.SetRootConstantBuffer(0, camera.GetBuffer());
 	context.SetRootConstantBuffer(1, light_manager.GetLightBuffer());
-	context.SetDescriptorHeap(*dev.buffer_heap);
 	context.SetRootDescriptorTable(2, g_buffer.DiffuseBuffer());
 	context.SetRootDescriptorTable(3, g_buffer.NormalBuffer());
 	context.SetRootDescriptorTable(4, light_manager.GetShadowMap());
@@ -250,7 +248,8 @@ void DeferrdRenderer::initializeModelRenderer(egx::Device& dev)
 	auto taa_sampler = egx::Sampler::LinearWrap();
 	taa_sampler.SetMipMapBias(-1.0f);
 	auto ssaa_sampler = egx::Sampler::LinearWrap();
-	ssaa_sampler.SetMipMapBias(-4.0f); // 0.5 * log2(num_samples) (num_samples = 256)
+	//ssaa_sampler.SetMaxMipMapLOD(0.0f);
+	ssaa_sampler.SetMipMapBias(-2.5f); // 0.5 * log2(num_samples) (num_samples = 32)
 
 	model_rs.InitConstantBuffer(0); // Camera buffer
 	model_rs.InitConstantBuffer(1); // Model buffer

@@ -71,8 +71,8 @@ void egx::ProjectiveCamera::updateProjectionMatrix()
 {
 	near_plane_vs_rectangle = ema::vec2(AspectRatio() * tanf(0.5f * field_of_view), tanf(0.5f * field_of_view));
 
-	ema::vec2 final_jitter = ema::vec2((jitter.x - 0.5f) / window_size.x, (jitter.y - 0.5f) / window_size.y);
-	//ema::vec2 final_jitter = ema::vec2(jitter.x / window_size.x, jitter.y / window_size.y);
+	//ema::vec2 final_jitter = ema::vec2(jitter.x, jitter.y) / window_size.x * 2.0f;
+	ema::vec2 final_jitter = ema::vec2((jitter.x - 0.5f), (jitter.y - 0.5f)) / window_size.x * 2.0f;
 	projection_matrix = ema::mat4::ProjectionOffset(near_plane, far_plane, near_plane_vs_rectangle * near_plane, final_jitter * near_plane);
 	inv_projection_matrix = ema::mat4::ProjectionOffsetInverse(near_plane, far_plane, near_plane_vs_rectangle * near_plane, final_jitter * near_plane);
 }

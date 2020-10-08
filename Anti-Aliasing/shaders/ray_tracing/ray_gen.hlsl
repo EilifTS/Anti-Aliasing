@@ -42,7 +42,7 @@ void RayGenerationShader()
 
     uint j = (cash(launchIndex.x, launchIndex.y) + jitter_index) % jitter_count;
 
-    float2 crd = float2(launchIndex.xy) + jitters[j].xy;
+    float2 crd = float2(launchIndex.xy) + (jitters[j].xy * float2(1.0, -1.0) + float2(0.0, 1.0));
     float2 dims = float2(launchDim.xy);
 
     float2 d = ((crd / dims) * 2.0 - 1.0);

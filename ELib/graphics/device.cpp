@@ -189,7 +189,12 @@ namespace
 		eio::Console::Log("Created: Command queue");
 		return d3d12CommandQueue;
 	}
-	ComPtr<IDXGISwapChain4> createSwapChain(HWND hwnd, ComPtr<IDXGIFactory7> factory, ComPtr<ID3D12CommandQueue> command_queue, const ema::point2D& window_size, int buffer_count, bool allow_tearing)
+	ComPtr<IDXGISwapChain4> createSwapChain(
+		HWND hwnd, ComPtr<IDXGIFactory7> factory, 
+		ComPtr<ID3D12CommandQueue> command_queue, 
+		const ema::point2D& window_size, 
+		const ema::point2D& refresh_rate, 
+		int buffer_count, bool allow_tearing)
 	{
 		ComPtr<IDXGISwapChain4> swap_chain;
 		DXGI_SWAP_CHAIN_DESC1 desc = {};
@@ -200,16 +205,24 @@ namespace
 		desc.SampleDesc = { 1, 0 };
 		desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		desc.BufferCount = buffer_count;
-		desc.Scaling = DXGI_SCALING_STRETCH;
+		desc.Scaling = DXGI_SCALING_NONE;
 		desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		desc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
 		desc.Flags = allow_tearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+		desc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+
+		DXGI_SWAP_CHAIN_FULLSCREEN_DESC fs_desc = {};
+		fs_desc.RefreshRate.Numerator = refresh_rate.x;
+		fs_desc.RefreshRate.Denominator = refresh_rate.y;
+		fs_desc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+		fs_desc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+		fs_desc.Windowed = true; // Fullscreen on / off
 
 		ComPtr<IDXGISwapChain1> swap_chain1;
 		THROWIFFAILED(factory->CreateSwapChainForHwnd(
 			command_queue.Get(),
 			hwnd, &desc,
-			nullptr,
+			&fs_desc,
 			nullptr,
 			&swap_chain1
 		), "Failed to create swap chain");
@@ -255,7 +268,7 @@ egx::Device::Device(const Window& window, const eio::InputManager& im, bool v_sy
 	supports_rt = checkForRayTracingSupport(device);
 	command_queue = createCommandQueue(device);
 	bool allow_tearing = checkTearingSupport(factory);
-	swap_chain = createSwapChain(window.Handle(), factory, command_queue, im.Window().WindowSize(), frame_count, allow_tearing);
+	swap_chain = createSwapChain(window.Handle(), factory, command_queue, im.Window().WindowSize(), refreshrate, frame_count, allow_tearing);
 
 	// Init upload heaps
 	upload_heaps.reserve(frame_count);
@@ -274,6 +287,11 @@ egx::Device::Device(const Window& window, const eio::InputManager& im, bool v_sy
 	initializeFence();
 
 	eio::Console::SetColor(15);
+}
+
+egx::Device::~Device()
+{
+	swap_chain->SetFullscreenState(false, nullptr);
 }
 
 void egx::Device::WaitForGPU()

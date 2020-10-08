@@ -13,7 +13,7 @@
 #endif
 
 #ifndef TAA_USE_HISTORY_RECTIFICATION
-#define TAA_USE_HISTORY_RECTIFICATION 1
+//#define TAA_USE_HISTORY_RECTIFICATION 1
 #endif
 
 #ifndef TAA_USE_YCOCG
@@ -55,6 +55,7 @@ float calculateBeta(int2 pixel_pos, float2 j)
 	// Calculate position of sample in history buffer
 	float2 new_sample_pixel_pos_nw = float2(pixel_pos / TAA_UPSAMPLE_FACTOR);
 	//float2 jittered_new_sample_pixel_pos = new_sample_pixel_pos_nw  + j;
+	//float2 jittered_new_sample_pixel_pos = new_sample_pixel_pos_nw + float2(0.5, 0.5) + j * float2(0.5, -0.5);
 	float2 jittered_new_sample_pixel_pos = new_sample_pixel_pos_nw  + j * float2(1.0, -1.0) + float2(0.0, 1.0);
 	int2 new_sample_pixel_pos_in_history = int2(jittered_new_sample_pixel_pos * TAA_UPSAMPLE_FACTOR);
 
@@ -141,7 +142,8 @@ float4 PS(PSInput input) : SV_TARGET
 {
 	int2 pixel_pos = (int2)input.position.xy;
 	int2 new_sample_pos = pixel_pos / TAA_UPSAMPLE_FACTOR;
-	float clip_depth = depth_buffer.Load(int3(new_sample_pos, 0));
+	float clip_depth = depth_buffer.Sample(linear_clamp, input.uv);
+	//float clip_depth = depth_buffer.Load(int3(new_sample_pos, 0));
 	float4 clip_position = float4(float3(input.clip_position, clip_depth), 1.0f);
 
 	// Dialate forground objects
@@ -209,7 +211,21 @@ float4 PS(PSInput input) : SV_TARGET
 
 	// History rectification
 	
-	float4 new_sample = new_sample_tex.Load(int3(new_sample_pos, 0));
+	// UV of current pixel in new_sample_buffer when jitter is taken into account
+	float2 size_1p_ds = 1.0 * rec_window_size * TAA_UPSAMPLE_FACTOR;
+	float2 size_1p = 1.0 * rec_window_size;
+	float2 cp_uv = input.uv + current_jitter * size_1p_ds;
+
+	float2 new_sample_pixel_pos_nw = float2(pixel_pos / TAA_UPSAMPLE_FACTOR);
+	float2 jittered_new_sample_pixel_pos = new_sample_pixel_pos_nw + current_jitter * float2(1.0, -1.0) + float2(0.0, 1.0);
+	int2 new_sample_pixel_pos_in_history = int2(jittered_new_sample_pixel_pos * TAA_UPSAMPLE_FACTOR);
+
+	float2 jitter_nw_uv = jittered_new_sample_pixel_pos * size_1p_ds;
+
+	float2 j = floor((current_jitter * float2(1.0, -1.0) + float2(0.0, 1.0)) * window_size) * size_1p;
+	float4 new_sample = new_sample_tex.Sample(linear_clamp, (float2(new_sample_pos) + float2(0.0f, 0.0f)) * TAA_UPSAMPLE_FACTOR / window_size);
+	//float4 new_sample = new_sample_tex.Sample(linear_clamp, floor((input.uv * window_size) / TAA_UPSAMPLE_FACTOR) * rec_window_size * TAA_UPSAMPLE_FACTOR);
+	//float4 new_sample = new_sample_tex.Load(int3(new_sample_pos, 0));
 
 #if TAA_USE_HISTORY_RECTIFICATION
 
@@ -271,10 +287,10 @@ float4 PS(PSInput input) : SV_TARGET
 
 	float velocity = length((prev_frame_uv - input.uv) * window_size);
 	float velocity_f = saturate(velocity / 20);
-	float alpha = lerp(0.2, 0.2, velocity_f);
+	float alpha = lerp(0.025, 0.2, velocity_f);
 
 	if (refresh_history) alpha = 1.0;
 
 	//return float4(beta.xxx, 1.0);
-	return lerp(history, new_sample, alpha * beta);
+	return lerp(history, new_sample, 1 * beta);
 }

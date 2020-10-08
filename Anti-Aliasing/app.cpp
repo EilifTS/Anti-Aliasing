@@ -12,7 +12,7 @@ namespace
 	const static float far_plane = 1000.0f;
 
 	// Upsampling
-	static const int upsample_factor = 2;
+	static const int upsample_factor = 32;
 }
 
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
@@ -23,8 +23,8 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	aa_target_upsampled(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
 	renderer(dev, context, im.Window().WindowSize() / upsample_factor, far_plane),
 	fxaa(dev, im.Window().WindowSize()),
-	taa(dev, im.Window().WindowSize(), 16, upsample_factor),
-	ssaa(dev, im.Window().WindowSize(), 256),
+	taa(dev, im.Window().WindowSize(), 256*256, upsample_factor),
+	ssaa(dev, im.Window().WindowSize(), 32),
 	aa_mode(AAMode::TAA),
 	render_mode(RenderMode::Rasterizer),
 	scene_update_mode(SceneUpdateMode::OnDemand)
@@ -167,7 +167,7 @@ void App::initializeRayTracing(egx::Device& dev, egx::CommandContext& context, c
 	// Create acceleration structures
 	if (dev.SupportsRayTracing())
 	{
-		ray_tracer = std::make_shared<RayTracer>(dev, context, window_size);
+		ray_tracer = std::make_shared<RayTracer>(dev, context, window_size / upsample_factor);
 
 		for (auto pmesh : sponza_mesh)
 		{
@@ -201,18 +201,18 @@ void App::handleInput(eio::InputManager& im)
 	if (im.Keyboard().IsKeyReleased('1'))
 	{
 		aa_mode = AAMode::None;
-		renderer.SetSampler(DeferrdRenderer::TextureSampler::NoBias);
+		renderer.SetSampler(DeferrdRenderer::TextureSampler::SSAABias);
 	}
 	
 	if (im.Keyboard().IsKeyReleased('2'))
 	{
 		aa_mode = AAMode::FXAA;
-		renderer.SetSampler(DeferrdRenderer::TextureSampler::NoBias);
+		renderer.SetSampler(DeferrdRenderer::TextureSampler::SSAABias);
 	}
 	if (im.Keyboard().IsKeyReleased('3'))
 	{
 		aa_mode = AAMode::TAA;
-		renderer.SetSampler(DeferrdRenderer::TextureSampler::TAABias);
+		renderer.SetSampler(DeferrdRenderer::TextureSampler::SSAABias);
 	}
 	if (im.Keyboard().IsKeyReleased('4'))
 	{

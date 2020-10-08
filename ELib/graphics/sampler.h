@@ -50,6 +50,14 @@ namespace egx
 		{
 			desc.MipLODBias = bias;
 		};
+		inline void SetMinMipMapLOD(float v)
+		{
+			desc.MinLOD = v;
+		};
+		inline void SetMaxMipMapLOD(float v)
+		{
+			desc.MaxLOD = v;
+		};
 		void SetVisibility(ShaderVisibility visibility);
 
 		inline static Sampler LinearClamp()

@@ -270,7 +270,7 @@ void TAA::recompileShaders(egx::Device& dev)
 
 void TAA::updateJitterBuffer(egx::Device& dev, egx::CommandContext& context)
 {
-	jbt.current_index = current_index;
+	jbt.current_index = (current_index + 1) % sample_count; // Buffer is updated after the actual rendering
 	egx::CPUBuffer cpu_buffer(&jbt, sizeof(jbt));
 	context.SetTransitionBuffer(jitter_buffer, egx::GPUBufferState::CopyDest);
 	dev.ScheduleUpload(context, cpu_buffer, jitter_buffer);

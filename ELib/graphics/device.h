@@ -21,6 +21,7 @@ namespace egx
 	{
 	public:
 		Device(const Window& window, const eio::InputManager& im, bool v_sync);
+		~Device();
 
 		bool SupportsRayTracing() const { return supports_rt; };
 

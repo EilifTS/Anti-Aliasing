@@ -12,7 +12,7 @@ namespace
 	const static float far_plane = 1000.0f;
 
 	// Upsampling
-	static const int upsample_factor = 32;
+	static const int upsample_factor = 1;
 }
 
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
@@ -23,7 +23,7 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	aa_target_upsampled(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
 	renderer(dev, context, im.Window().WindowSize() / upsample_factor, far_plane),
 	fxaa(dev, im.Window().WindowSize()),
-	taa(dev, im.Window().WindowSize(), 256*256, upsample_factor),
+	taa(dev, im.Window().WindowSize(), 16, upsample_factor),
 	ssaa(dev, im.Window().WindowSize(), 32),
 	aa_mode(AAMode::TAA),
 	render_mode(RenderMode::Rasterizer),

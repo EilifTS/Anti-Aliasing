@@ -13,7 +13,7 @@
 #endif
 
 #ifndef TAA_USE_HISTORY_RECTIFICATION
-//#define TAA_USE_HISTORY_RECTIFICATION 1
+#define TAA_USE_HISTORY_RECTIFICATION 1
 #endif
 
 #ifndef TAA_USE_YCOCG
@@ -24,7 +24,7 @@
 #define TAA_USE_CLIPPING 1
 #endif
 
-Texture2D			new_sample_tex		: register(t0);
+Texture2D			new_sample_buffer	: register(t0);
 Texture2D			history_buffer		: register(t1);
 Texture2D<float2>	motion_vectors		: register(t2);
 Texture2D<float>	depth_buffer		: register(t3);
@@ -50,13 +50,54 @@ struct PSInput
 	float2 uv : TEXCOORD1;
 };
 
+static const int2 index3x3[9] =
+{
+	int2(-1, -1), int2(0, -1), int2(1, -1),
+	int2(-1,  0), int2(0,  0), int2(1,  0),
+	int2(-1,  1), int2(0,  1), int2(1,  1)
+};
+
+// Functions for converting positions between high resolution, low resolution and uv
+float2 HR2UV(float2 hr_pos)
+{
+	return hr_pos * rec_window_size;
+}
+
+float2 LR2UV(float2 lr_pos)
+{
+	return lr_pos * rec_window_size * TAA_UPSAMPLE_FACTOR;
+}
+
+float2 UV2HR(float2 uv)
+{
+	return uv * window_size;
+}
+
+float2 UV2LR(float2 uv)
+{
+	return uv * window_size / TAA_UPSAMPLE_FACTOR;
+}
+
+// Returns the weight of of a pixel at distance dp
+float computePixelWeight(float2 dp, float inv_scale_factor)
+{
+	// Formula is 1 - 1.9 * x^2 + 0.9 * x^4
+	// It is an approximation of e ^ (- x^2 / (2 * s^2))
+	// With s = 0.47
+	float u2 = TAA_UPSAMPLE_FACTOR * TAA_UPSAMPLE_FACTOR;
+	u2 *= inv_scale_factor * inv_scale_factor;
+
+	float x2 = saturate(u2 * dot(dp, dp));
+	float r = (0.905 * x2 - 1.9) * x2 + 1.0;
+	return r * u2;
+}
+
+// Returns 1 if jitter is in current pixel in upscaled resolution
 float calculateBeta(int2 pixel_pos, float2 j)
 {
 	// Calculate position of sample in history buffer
 	float2 new_sample_pixel_pos_nw = float2(pixel_pos / TAA_UPSAMPLE_FACTOR);
-	//float2 jittered_new_sample_pixel_pos = new_sample_pixel_pos_nw  + j;
-	//float2 jittered_new_sample_pixel_pos = new_sample_pixel_pos_nw + float2(0.5, 0.5) + j * float2(0.5, -0.5);
-	float2 jittered_new_sample_pixel_pos = new_sample_pixel_pos_nw  + j * float2(1.0, -1.0) + float2(0.0, 1.0);
+	float2 jittered_new_sample_pixel_pos = new_sample_pixel_pos_nw  + j;
 	int2 new_sample_pixel_pos_in_history = int2(jittered_new_sample_pixel_pos * TAA_UPSAMPLE_FACTOR);
 
 	// Use new sample if equal
@@ -140,8 +181,13 @@ float3 clipHistory(float3 start_color, float3 end_color, float3 min_color, float
 
 float4 PS(PSInput input) : SV_TARGET
 {
-	int2 pixel_pos = (int2)input.position.xy;
-	int2 new_sample_pos = pixel_pos / TAA_UPSAMPLE_FACTOR;
+	// Some position calculations
+	int2 pixel_pos = (int2)input.position.xy; // Position in pixels of current pixel in high res image
+	int2 new_sample_pos = pixel_pos / TAA_UPSAMPLE_FACTOR; // Position of pixel in low res image
+
+	float2 jitter_uv = current_jitter * rec_window_size * TAA_UPSAMPLE_FACTOR; // UV offset of jitter
+	float2 jitter_offset = current_jitter; // Pixel offset of jitter in low res image
+
 	float clip_depth = depth_buffer.Sample(linear_clamp, input.uv);
 	//float clip_depth = depth_buffer.Load(int3(new_sample_pos, 0));
 	float4 clip_position = float4(float3(input.clip_position, clip_depth), 1.0f);
@@ -151,10 +197,10 @@ float4 PS(PSInput input) : SV_TARGET
 	int2 offset_ne = int2( 2, -2);
 	int2 offset_sw = int2(-2,  2);
 	int2 offset_se = int2( 2,  2);
-	float depth_nw = depth_buffer.Load(int3(new_sample_pos + offset_nw, 0));
-	float depth_ne = depth_buffer.Load(int3(new_sample_pos + offset_ne, 0));
-	float depth_sw = depth_buffer.Load(int3(new_sample_pos + offset_sw, 0));
-	float depth_se = depth_buffer.Load(int3(new_sample_pos + offset_se, 0));
+	float depth_nw = depth_buffer.Sample(linear_clamp, input.uv, offset_nw);
+	float depth_ne = depth_buffer.Sample(linear_clamp, input.uv, offset_ne);
+	float depth_sw = depth_buffer.Sample(linear_clamp, input.uv, offset_sw);
+	float depth_se = depth_buffer.Sample(linear_clamp, input.uv, offset_se);
 
 	int2 velocity_offset = offset_nw;
 	float frontmost_depth = depth_nw;
@@ -209,57 +255,59 @@ float4 PS(PSInput input) : SV_TARGET
 		refresh_history = false;
 	}
 
+	// Get samples around current pixel
+	float3 new_samples[9];
+	[unroll]
+	for (int i = 0; i < 9; i++)
+		new_samples[i] = new_sample_buffer.Load(int3(new_sample_pos + index3x3[i], 0)).xyz;
+
+	// Calculate velocity
+	float velocity = length((prev_frame_uv - input.uv) * window_size);
+	float velocity_f = saturate(velocity / 20);
+
+	// Calculate the new sample
+#if TAA_UPSAMPLE
+	float pixel_weights[9];
+	float norm_weight_factor = 0.0;
+	float3 new_sample = float3(0.0, 0.0, 0.0);
+	[unroll]
+	for (i = 0; i < 9; i++)
+	{
+		float2 pixel_position = float2(new_sample_pos + index3x3[i]) + jitter_offset; // Position of pixel i in LR image
+		float2 dp = pixel_position - UV2LR(input.uv);
+		pixel_weights[i] = computePixelWeight(dp, 1.0);
+		norm_weight_factor += pixel_weights[i];
+		new_sample += new_samples[i] * pixel_weights[i];
+	}
+
+	// Center weight is always larger than the others
+	float biggest_weight = pixel_weights[4];
+
+	float inv_norm_weight_factor = 1.0 / norm_weight_factor;
+	new_sample *= inv_norm_weight_factor;
+
+#else
+	float3 new_sample = new_samples[4];
+#endif // TAA_UPSAMPLE
+
 	// History rectification
-	
-	// UV of current pixel in new_sample_buffer when jitter is taken into account
-	float2 size_1p_ds = 1.0 * rec_window_size * TAA_UPSAMPLE_FACTOR;
-	float2 size_1p = 1.0 * rec_window_size;
-	float2 cp_uv = input.uv + current_jitter * size_1p_ds;
-
-	float2 new_sample_pixel_pos_nw = float2(pixel_pos / TAA_UPSAMPLE_FACTOR);
-	float2 jittered_new_sample_pixel_pos = new_sample_pixel_pos_nw + current_jitter * float2(1.0, -1.0) + float2(0.0, 1.0);
-	int2 new_sample_pixel_pos_in_history = int2(jittered_new_sample_pixel_pos * TAA_UPSAMPLE_FACTOR);
-
-	float2 jitter_nw_uv = jittered_new_sample_pixel_pos * size_1p_ds;
-
-	float2 j = floor((current_jitter * float2(1.0, -1.0) + float2(0.0, 1.0)) * window_size) * size_1p;
-	float4 new_sample = new_sample_tex.Sample(linear_clamp, (float2(new_sample_pos) + float2(0.0f, 0.0f)) * TAA_UPSAMPLE_FACTOR / window_size);
-	//float4 new_sample = new_sample_tex.Sample(linear_clamp, floor((input.uv * window_size) / TAA_UPSAMPLE_FACTOR) * rec_window_size * TAA_UPSAMPLE_FACTOR);
-	//float4 new_sample = new_sample_tex.Load(int3(new_sample_pos, 0));
-
 #if TAA_USE_HISTORY_RECTIFICATION
 
-	float3 ns_nw = new_sample_tex.Load(int3(new_sample_pos + int2(-1, -1), 0)).xyz;
-	float3 ns_n =  new_sample_tex.Load(int3(new_sample_pos + int2( 0, -1), 0)).xyz;
-	float3 ns_ne = new_sample_tex.Load(int3(new_sample_pos + int2( 1, -1), 0)).xyz;
-	float3 ns_w =  new_sample_tex.Load(int3(new_sample_pos + int2(-1,  0), 0)).xyz;
-	float3 ns_m =  new_sample.xyz;
-	float3 ns_e =  new_sample_tex.Load(int3(new_sample_pos + int2( 1,  0), 0)).xyz;
-	float3 ns_sw = new_sample_tex.Load(int3(new_sample_pos + int2(-1,  1), 0)).xyz;
-	float3 ns_s =  new_sample_tex.Load(int3(new_sample_pos + int2( 0,  1), 0)).xyz;
-	float3 ns_se = new_sample_tex.Load(int3(new_sample_pos + int2( 1,  1), 0)).xyz;
-
 #if TAA_USE_YCOCG
-	ns_nw = rgbToYCoCg(ns_nw);
-	ns_n  = rgbToYCoCg(ns_n);
-	ns_ne = rgbToYCoCg(ns_ne);
-	ns_w  = rgbToYCoCg(ns_w);
-	ns_m  = rgbToYCoCg(ns_m);
-	ns_e  = rgbToYCoCg(ns_e);
-	ns_sw = rgbToYCoCg(ns_sw);
-	ns_s  = rgbToYCoCg(ns_s);
-	ns_se = rgbToYCoCg(ns_se);
+	[unroll]
+	for (i = 0; i < 9; i++)
+		new_samples[i] = rgbToYCoCg(new_samples[i]);
 	history.rgb = rgbToYCoCg(history.rgb);
 #endif // TAA_USE_YCOCG
 
-	float3 min_n =		min(ns_nw, min(ns_n,  ns_ne));
-	float3 min_m =		min(ns_w,  min(ns_m,  ns_e));
-	float3 min_s =		min(ns_sw, min(ns_s,  ns_se));
+	float3 min_n =		min(new_samples[0], min(new_samples[1], new_samples[2]));
+	float3 min_m =		min(new_samples[3], min(new_samples[4], new_samples[5]));
+	float3 min_s =		min(new_samples[6], min(new_samples[7], new_samples[8]));
 	float3 min_sample = min(min_n, min(min_m, min_s));
 
-	float3 max_n =		max(ns_nw, max(ns_n,  ns_ne));
-	float3 max_m =		max(ns_w,  max(ns_m,  ns_e));
-	float3 max_s =		max(ns_sw, max(ns_s,  ns_se));
+	float3 max_n =		max(new_samples[0], max(new_samples[1], new_samples[2]));
+	float3 max_m =		max(new_samples[3], max(new_samples[4], new_samples[5]));
+	float3 max_s =		max(new_samples[6], max(new_samples[7], new_samples[8]));
 	float3 max_sample = max(max_n, max(max_m, max_s));
 
 #if TAA_USE_CLIPPING
@@ -277,20 +325,18 @@ float4 PS(PSInput input) : SV_TARGET
 #endif // TAA_USE_HISTORY_RECTIFICATION
 
 	// Calculate beta for upsampling
-	float beta = 1.0; 
+	float beta = 1.0;
 #if TAA_UPSAMPLE
-	//if (int(floor(input.uv.x * window_size.x / 2)) % 2 == 0)
-	//	beta = 0;
-	beta = calculateBeta(pixel_pos, current_jitter);
-	//beta = 1.0;
+	//beta = calculateBeta(pixel_pos, current_jitter);
+	beta = biggest_weight;
 #endif
 
-	float velocity = length((prev_frame_uv - input.uv) * window_size);
-	float velocity_f = saturate(velocity / 20);
+	// Calculate alpha
 	float alpha = lerp(0.025, 0.2, velocity_f);
-
 	if (refresh_history) alpha = 1.0;
 
-	//return float4(beta.xxx, 1.0);
-	return lerp(history, new_sample, 1 * beta);
+	//return float4(((float)refresh_history).xx, 0.0, 1.0);
+	//return float4((input.uv - prev_frame_uv) * 1000, 0.0, 1.0);
+	//return float4(velocity_f.xxx, 1.0);
+	return lerp(history, float4(new_sample, 1), alpha * beta);
 }

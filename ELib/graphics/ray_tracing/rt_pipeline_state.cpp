@@ -16,6 +16,10 @@ void egx::RTPipelineState::AddHitGroup(const std::wstring& hit_group_name, const
 {
 	hit_groups.emplace_back(hit_group_name, closest_hit_symbol, L"", L"");
 }
+void egx::RTPipelineState::AddHitGroup(const std::wstring& hit_group_name, const std::wstring& closest_hit_symbol, const std::wstring& any_hit_symbol)
+{
+	hit_groups.emplace_back(hit_group_name, closest_hit_symbol, any_hit_symbol, L"");
+}
 void egx::RTPipelineState::AddHitGroup(const std::wstring& hit_group_name, const std::wstring& closest_hit_symbol, const std::wstring& any_hit_symbol, const std::wstring& intersection_symbol)
 {
 	hit_groups.emplace_back(hit_group_name, closest_hit_symbol, any_hit_symbol, intersection_symbol);

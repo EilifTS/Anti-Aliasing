@@ -42,7 +42,9 @@ void egx::Mesh::BuildAccelerationStructure(Device& dev, CommandContext& context)
     geom_desc.Triangles.IndexBuffer = index_buffer.view.BufferLocation;
     geom_desc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
     geom_desc.Triangles.IndexCount = index_buffer.GetElementCount();
-    geom_desc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+    geom_desc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
+    if(!material.HasMaskTexture())
+        geom_desc.Flags |= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     // Get size required for build
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs = {};

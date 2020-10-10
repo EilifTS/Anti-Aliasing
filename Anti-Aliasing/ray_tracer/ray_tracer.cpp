@@ -31,9 +31,16 @@ RayTracer::RayTracer(egx::Device& dev, egx::CommandContext& context, const ema::
 	hit_rs.InitDescriptorTable(3); // Normal map
 	hit_rs.InitDescriptorTable(4); // Specular map
 	hit_rs.InitDescriptorTable(5); // Mask texture
-	hit_rs.InitDescriptorTable(6); // Mask texture
+	hit_rs.InitDescriptorTable(6); // Acceleration structure
 	hit_rs.AddSampler(sampler, 0);
 	hit_rs.Finalize(dev, true);
+
+	shadowhit_rs.InitShaderResource(0); // Vertex Bufffer
+	shadowhit_rs.InitShaderResource(1); // Index Buffer
+	shadowhit_rs.InitConstantBuffer(0); // Material buffer
+	shadowhit_rs.InitDescriptorTable(2); // Mask texture
+	shadowhit_rs.AddSampler(sampler, 0);
+	shadowhit_rs.Finalize(dev, true);
 
 	egx::ShaderLibrary lib1;
 	egx::ShaderLibrary lib2;
@@ -46,13 +53,14 @@ RayTracer::RayTracer(egx::Device& dev, egx::CommandContext& context, const ema::
 
 	pipeline_state.AddLibrary(lib1, { L"RayGenerationShader" });
 	pipeline_state.AddLibrary(lib2, { L"MissShader" });
-	pipeline_state.AddLibrary(lib3, { L"ClosestHitShader" });
-	pipeline_state.AddLibrary(lib4, { L"ShadowMiss", L"ShadowCHS" });
-	pipeline_state.AddHitGroup(L"HitGroup1", L"ClosestHitShader");
-	pipeline_state.AddHitGroup(L"ShadowHitGroup", L"ShadowCHS");
+	pipeline_state.AddLibrary(lib3, { L"AnyHitShader", L"ClosestHitShader" });
+	pipeline_state.AddLibrary(lib4, { L"ShadowMiss", L"ShadowAnyHit", L"ShadowCHS" });
+	pipeline_state.AddHitGroup(L"HitGroup1", L"ClosestHitShader", L"AnyHitShader");
+	pipeline_state.AddHitGroup(L"ShadowHitGroup", L"ShadowCHS", L"ShadowAnyHit");
 	pipeline_state.AddRootSignatureAssociation(ray_gen_rs, { L"RayGenerationShader" });
-	pipeline_state.AddRootSignatureAssociation(miss_rs, { L"MissShader", L"ShadowMiss", L"ShadowHitGroup" });
+	pipeline_state.AddRootSignatureAssociation(miss_rs, { L"MissShader", L"ShadowMiss" });
 	pipeline_state.AddRootSignatureAssociation(hit_rs, { L"HitGroup1" });
+	pipeline_state.AddRootSignatureAssociation(shadowhit_rs, { L"ShadowHitGroup" });
 	pipeline_state.AddGlobalRootSignature(compute_rs);
 	pipeline_state.SetMaxPayloadSize(3 * sizeof(float) + sizeof(int));
 	pipeline_state.SetMaxAttributeSize(2 * sizeof(float));
@@ -112,6 +120,13 @@ void RayTracer::UpdateShaderTable(egx::Device& dev, egx::ConstantBuffer& camera_
 
 		// Shadow hit group
 		auto& program5 = shader_table.AddHitProgram(L"ShadowHitGroup");
+		program5.AddVertexBuffer(mesh->GetVertexBuffer());
+		program5.AddIndexBuffer(mesh->GetIndexBuffer());
+		program5.AddConstantBuffer(material.GetBuffer());
+		if (material.HasMaskTexture())
+			program5.AddDescriptorTable(material.GetMaskTexture());
+		else
+			program5.AddNullDescriptor();
 	}
 	shader_table.Finalize(dev, pipeline_state);
 }

@@ -17,6 +17,7 @@ namespace egx
 
 		void AddLibrary(ShaderLibrary& lib, const std::vector<std::wstring>& exports);
 		void AddHitGroup(const std::wstring& hit_group_name, const std::wstring& closest_hit_symbol);
+		void AddHitGroup(const std::wstring& hit_group_name, const std::wstring& closest_hit_symbol, const std::wstring& any_hit_symbol);
 		void AddHitGroup(const std::wstring& hit_group_name, const std::wstring& closest_hit_symbol, const std::wstring& any_hit_symbol, const std::wstring& intersection_symbol);
 		void AddRootSignatureAssociation(RootSignature& rs, const std::vector<std::wstring>& symbols);
 		void AddGlobalRootSignature(RootSignature& rs);

@@ -156,7 +156,7 @@ void App::initializeAssets(egx::Device& dev, egx::CommandContext& context)
 	//mat_manager.DisableDiffuseTextures();
 	//mat_manager.DisableNormalMaps();
 	//mat_manager.DisableSpecularMaps();
-	mat_manager.DisableMaskTextures();
+	//mat_manager.DisableMaskTextures();
 	mat_manager.LoadMaterialAssets(dev, context, texture_loader);
 
 	

@@ -98,6 +98,25 @@ float3 TraceReflectionRay(float3 pos, float3 dir, int depth)
     return payload.color;
 }
 
+[shader("anyhit")]
+void AnyHitShader(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attribs)
+{
+    float3 barycentrics = float3(1.0 - attribs.barycentrics.x - attribs.barycentrics.y, attribs.barycentrics.x, attribs.barycentrics.y);
+
+    // Vertex unpacking
+    int triangle_id = 3 * PrimitiveIndex();
+    VertexType vertex0 = vertices[indices[triangle_id + 0]];
+    VertexType vertex1 = vertices[indices[triangle_id + 1]];
+    VertexType vertex2 = vertices[indices[triangle_id + 2]];
+
+    float2 uv = vertex0.uv * barycentrics.x + vertex1.uv * barycentrics.y + vertex2.uv * barycentrics.z;
+
+    float mask = material_mask_texture.SampleLevel(linear_wrap, uv, 0).x;
+
+    if (mask < 0.5)
+        IgnoreHit();
+}
+
 [shader("closesthit")]
 void ClosestHitShader(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attribs)
 {

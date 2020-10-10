@@ -26,6 +26,7 @@ private:
 	egx::RootSignature ray_gen_rs;
 	egx::RootSignature miss_rs;
 	egx::RootSignature hit_rs;
+	egx::RootSignature shadowhit_rs;
 	egx::RTPipelineState pipeline_state;
 	egx::ShaderTable shader_table;
 };

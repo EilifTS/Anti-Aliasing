@@ -193,10 +193,11 @@ float4 PS(PSInput input) : SV_TARGET
 	float4 clip_position = float4(float3(input.clip_position, clip_depth), 1.0f);
 
 	// Dialate forground objects
-	int2 offset_nw = int2(-2, -2);
-	int2 offset_ne = int2( 2, -2);
-	int2 offset_sw = int2(-2,  2);
-	int2 offset_se = int2( 2,  2);
+	const int dialation_offset = 1;
+	int2 offset_nw = int2(-dialation_offset, -dialation_offset);
+	int2 offset_ne = int2( dialation_offset, -dialation_offset);
+	int2 offset_sw = int2(-dialation_offset,  dialation_offset);
+	int2 offset_se = int2( dialation_offset,  dialation_offset);
 	float depth_nw = depth_buffer.Sample(linear_clamp, input.uv, offset_nw);
 	float depth_ne = depth_buffer.Sample(linear_clamp, input.uv, offset_ne);
 	float depth_sw = depth_buffer.Sample(linear_clamp, input.uv, offset_sw);
@@ -263,7 +264,7 @@ float4 PS(PSInput input) : SV_TARGET
 
 	// Calculate velocity
 	float velocity = length((prev_frame_uv - input.uv) * window_size);
-	float velocity_f = saturate(velocity / 20);
+	float velocity_f = saturate(velocity / 10);
 
 	// Calculate the new sample
 #if TAA_UPSAMPLE
@@ -332,10 +333,10 @@ float4 PS(PSInput input) : SV_TARGET
 #endif
 
 	// Calculate alpha
-	float alpha = lerp(0.025, 0.2, velocity_f);
+	float alpha = lerp(0.05, 0.2, velocity_f);
 	if (refresh_history) alpha = 1.0;
 
-	//return float4(((float)refresh_history).xx, 0.0, 1.0);
+	//return float4(beta.xxx, 1.0);
 	//return float4((input.uv - prev_frame_uv) * 1000, 0.0, 1.0);
 	//return float4(velocity_f.xxx, 1.0);
 	return lerp(history, float4(new_sample, 1), alpha * beta);

@@ -54,7 +54,7 @@ namespace ema
 
 			out.matrix.r[0] = DirectX::XMVectorSet(n * rw, 0.0f, 0.0f, 0.0f);
 			out.matrix.r[1] = DirectX::XMVectorSet(0.0f, n * rh, 0.0f, 0.0f);
-			out.matrix.r[2] = DirectX::XMVectorSet(-a*rw, -b*rh, R, 1.0f);
+			out.matrix.r[2] = DirectX::XMVectorSet(-a, -b, R, 1.0f);
 			out.matrix.r[3] = DirectX::XMVectorSet(0.0f, 0.0f, -R*n, 0.0f);
 
 			return out;
@@ -72,7 +72,7 @@ namespace ema
 			out.matrix.r[0] = DirectX::XMVectorSet(rec_n * w,	0.0f,		0.0f, 0.0f);
 			out.matrix.r[1] = DirectX::XMVectorSet(0.0f,		rec_n * h,	0.0f, 0.0f);
 			out.matrix.r[2] = DirectX::XMVectorSet(0.0f,		0.0f,		0.0f, -rec_R);
-			out.matrix.r[3] = DirectX::XMVectorSet(a * rec_n,	b * rec_n,	1.0f, rec_n);
+			out.matrix.r[3] = DirectX::XMVectorSet(a * rec_n * w,	b * rec_n * h,	1.0f, rec_n);
 
 			return out;
 		}

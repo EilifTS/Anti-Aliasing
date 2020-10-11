@@ -73,17 +73,23 @@ void egx::ProjectiveCamera::updateProjectionMatrix()
 
 	//ema::vec2 final_jitter = ema::vec2(jitter.x, jitter.y) / window_size.x * 2.0f;
 	//ema::vec2 final_jitter = ema::vec2((jitter.x - 0.5f) / window_size.x, (jitter.y - 0.5f) / window_size.y) * 2.0f;
-	ema::vec2 final_jitter = ema::vec2((jitter.x - 0.5f), -(jitter.y - 0.5f)) / window_size.x * 2.0f;
-	projection_matrix = ema::mat4::ProjectionOffset(near_plane, far_plane, near_plane_vs_rectangle * near_plane, final_jitter * near_plane);
-	inv_projection_matrix = ema::mat4::ProjectionOffsetInverse(near_plane, far_plane, near_plane_vs_rectangle * near_plane, final_jitter * near_plane);
+	ema::vec2 final_jitter = ema::vec2((jitter.x - 0.5f) / window_size.x, -(jitter.y - 0.5f) / window_size.y) * 2.0f;
+	ema::vec2 final_jitter2 = ema::vec2((jitter.x - 0.5f), -(jitter.y - 0.5f)) / window_size.x * 2.0f;
+	projection_matrix = ema::mat4::ProjectionOffset(near_plane, far_plane, near_plane_vs_rectangle * near_plane, final_jitter);
+	inv_projection_matrix = ema::mat4::ProjectionOffsetInverse(near_plane, far_plane, near_plane_vs_rectangle * near_plane, final_jitter);
 
-	/* Jittering test
+	// Jittering test
 	ema::vec4 pixel_pos = ema::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	ema::vec4 view_pixel_pos = pixel_pos * inv_projection_matrix_no_jitter;
 	ema::vec4 j_pixel_pos = view_pixel_pos * projection_matrix;
 	ema::vec2 temp = ema::vec2(j_pixel_pos.x, j_pixel_pos.y) * 0.5f + ema::vec2(0.5f, 0.5f);
 	ema::vec2 f_pos = ema::vec2(temp.x * window_size.x, temp.y * window_size.y);
-	*/
+	
+
+	  // Inverse check
+	auto id = projection_matrix * inv_projection_matrix;
+	auto inv = projection_matrix.Inverse();
+	
 }
 
 // First person camera

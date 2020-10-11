@@ -63,7 +63,7 @@ void TAA::HandleInput(const eio::InputManager& im)
 {
 	auto& keyboard = im.Keyboard();
 
-	if (keyboard.IsKeyReleased('1'))
+	if (keyboard.IsKeyReleased('E'))
 	{
 		taa_preset = (taa_preset + 1) % (int)_countof(sample_count_presets);
 		macro_list.SetMacro("TAA_ALPHA", alpha_presets[taa_preset]);
@@ -72,25 +72,25 @@ void TAA::HandleInput(const eio::InputManager& im)
 		current_index = 0;
 		recompile_shaders = true;
 	}
-	if (keyboard.IsKeyReleased('2'))
+	if (keyboard.IsKeyReleased('R'))
 	{
 		macro_list.SetMacro("TAA_USE_CATMUL_ROM", taa_use_catmul_room ? "0" : "1");
 		taa_use_catmul_room = !taa_use_catmul_room;
 		recompile_shaders = true;
 	}
-	if (keyboard.IsKeyReleased('3')) 
+	if (keyboard.IsKeyReleased('T')) 
 	{
 		macro_list.SetMacro("TAA_USE_HISTORY_RECTIFICATION", taa_use_history_rectification ? "0" : "1");
 		taa_use_history_rectification = !taa_use_history_rectification;
 		recompile_shaders = true;
 	}
-	if (keyboard.IsKeyReleased('4')) 
+	if (keyboard.IsKeyReleased('Y')) 
 	{
 		macro_list.SetMacro("TAA_USE_YCOCG", taa_use_ycocg ? "0" : "1");
 		taa_use_ycocg = !taa_use_ycocg;
 		recompile_shaders = true;
 	}
-	if (keyboard.IsKeyReleased('5')) 
+	if (keyboard.IsKeyReleased('U')) 
 	{
 		macro_list.SetMacro("TAA_USE_CLIPPING", taa_use_clipping ? "0" : "1");
 		taa_use_clipping = !taa_use_clipping;

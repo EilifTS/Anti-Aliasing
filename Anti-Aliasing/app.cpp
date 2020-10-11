@@ -201,18 +201,18 @@ void App::handleInput(eio::InputManager& im)
 	if (im.Keyboard().IsKeyReleased('1'))
 	{
 		aa_mode = AAMode::None;
-		renderer.SetSampler(DeferrdRenderer::TextureSampler::SSAABias);
+		renderer.SetSampler(DeferrdRenderer::TextureSampler::NoBias);
 	}
 	
 	if (im.Keyboard().IsKeyReleased('2'))
 	{
 		aa_mode = AAMode::FXAA;
-		renderer.SetSampler(DeferrdRenderer::TextureSampler::SSAABias);
+		renderer.SetSampler(DeferrdRenderer::TextureSampler::NoBias);
 	}
 	if (im.Keyboard().IsKeyReleased('3'))
 	{
 		aa_mode = AAMode::TAA;
-		renderer.SetSampler(DeferrdRenderer::TextureSampler::SSAABias);
+		renderer.SetSampler(DeferrdRenderer::TextureSampler::TAABias);
 	}
 	if (im.Keyboard().IsKeyReleased('4'))
 	{
@@ -236,8 +236,8 @@ void App::handleInput(eio::InputManager& im)
 	}
 	//if (aa_mode == AAMode::FXAA)
 	//	fxaa.HandleInput(im);
-	//else if (aa_mode == AAMode::TAA)
-	//	taa.HandleInput(im);
+	if (aa_mode == AAMode::TAA)
+		taa.HandleInput(im);
 }
 void App::updateScene(float t)
 {

@@ -13,11 +13,14 @@ public:
 
 	const ema::vec2& GetJitter() const { return jitter.Get(current_index); };
 	const ema::vec2& GetNextJitter() const { return jitter.Get((current_index + 1) % sample_count); };
+
 	void Update(
 		const ema::mat4& inv_proj_matrix_no_jitter,
 		const ema::mat4& inv_view_matrix,
 		const ema::mat4& prev_frame_view_matrix,
 		const ema::mat4& prev_frame_proj_matrix_no_jitter);
+
+	void UseRasterizer(bool new_value);
 
 	void HandleInput(const eio::InputManager& im);
 
@@ -69,6 +72,7 @@ private:
 	bool taa_use_history_rectification = true;
 	bool taa_use_ycocg = true;
 	bool taa_use_clipping = true;
+	bool taa_use_rasterizer = true;
 
 private:
 	void applyTAA(

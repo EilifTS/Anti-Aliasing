@@ -8,6 +8,11 @@
 #define TAA_UPSAMPLE 1
 #endif
 
+
+#ifndef TAA_USE_RASTERIZER
+#define TAA_USE_RASTERIZER 1
+#endif
+
 #ifndef TAA_USE_CATMUL_ROM
 #define TAA_USE_CATMUL_ROM 1
 #endif
@@ -41,6 +46,23 @@ cbuffer TAABuffer : register(b1)
 	matrix clip_to_prev_frame_clip_matrix;
 	float2 current_jitter;
 };
+
+// Only used for ray tracing
+cbuffer JitterBuffer : register(b2)
+{
+	int jitter_count;
+	int sample_count;
+	int jitter_index;
+	int placeholder;
+	float4 jitters[128];
+}
+
+int cash(uint x, uint y)
+{
+	int h = 0 + x * 374761393 + y * 668265263;
+	h = (h ^ (h >> 13)) * 1274126177;
+	return h ^ (h >> 16);
+}
 
 // Pixel shader input
 struct PSInput
@@ -87,8 +109,9 @@ float computePixelWeight(float2 dp, float inv_scale_factor)
 	float u2 = TAA_UPSAMPLE_FACTOR * TAA_UPSAMPLE_FACTOR;
 	u2 *= inv_scale_factor * inv_scale_factor;
 
-	float x2 = saturate(u2 * dot(dp, dp));
+	float x2 = u2 * dot(dp, dp);
 	float r = (0.905 * x2 - 1.9) * x2 + 1.0;
+	if (x2 > 1.0) r = 0.0001;
 	return r * u2;
 }
 
@@ -186,7 +209,14 @@ float4 PS(PSInput input) : SV_TARGET
 	int2 new_sample_pos = pixel_pos / TAA_UPSAMPLE_FACTOR; // Position of pixel in low res image
 
 	float2 jitter_uv = current_jitter * rec_window_size * TAA_UPSAMPLE_FACTOR; // UV offset of jitter
+
+#if TAA_USE_RASTERIZER
 	float2 jitter_offset = current_jitter; // Pixel offset of jitter in low res image
+#else
+	int prev_j_index = (jitter_index - 1) % sample_count;
+	int random_jitter_index = (cash(new_sample_pos.x, new_sample_pos.y) + prev_j_index) % jitter_count;
+	float2 jitter_offset = jitters[random_jitter_index].xy; // Pixel offset of jitter in low res image
+#endif
 
 	float clip_depth = depth_buffer.Sample(linear_clamp, input.uv);
 	//float clip_depth = depth_buffer.Load(int3(new_sample_pos, 0));
@@ -328,7 +358,7 @@ float4 PS(PSInput input) : SV_TARGET
 	// Calculate beta for upsampling
 	float beta = 1.0;
 #if TAA_UPSAMPLE
-	//beta = calculateBeta(pixel_pos, current_jitter);
+	//beta = calculateBeta(pixel_pos, jitter_offset);
 	beta = biggest_weight;
 #endif
 

@@ -11,7 +11,6 @@ namespace
 	};
 
 	static const int sample_count_presets[5]	= {    2,     4,     8,     16,     32 };
-	static const std::string alpha_presets[5]	= { "0.5", "0.3", "0.2", "0.013", "0.05" };
 }
 
 TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count, int upsample_factor)
@@ -59,6 +58,13 @@ void TAA::Update(
 		prev_frame_proj_matrix_no_jitter);
 };
 
+void TAA::UseRasterizer(bool new_value)
+{
+	taa_use_rasterizer = new_value;
+	recompile_shaders = true;
+	macro_list.SetMacro("TAA_USE_RASTERIZER", taa_use_rasterizer ? "1" : "0");
+}
+
 void TAA::HandleInput(const eio::InputManager& im)
 {
 	auto& keyboard = im.Keyboard();
@@ -66,7 +72,6 @@ void TAA::HandleInput(const eio::InputManager& im)
 	if (keyboard.IsKeyReleased('E'))
 	{
 		taa_preset = (taa_preset + 1) % (int)_countof(sample_count_presets);
-		macro_list.SetMacro("TAA_ALPHA", alpha_presets[taa_preset]);
 		sample_count = sample_count_presets[taa_preset];
 		jitter = Jitter::Halton(2, 3, sample_count);
 		current_index = 0;
@@ -146,10 +151,11 @@ void TAA::applyTAA(
 
 	context.SetRootConstant(0, 4, &window_size);
 	context.SetRootConstantBuffer(1, taa_buffer);
-	context.SetRootDescriptorTable(2, new_frame);
-	context.SetRootDescriptorTable(3, history_buffer);
-	context.SetRootDescriptorTable(4, motion_vectors);
-	context.SetRootDescriptorTable(5, depth_stencil_buffer);
+	context.SetRootConstantBuffer(2, jitter_buffer);
+	context.SetRootDescriptorTable(3, new_frame);
+	context.SetRootDescriptorTable(4, history_buffer);
+	context.SetRootDescriptorTable(5, motion_vectors);
+	context.SetRootDescriptorTable(6, depth_stencil_buffer);
 
 	context.SetRenderTarget(temp_target);
 
@@ -191,6 +197,7 @@ void TAA::initializeTAA(egx::Device& dev)
 	// Create root signature
 	taa_rs.InitConstants(4, 0); // Window values
 	taa_rs.InitConstantBuffer(1, egx::ShaderVisibility::Pixel); // TAA buffer
+	taa_rs.InitConstantBuffer(2, egx::ShaderVisibility::Pixel); // Jitter buffer
 	taa_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel); // New sample texture
 	taa_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel); // History buffer
 	taa_rs.InitDescriptorTable(2, egx::ShaderVisibility::Pixel); // Motion vectors

@@ -4,7 +4,7 @@ ToneMapper::ToneMapper(egx::Device& dev)
 {
 	// Create root signature
 	root_sig.InitDescriptorTable(0, egx::ShaderVisibility::Pixel);
-	root_sig.AddSampler(egx::Sampler::LinearClamp(), 0);
+	root_sig.AddSampler(egx::Sampler::PointClamp(), 0);
 	root_sig.Finalize(dev);
 
 	// Create Shaders

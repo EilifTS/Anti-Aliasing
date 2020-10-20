@@ -12,7 +12,7 @@ namespace
 	const static float far_plane = 1000.0f;
 
 	// Upsampling
-	static const int upsample_factor = 1;
+	static const int upsample_factor = 2;
 }
 
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
@@ -230,9 +230,15 @@ void App::handleInput(eio::InputManager& im)
 	if (im.Keyboard().IsKeyReleased('6'))
 	{
 		if (render_mode == RenderMode::Rasterizer)
+		{
 			render_mode = RenderMode::RayTracer;
+			taa.UseRasterizer(false);
+		}
 		else
+		{
 			render_mode = RenderMode::Rasterizer;
+			taa.UseRasterizer(true);
+		}
 	}
 	//if (aa_mode == AAMode::FXAA)
 	//	fxaa.HandleInput(im);

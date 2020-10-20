@@ -86,7 +86,7 @@ void egx::ProjectiveCamera::updateProjectionMatrix()
 	ema::vec2 f_pos = ema::vec2(temp.x * window_size.x, temp.y * window_size.y);
 	
 
-	  // Inverse check
+	// Inverse check
 	auto id = projection_matrix * inv_projection_matrix;
 	auto inv = projection_matrix.Inverse();
 	

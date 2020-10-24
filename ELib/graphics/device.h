@@ -86,5 +86,7 @@ namespace egx
 		friend RTPipelineState;
 		friend UnorderedAccessBuffer;
 		friend std::shared_ptr<egx::Texture2D> eio::LoadTextureFromFile(egx::Device& dev, egx::CommandContext& context, const std::string& file_name, bool use_srgb);
+		friend void eio::SaveTextureToFile(egx::Device& dev, egx::CommandContext& context, egx::Texture2D& texture, const std::string& file_name);
+		friend void eio::SaveTextureToFileDDS(egx::Device& dev, egx::CommandContext& context, egx::Texture2D& texture, const std::string& file_name);
 	};
 }

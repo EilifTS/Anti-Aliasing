@@ -70,6 +70,9 @@ private:
 	DeferrdRenderer renderer;
 	std::shared_ptr<RayTracer> ray_tracer;
 
+	// Temp
+	bool do_screen_shot = false;
+	int ss_nr = 0;
 
 private:
 	void initializeInternals(egx::Device& dev);

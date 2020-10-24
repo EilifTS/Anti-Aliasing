@@ -1,10 +1,12 @@
 #include "texture_io.h"
 #include "../graphics/internal/egx_internal.h"
 #include "internal/WICTextureLoader12.h"
+#include "internal/ScreenGrab12.h"
 #include "../graphics/device.h"
 #include "../graphics/command_context.h"
 #include "../graphics/cpu_buffer.h"
 
+#include <wincodec.h>
 namespace
 {
 	std::vector<uint8_t> generateMipmaps(uint8_t* data, int width, int height, int bytes_per_pixel)
@@ -111,4 +113,37 @@ std::shared_ptr<egx::Texture2D> eio::LoadTextureFromFile(egx::Device& dev, egx::
 	dev.ScheduleUpload(context, cpu_buffer, *texture);
 
 	return texture;
+}
+
+void eio::SaveTextureToFile(egx::Device& dev, egx::CommandContext& context, egx::Texture2D& texture, const std::string& file_name)
+{
+	// Flush gpu to make sure that the texture is ready to be copied to a readback buffer
+	dev.QueueList(context);
+	dev.WaitForGPU();
+
+	// Save
+	std::wstring wfile_name(file_name.begin(), file_name.end());
+	THROWIFFAILED(DirectX::SaveWICTextureToFile(
+		dev.command_queue.Get(),
+		texture.buffer.Get(),
+		GUID_ContainerFormatPng,
+		wfile_name.c_str(),
+		texture.state,
+		texture.state), "Failed to save texture to png");
+}
+
+void eio::SaveTextureToFileDDS(egx::Device& dev, egx::CommandContext& context, egx::Texture2D& texture, const std::string& file_name)
+{
+	// Flush gpu to make sure that the texture is ready to be copied to a readback buffer
+	dev.QueueList(context);
+	dev.WaitForGPU();
+
+	// Save
+	std::wstring wfile_name(file_name.begin(), file_name.end());
+	THROWIFFAILED(DirectX::SaveDDSTextureToFile(
+		dev.command_queue.Get(),
+		texture.buffer.Get(),
+		wfile_name.c_str(),
+		texture.state,
+		texture.state), "Failed to save texture to dds");
 }

@@ -6,13 +6,17 @@
 #include "io/mesh_io.h"
 #include "graphics/mesh.h"
 
+// Temp
+#include "io/texture_io.h"
+#include "misc/string_helpers.h"
+
 namespace
 {
 	const static float near_plane = 0.1f;
 	const static float far_plane = 1000.0f;
 
 	// Upsampling
-	static const int upsample_factor = 2;
+	static const int upsample_factor = 1;
 }
 
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
@@ -98,10 +102,16 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 		}
 	}
 	
-
 	auto& back_buffer = context.GetCurrentBackBuffer();
 	renderer.ApplyToneMapping(dev, context, caa_target, back_buffer);
 	progress_frame = false;
+
+	// Temp screen shotting
+	if (do_screen_shot)
+	{
+		eio::SaveTextureToFile(dev, context, caa_target, "screen_shot" + emisc::ToString(ss_nr++) + ".png");
+		do_screen_shot = false;
+	}
 }
 
 void App::initializeInternals(egx::Device& dev)
@@ -244,6 +254,9 @@ void App::handleInput(eio::InputManager& im)
 	//	fxaa.HandleInput(im);
 	if (aa_mode == AAMode::TAA)
 		taa.HandleInput(im);
+
+	// Temp screen shotting
+	if (im.Keyboard().IsKeyReleased('Q')) do_screen_shot = true;
 }
 void App::updateScene(float t)
 {

@@ -193,6 +193,7 @@
     <ClInclude Include="io\console.h" />
     <ClInclude Include="io\game_clock.h" />
     <ClInclude Include="io\input_manager.h" />
+    <ClInclude Include="io\internal\ScreenGrab12.h" />
     <ClInclude Include="io\internal\WICTextureLoader12.h" />
     <ClInclude Include="io\keyboard_state.h" />
     <ClInclude Include="io\mesh_io.h" />
@@ -235,6 +236,7 @@
     <ClCompile Include="graphics\unordered_access_buffer.cpp" />
     <ClCompile Include="io\console.cpp" />
     <ClCompile Include="io\game_clock.cpp" />
+    <ClCompile Include="io\internal\ScreenGrab12.cpp" />
     <ClCompile Include="io\internal\WICTextureLoader12.cpp" />
     <ClCompile Include="io\keyboard_state.cpp" />
     <ClCompile Include="io\mesh_io.cpp" />

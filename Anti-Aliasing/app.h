@@ -13,6 +13,8 @@
 
 #include "ray_tracer/ray_tracer.h"
 
+#include "network/dataset_video_recorder.h"
+
 enum class AAMode
 {
 	None, FXAA, TAA, SSAA
@@ -69,6 +71,9 @@ private:
 	// Renderers
 	DeferrdRenderer renderer;
 	std::shared_ptr<RayTracer> ray_tracer;
+
+	// Network
+	enn::DatasetVideoRecorder dataset_recorder;
 
 	// Temp
 	bool do_screen_shot = false;

@@ -54,6 +54,9 @@ void App::Update(eio::InputManager& im)
 
 		updateScene(time);
 	}
+
+	if (!dataset_recorder.IsReady())
+		dataset_recorder.CaptureFrame({ camera.Position(), camera.GetRotation(), im.Clock().GetTime() });
 }
 void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 {
@@ -256,7 +259,17 @@ void App::handleInput(eio::InputManager& im)
 		taa.HandleInput(im);
 
 	// Temp screen shotting
-	if (im.Keyboard().IsKeyReleased('Q')) do_screen_shot = true;
+	if (im.Keyboard().IsKeyReleased('Z')) do_screen_shot = true;
+
+	// Start video recording
+	if (dataset_recorder.IsReady())
+	{
+		if (im.Keyboard().IsKeyReleased('Q'))
+		{
+			dataset_recorder.StartRecording(60);
+		}
+	}
+		
 }
 void App::updateScene(float t)
 {

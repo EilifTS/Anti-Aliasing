@@ -160,6 +160,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="network\dataset_video_recorder.h" />
     <ClInclude Include="graphics\camera.h" />
     <ClInclude Include="graphics\command_context.h" />
     <ClInclude Include="graphics\constant_buffer.h" />
@@ -246,6 +247,7 @@
       <IntrinsicFunctions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</IntrinsicFunctions>
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
     </ClCompile>
+    <ClCompile Include="network\dataset_video_recorder.cpp" />
     <ClCompile Include="window\window.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

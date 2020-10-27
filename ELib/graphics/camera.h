@@ -87,6 +87,7 @@ namespace egx
 		void Update();
 
 		inline void SetRotation(const ema::vec3& new_roll_pitch_yaw) { roll_pitch_yaw = new_roll_pitch_yaw; };
+		inline const ema::vec3& GetRotation() const { return roll_pitch_yaw; };
 
 	private:
 		float speed, mouse_speed;

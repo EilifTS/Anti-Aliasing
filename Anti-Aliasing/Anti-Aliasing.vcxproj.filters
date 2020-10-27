@@ -110,4 +110,7 @@
     <None Include="shaders\headers\model.hlsli" />
     <None Include="shaders\deferred\illumination.hlsli" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="dataset\dataset_video_count.txt" />
+  </ItemGroup>
 </Project>

@@ -1,0 +1,104 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="deferred_rendering\deferred_renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="deferred_rendering\g_buffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="deferred_rendering\light_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="deferred_rendering\tone_mapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ray_tracer\ray_tracer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="aa\fxaa\fxaa.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="aa\ssaa\ssaa.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="aa\taa\taa.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="deferred_rendering\deferred_renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="deferred_rendering\g_buffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="deferred_rendering\light_manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="deferred_rendering\tone_mapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ray_tracer\ray_tracer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="aa\fxaa\fxaa.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="aa\ssaa\ssaa.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="aa\taa\jitter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="aa\taa\taa.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="shaders\deferred\deferred_light_ps.hlsl" />
+    <FxCompile Include="shaders\deferred\deferred_light_vs.hlsl" />
+    <FxCompile Include="shaders\deferred\deferred_model_nm_ps.hlsl" />
+    <FxCompile Include="shaders\deferred\deferred_model_nm_vs.hlsl" />
+    <FxCompile Include="shaders\deferred\depth_only_ps.hlsl" />
+    <FxCompile Include="shaders\deferred\depth_only_vs.hlsl" />
+    <FxCompile Include="shaders\deferred\motion_vector_ps.hlsl" />
+    <FxCompile Include="shaders\deferred\motion_vector_vs.hlsl" />
+    <FxCompile Include="shaders\deferred\tone_map_ps.hlsl" />
+    <FxCompile Include="shaders\deferred\tone_map_vs.hlsl" />
+    <FxCompile Include="shaders\fxaa\fxaa_ps.hlsl" />
+    <FxCompile Include="shaders\fxaa\fxaa_vs.hlsl" />
+    <FxCompile Include="shaders\ray_tracing\closest_hit.hlsl" />
+    <FxCompile Include="shaders\ray_tracing\miss.hlsl" />
+    <FxCompile Include="shaders\ray_tracing\ray_gen.hlsl" />
+    <FxCompile Include="shaders\ray_tracing\shadow_ray.hlsl" />
+    <FxCompile Include="shaders\ssaa\ssaa_ps.hlsl" />
+    <FxCompile Include="shaders\ssaa\ssaa_vs.hlsl" />
+    <FxCompile Include="shaders\taa\format_converter_ps.hlsl" />
+    <FxCompile Include="shaders\taa\format_converter_vs.hlsl" />
+    <FxCompile Include="shaders\taa\taa_ps.hlsl" />
+    <FxCompile Include="shaders\taa\taa_vs.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\deferred\g_buffer.hlsli" />
+    <None Include="shaders\deferred\illumination.hlsli" />
+    <None Include="shaders\deferred\shadow.hlsli" />
+    <None Include="shaders\fxaa\fxaa_header.hlsli" />
+    <None Include="shaders\headers\camera.hlsli" />
+    <None Include="shaders\headers\model.hlsli" />
+  </ItemGroup>
+</Project>

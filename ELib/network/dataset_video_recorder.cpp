@@ -2,6 +2,7 @@
 #include <fstream>
 #include <stdexcept>
 #include "../misc/string_helpers.h"
+#include "../io/console.h"
 
 namespace
 {
@@ -69,6 +70,8 @@ void enn::DatasetVideoRecorder::StartRecording(int frame_count)
 	current_frame = 0;
 	max_frame_count = frame_count;
 	is_ready = false;
+
+	eio::Console::Log("Starting dataset recording");
 }
 void enn::DatasetVideoRecorder::CaptureFrame(const enn::DatasetFrame& frame)
 {
@@ -78,6 +81,7 @@ void enn::DatasetVideoRecorder::CaptureFrame(const enn::DatasetFrame& frame)
 		is_ready = true;
 		dataset_video.SaveToFile(dataset_count++);
 		saveDatasetCount();
+		eio::Console::Log("Saving dataset recording");
 	}
 }
 

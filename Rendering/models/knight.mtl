@@ -1,0 +1,32 @@
+# Blender MTL File: 'the-cartoon-knight.blend'
+# Material Count: 2
+
+newmtl Caballero
+Ns 225.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.200000 0.200000 0.200000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+r 0.500000
+d 1.000000
+illum 2
+map_bump ..\Rendering\textures\knight\Knight_normal.png
+map_Kd ..\Rendering\textures\knight\Knight_diffuse.png
+map_spec ..\Rendering\textures\knight\Knight_spec.png
+refl ..\Rendering\textures\knight\Knight_metallic.png
+
+newmtl Espada
+Ns 225.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+r 0.500000
+d 1.000000
+illum 2
+map_bump ..\Rendering\textures\knight\Sword_normal.png
+map_Kd ..\Rendering\textures\knight\Sword_diffuse.png
+map_spec ..\Rendering\textures\knight\Sword_spec.png
+refl ..\Rendering\textures\knight\Sword_metallic.png

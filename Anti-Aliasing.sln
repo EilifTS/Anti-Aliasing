@@ -11,6 +11,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Testing", "Testing\Testing.
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Network", "Network\Network.pyproj", "{A1609C03-6F0A-48BF-8D39-2677F0AF1BC0}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Rendering", "Rendering\Rendering.vcxproj", "{C82763C5-740F-485E-ADC0-183C71724E2C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +59,16 @@ Global
 		{A1609C03-6F0A-48BF-8D39-2677F0AF1BC0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A1609C03-6F0A-48BF-8D39-2677F0AF1BC0}.Release|x64.ActiveCfg = Release|Any CPU
 		{A1609C03-6F0A-48BF-8D39-2677F0AF1BC0}.Release|x86.ActiveCfg = Release|Any CPU
+		{C82763C5-740F-485E-ADC0-183C71724E2C}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{C82763C5-740F-485E-ADC0-183C71724E2C}.Debug|x64.ActiveCfg = Debug|x64
+		{C82763C5-740F-485E-ADC0-183C71724E2C}.Debug|x64.Build.0 = Debug|x64
+		{C82763C5-740F-485E-ADC0-183C71724E2C}.Debug|x86.ActiveCfg = Debug|Win32
+		{C82763C5-740F-485E-ADC0-183C71724E2C}.Debug|x86.Build.0 = Debug|Win32
+		{C82763C5-740F-485E-ADC0-183C71724E2C}.Release|Any CPU.ActiveCfg = Release|Win32
+		{C82763C5-740F-485E-ADC0-183C71724E2C}.Release|x64.ActiveCfg = Release|x64
+		{C82763C5-740F-485E-ADC0-183C71724E2C}.Release|x64.Build.0 = Release|x64
+		{C82763C5-740F-485E-ADC0-183C71724E2C}.Release|x86.ActiveCfg = Release|Win32
+		{C82763C5-740F-485E-ADC0-183C71724E2C}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

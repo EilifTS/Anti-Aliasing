@@ -146,12 +146,12 @@ void App::initializeInternals(egx::Device& dev)
 void App::initializeAssets(egx::Device& dev, egx::CommandContext& context)
 {
 	// Load assets
-	sponza_mesh = eio::LoadMeshFromOBJB(dev, context, "models/sponza", mat_manager);
+	sponza_mesh = eio::LoadMeshFromOBJB(dev, context, "../Rendering/models/sponza", mat_manager);
 	sponza_model = std::make_shared<egx::Model>(dev, sponza_mesh);
 	sponza_model->SetScale(0.01f);
 	sponza_model->SetStatic(true);
 
-	knight_mesh = eio::LoadMeshFromOBJB(dev, context, "models/knight", mat_manager);
+	knight_mesh = eio::LoadMeshFromOBJB(dev, context, "../Rendering/models/knight", mat_manager);
 	knight_model1 = std::make_shared<egx::Model>(dev, knight_mesh);
 	knight_model2 = std::make_shared<egx::Model>(dev, knight_mesh);
 	knight_model3 = std::make_shared<egx::Model>(dev, knight_mesh);

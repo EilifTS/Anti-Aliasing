@@ -20,14 +20,6 @@ float luma(float3 color)
 {
 	return dot(color, float3(0.299, 0.587, 0.114));
 }
-float luma2(float3 color)
-{
-	return color.g* (0.587 / 0.299) + color.r;
-}
-float luma3(float3 color)
-{
-	return color.g;
-}
 
 float3 sampleAt(float2 pos)
 {
@@ -145,7 +137,7 @@ float traverseEdge(FXAACommon common, float2 uv, bool is_horizontal, bool is_sid
 	bool reached2 = false;
 	float luma_end1 = 0.0;
 	float luma_end2 = 0.0;
-	for (int i = 0; i < TAVERSAL_MAX_STEPS; i++)
+	for (int i = 0; i < TRAVERSAL_MAX_STEPS; i++)
 	{
 		if (!reached1)
 		{
@@ -179,7 +171,7 @@ float traverseEdge(FXAACommon common, float2 uv, bool is_horizontal, bool is_sid
 	float pixel_offset = -shortest_dist / total_dist + 0.5;
 
 
-	// Check if distance is not too far (might not be needed with stepsize 1?)
+	// Check if distance is not too far
 	bool luma_m_smaller = common.m < luma_local_avg;
 	bool correct_variation_at_end = ((is_1_closest ? luma_end1 : luma_end2) < 0.0) != luma_m_smaller;
 	pixel_offset = correct_variation_at_end ? pixel_offset : 0.0;

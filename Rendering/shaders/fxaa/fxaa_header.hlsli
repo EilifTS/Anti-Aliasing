@@ -8,7 +8,7 @@
 #define EDGE_THRESHOLD_MIN (1.0 / 32.0)
 #endif
 
-#define TAVERSAL_MAX_STEPS 16
+#define TRAVERSAL_MAX_STEPS 16
 
 #define SUBPIXEL_QUALITY 0.75
 

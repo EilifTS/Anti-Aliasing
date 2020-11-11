@@ -64,7 +64,7 @@ int cash(uint x, uint y)
 	return h ^ (h >> 16);
 }
 
-// Pixel shader input
+// Per pixel input
 struct PSInput
 {
 	float4 position : SV_POSITION;
@@ -130,16 +130,69 @@ float calculateBeta(int2 pixel_pos, float2 j)
 	return beta;
 }
 
-float3 catmulSample(float2 uv)
+float2 calculatePreviousFrameUV(int2 new_sample_pos, float2 uv, float4 clip_position)
+{
+	// Dialate forground objects
+	const int dialation_offset = 1;
+	int2 offset_nw = int2(-dialation_offset, -dialation_offset);
+	int2 offset_ne = int2(dialation_offset, -dialation_offset);
+	int2 offset_sw = int2(-dialation_offset, dialation_offset);
+	int2 offset_se = int2(dialation_offset, dialation_offset);
+	float depth_nw = depth_buffer.Sample(linear_clamp, uv, offset_nw);
+	float depth_ne = depth_buffer.Sample(linear_clamp, uv, offset_ne);
+	float depth_sw = depth_buffer.Sample(linear_clamp, uv, offset_sw);
+	float depth_se = depth_buffer.Sample(linear_clamp, uv, offset_se);
+
+	int2 velocity_offset = offset_nw;
+	float frontmost_depth = depth_nw;
+	if (frontmost_depth > depth_ne)
+	{
+		velocity_offset = offset_ne;
+		frontmost_depth = depth_ne;
+	}
+	if (frontmost_depth > depth_sw)
+	{
+		velocity_offset = offset_sw;
+		frontmost_depth = depth_sw;
+	}
+	if (frontmost_depth > depth_se)
+	{
+		velocity_offset = offset_se;
+		frontmost_depth = depth_se;
+	}
+	if (frontmost_depth > clip_position.z)
+	{
+		velocity_offset = int2(0.0, 0.0);
+	}
+	else
+	{
+		clip_position.z = frontmost_depth;
+	}
+
+	// Calculate uv in history buffer
+	float2 prev_frame_uv = float2(0.0, 0.0);
+
+	// Static object pixel
+	float4 prev_frame_pos = mul(clip_position, clip_to_prev_frame_clip_matrix);
+	prev_frame_pos /= prev_frame_pos.w;
+	prev_frame_uv = prev_frame_pos.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
+
+	// Dynamic object pixel
+	float2 motion_vector = motion_vectors.Load(int3(new_sample_pos + velocity_offset, 0));
+	if (motion_vector.x != 0.0 || motion_vector.y != 0.0)
+		prev_frame_uv = uv + motion_vector;
+
+	return prev_frame_uv;
+}
+
+float3 catmullSample(float2 uv)
 {
 	return history_buffer.Sample(linear_clamp, uv).rgb;
 }
 
-float3 catmulRom(float2 uv)
+float3 catmullRom(float2 uv)
 {
-	float2 ws_sub = window_size;
-	float2 rws_sub = rec_window_size;
-	float2 position = uv * ws_sub;
+	float2 position = uv * window_size;
 	float2 center_position = floor(position - 0.5) + 0.5;
 	float2 f = position - center_position;
 	float2 f2 = f * f;
@@ -152,19 +205,35 @@ float3 catmulRom(float2 uv)
 	// float2 w2 = 1.0 - w0 - w1 - w3
 
 	float2 w12 = w1 + w2;
-	float2 tc12 = rws_sub * (center_position + w2 / w12);
-	float3 center_color = catmulSample(tc12);
+	float2 tc12 = rec_window_size * (center_position + w2 / w12);
+	float3 center_color = catmullSample(tc12);
 
-	float2 tc0 = rws_sub * (center_position - 1.0);
-	float2 tc3 = rws_sub * (center_position + 2.0);
-	float4 color = 
-		float4(catmulSample(float2(tc12.x, tc0.y)), 1.0) * (w12.x * w0.y) + 
-		float4(catmulSample(float2(tc0.x, tc12.y)), 1.0) * (w0.x * w12.y) +
-		float4(center_color			              , 1.0) * (w12.x * w12.y) +
-		float4(catmulSample(float2(tc3.x, tc12.y)), 1.0) * (w3.x * w12.y) +
-		float4(catmulSample(float2(tc12.x, tc3.y)), 1.0) * (w12.x * w3.y);
+	float2 tc0 = rec_window_size * (center_position - 1.0);
+	float2 tc3 = rec_window_size * (center_position + 2.0);
+	float4 color =
+		float4(catmullSample(float2(tc12.x, tc0.y)), 1.0) * (w12.x * w0.y) +
+		float4(catmullSample(float2(tc0.x, tc12.y)), 1.0) * (w0.x * w12.y) +
+		float4(center_color, 1.0) * (w12.x * w12.y) +
+		float4(catmullSample(float2(tc3.x, tc12.y)), 1.0) * (w3.x * w12.y) +
+		float4(catmullSample(float2(tc12.x, tc3.y)), 1.0) * (w12.x * w3.y);
 
 	return color.rgb / color.a;
+}
+
+float3 sampleHistoryColor(float2 prev_frame_uv, inout bool refresh_history)
+{
+	float3 history = float3(0.0, 0.0, 0.0);
+	if (prev_frame_uv.x > 0.0 && prev_frame_uv.x <= 1.0 && prev_frame_uv.y > 0.0 && prev_frame_uv.y <= 1.0)
+	{
+#if TAA_USE_CATMUL_ROM
+		history = catmullRom(prev_frame_uv);
+#else
+		history = history_buffer.Sample(linear_clamp, prev_frame_uv).xyz;
+#endif // TAA_USE_CATMUL_ROM
+
+		refresh_history = false;
+	}
+	return history;
 }
 
 float3 rgbToYCoCg(float3 c)
@@ -202,6 +271,57 @@ float3 clipHistory(float3 start_color, float3 end_color, float3 min_color, float
 	return lerp(start_color, end_color, x);
 }
 
+float3 rectifyHistory(float3 history, float3 new_samples[9])
+{
+	// Transform into YCoCg
+	#if TAA_USE_YCOCG
+		[unroll]
+		for (int i = 0; i < 9; i++)
+			new_samples[i] = rgbToYCoCg(new_samples[i]);
+		history = rgbToYCoCg(history);
+	#endif // TAA_USE_YCOCG
+
+	// Calculate AABB
+	float3 min_n = min(new_samples[0], min(new_samples[1], new_samples[2]));
+	float3 min_m = min(new_samples[3], min(new_samples[4], new_samples[5]));
+	float3 min_s = min(new_samples[6], min(new_samples[7], new_samples[8]));
+	float3 min_sample = min(min_n, min(min_m, min_s));
+
+	float3 max_n = max(new_samples[0], max(new_samples[1], new_samples[2]));
+	float3 max_m = max(new_samples[3], max(new_samples[4], new_samples[5]));
+	float3 max_s = max(new_samples[6], max(new_samples[7], new_samples[8]));
+	float3 max_sample = max(max_n, max(max_m, max_s));
+
+	// Do clipping or clamping
+	#if TAA_USE_CLIPPING
+		history = clipHistory(history.rgb, 0.5 * (min_sample + max_sample), min_sample, max_sample);
+	#else
+		history = clamp(history.rgb, min_sample, max_sample);
+	#endif // TAA_USE_CLIPPING
+
+	// Transform back to RGB
+	#if TAA_USE_YCOCG
+		history = YCoCgTorgb(history);
+	#endif // TAA_USE_YCOCG
+
+	return history;
+}
+
+#define MIN_ALPHA 0.05
+#define MAX_ALPHA 0.2
+float calculateAlpha(float2 uv, float2 prev_frame_uv, bool refresh_history)
+{
+	// Calculate velocity
+	float velocity = length((prev_frame_uv - uv) * window_size);
+	float velocity_f = saturate(velocity / 10);
+
+	// Calculate alpha
+	float alpha = lerp(MIN_ALPHA, MAX_ALPHA, velocity_f);
+	if (refresh_history) alpha = 1.0;
+
+	return alpha;
+}
+
 float4 PS(PSInput input) : SV_TARGET
 {
 	// Some position calculations
@@ -219,82 +339,19 @@ float4 PS(PSInput input) : SV_TARGET
 #endif
 
 	float clip_depth = depth_buffer.Sample(linear_clamp, input.uv);
-	//float clip_depth = depth_buffer.Load(int3(new_sample_pos, 0));
 	float4 clip_position = float4(float3(input.clip_position, clip_depth), 1.0f);
 
-	// Dialate forground objects
-	const int dialation_offset = 1;
-	int2 offset_nw = int2(-dialation_offset, -dialation_offset);
-	int2 offset_ne = int2( dialation_offset, -dialation_offset);
-	int2 offset_sw = int2(-dialation_offset,  dialation_offset);
-	int2 offset_se = int2( dialation_offset,  dialation_offset);
-	float depth_nw = depth_buffer.Sample(linear_clamp, input.uv, offset_nw);
-	float depth_ne = depth_buffer.Sample(linear_clamp, input.uv, offset_ne);
-	float depth_sw = depth_buffer.Sample(linear_clamp, input.uv, offset_sw);
-	float depth_se = depth_buffer.Sample(linear_clamp, input.uv, offset_se);
-
-	int2 velocity_offset = offset_nw;
-	float frontmost_depth = depth_nw;
-	if (frontmost_depth > depth_ne)
-	{
-		velocity_offset = offset_ne;
-		frontmost_depth = depth_ne;
-	}
-	if (frontmost_depth > depth_sw)
-	{
-		velocity_offset = offset_sw;
-		frontmost_depth = depth_sw;
-	}
-	if (frontmost_depth > depth_se)
-	{
-		velocity_offset = offset_se;
-		frontmost_depth = depth_se;
-	}
-	if (frontmost_depth > clip_depth)
-	{
-		velocity_offset = int2(0.0, 0.0);
-	}
-	else
-	{
-		clip_position.z = frontmost_depth;
-	}
-
-	// Calculate uv in history buffer
-	float2 prev_frame_uv = float2(0.0, 0.0);
-
-	// Static object pixel
-	float4 prev_frame_pos = mul(clip_position, clip_to_prev_frame_clip_matrix);
-	prev_frame_pos /= prev_frame_pos.w;
-	prev_frame_uv = prev_frame_pos.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
-	
-	// Dynamic object pixel
-	float2 motion_vector = motion_vectors.Load(int3(new_sample_pos + velocity_offset, 0));
-	if (motion_vector.x != 0.0 || motion_vector.y != 0.0)
-		prev_frame_uv = input.uv + motion_vector;
+	float2 prev_frame_uv = calculatePreviousFrameUV(new_sample_pos, input.uv, clip_position);
 
 	// Sample history
 	bool refresh_history = true;
-	float4 history = float4(0.0, 0.0, 0.0, 0.0);
-	if (prev_frame_uv.x > 0.0 && prev_frame_uv.x <= 1.0 && prev_frame_uv.y > 0.0 && prev_frame_uv.y <= 1.0)
-	{
-		#if TAA_USE_CATMUL_ROM
-			history = float4(catmulRom(prev_frame_uv), 1.0);
-		#else
-			history = history_buffer.Sample(linear_clamp, prev_frame_uv);
-		#endif // TAA_USE_CATMUL_ROM
-		
-		refresh_history = false;
-	}
+	float3 history = sampleHistoryColor(prev_frame_uv, refresh_history);
 
 	// Get samples around current pixel
 	float3 new_samples[9];
 	[unroll]
 	for (int i = 0; i < 9; i++)
 		new_samples[i] = new_sample_buffer.Load(int3(new_sample_pos + index3x3[i], 0)).xyz;
-
-	// Calculate velocity
-	float velocity = length((prev_frame_uv - input.uv) * window_size);
-	float velocity_f = saturate(velocity / 10);
 
 	// Calculate the new sample
 #if TAA_UPSAMPLE
@@ -323,51 +380,16 @@ float4 PS(PSInput input) : SV_TARGET
 
 	// History rectification
 #if TAA_USE_HISTORY_RECTIFICATION
-
-#if TAA_USE_YCOCG
-	[unroll]
-	for (i = 0; i < 9; i++)
-		new_samples[i] = rgbToYCoCg(new_samples[i]);
-	history.rgb = rgbToYCoCg(history.rgb);
-#endif // TAA_USE_YCOCG
-
-	float3 min_n =		min(new_samples[0], min(new_samples[1], new_samples[2]));
-	float3 min_m =		min(new_samples[3], min(new_samples[4], new_samples[5]));
-	float3 min_s =		min(new_samples[6], min(new_samples[7], new_samples[8]));
-	float3 min_sample = min(min_n, min(min_m, min_s));
-
-	float3 max_n =		max(new_samples[0], max(new_samples[1], new_samples[2]));
-	float3 max_m =		max(new_samples[3], max(new_samples[4], new_samples[5]));
-	float3 max_s =		max(new_samples[6], max(new_samples[7], new_samples[8]));
-	float3 max_sample = max(max_n, max(max_m, max_s));
-
-#if TAA_USE_CLIPPING
-	float3 clipped_sample = clipHistory(history.rgb, 0.5 * (min_sample + max_sample), min_sample, max_sample);
-	history = float4(clipped_sample, 1.0);
-#else
-	float3 clamped_sample = clamp(history.rgb, min_sample, max_sample);
-	history = float4(clamped_sample, 1.0);
-#endif // TAA_USE_CLIPPING
-
-#if TAA_USE_YCOCG
-	history.rgb = YCoCgTorgb(history.rgb);
-#endif // TAA_USE_YCOCG
-
+	history = rectifyHistory(history, new_samples);
 #endif // TAA_USE_HISTORY_RECTIFICATION
 
 	// Calculate beta for upsampling
 	float beta = 1.0;
 #if TAA_UPSAMPLE
-	//beta = calculateBeta(pixel_pos, jitter_offset);
 	beta = biggest_weight;
 #endif
 
-	// Calculate alpha
-	float alpha = lerp(0.05, 0.2, velocity_f);
-	if (refresh_history) alpha = 1.0;
+	float alpha = calculateAlpha(input.uv, prev_frame_uv, refresh_history);
 
-	//return float4(beta.xxx, 1.0);
-	//return float4((input.uv - prev_frame_uv) * 1000, 0.0, 1.0);
-	//return float4(velocity_f.xxx, 1.0);
-	return lerp(history, float4(new_sample, 1), alpha * beta);
+	return float4(lerp(history, new_sample, alpha * beta), 1.0);
 }

@@ -112,7 +112,7 @@ float computePixelWeight(float2 dp, float inv_scale_factor)
 	float x2 = u2 * dot(dp, dp);
 	float r = (0.905 * x2 - 1.9) * x2 + 1.0;
 	if (x2 > 1.0) r = 0.000000001;
-	return saturate(r * u2);
+	return r * u2;
 }
 
 // Returns 1 if jitter is in current pixel in upscaled resolution
@@ -327,8 +327,6 @@ float4 PS(PSInput input) : SV_TARGET
 	// Some position calculations
 	int2 pixel_pos = (int2)input.position.xy; // Position in pixels of current pixel in high res image
 	int2 new_sample_pos = pixel_pos / TAA_UPSAMPLE_FACTOR; // Position of pixel in low res image
-
-	float2 jitter_uv = current_jitter * rec_window_size * TAA_UPSAMPLE_FACTOR; // UV offset of jitter
 
 #if TAA_USE_RASTERIZER
 	float2 jitter_offset = current_jitter; // Pixel offset of jitter in low res image

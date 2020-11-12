@@ -18,6 +18,7 @@ private:
 private:
 	bool recompile_shaders;
 
+	ema::point2D window_size;
 	ema::vec2 reciprocal_window_size;
 	egx::RootSignature root_sig;
 	egx::PipelineState pso;

@@ -3,7 +3,8 @@
 #include "misc/string_helpers.h"
 
 FXAA::FXAA(egx::Device& dev, const ema::point2D& window_size)
-	: reciprocal_window_size(1.0f / (float)window_size.x, 1.0f / (float)window_size.y),
+	: window_size(window_size),
+	reciprocal_window_size(1.0f / (float)window_size.x, 1.0f / (float)window_size.y),
 	root_sig(), pso(),
 	debug_mode_index(6), tuning_edge_threshold_index(2), tuning_edge_threshold_min_index(1)
 {
@@ -115,8 +116,8 @@ void FXAA::Apply(egx::Device& dev, egx::CommandContext& context, egx::Texture2D&
 	context.SetRootConstant(0, 2, &reciprocal_window_size);
 	context.SetRootDescriptorTable(1, texture);
 
-	context.SetViewport();
-	context.SetScissor();
+	context.SetViewport(window_size);
+	context.SetScissor(window_size);
 	context.SetPrimitiveTopology(egx::Topology::TriangleStrip);
 
 	context.Draw(4);

@@ -13,7 +13,7 @@ namespace
 	static const int sample_count_presets[5]	= {    2,     4,     8,     16,     32 };
 }
 
-TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count, int upsample_factor)
+TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count, float upsample_factor)
 	: jitter(Jitter::Halton(2, 3, sample_count)),
 	sample_count(sample_count),
 	current_index(0),
@@ -28,6 +28,7 @@ TAA::TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count, in
 	temp_target.CreateRenderTargetView(dev);
 
 	macro_list.SetMacro("TAA_UPSAMPLE_FACTOR", emisc::ToString(upsample_factor));
+	macro_list.SetMacro("TAA_UPSAMPLE", upsample_factor == 1.0f ? "0" : "1");
 	initializeTAA(dev);
 	initializeFormatConverter(dev);
 

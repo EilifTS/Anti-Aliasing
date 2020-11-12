@@ -4,8 +4,8 @@
 #define TAA_UPSAMPLE_FACTOR 1
 #endif
 
-#if TAA_UPSAMPLE_FACTOR != 1
-#define TAA_UPSAMPLE 1
+#ifndef TAA_UPSAMPLE
+#define TAA_UPSAMPLE 0
 #endif
 
 
@@ -111,8 +111,8 @@ float computePixelWeight(float2 dp, float inv_scale_factor)
 
 	float x2 = u2 * dot(dp, dp);
 	float r = (0.905 * x2 - 1.9) * x2 + 1.0;
-	if (x2 > 1.0) r = 0.0001;
-	return r * u2;
+	if (x2 > 1.0) r = 0.000000001;
+	return saturate(r * u2);
 }
 
 // Returns 1 if jitter is in current pixel in upscaled resolution
@@ -358,6 +358,7 @@ float4 PS(PSInput input) : SV_TARGET
 	float pixel_weights[9];
 	float norm_weight_factor = 0.0;
 	float3 new_sample = float3(0.0, 0.0, 0.0);
+	float biggest_weight = 0.0;
 	[unroll]
 	for (i = 0; i < 9; i++)
 	{
@@ -366,10 +367,11 @@ float4 PS(PSInput input) : SV_TARGET
 		pixel_weights[i] = computePixelWeight(dp, 1.0);
 		norm_weight_factor += pixel_weights[i];
 		new_sample += new_samples[i] * pixel_weights[i];
+		biggest_weight = max(biggest_weight, pixel_weights[i]);
 	}
 
 	// Center weight is always larger than the others
-	float biggest_weight = pixel_weights[4];
+	//float biggest_weight = pixel_weights[4];
 
 	float inv_norm_weight_factor = 1.0 / norm_weight_factor;
 	new_sample *= inv_norm_weight_factor;

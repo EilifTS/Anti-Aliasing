@@ -7,7 +7,7 @@
 class TAA
 {
 public:
-	TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count, int upsample_factor);
+	TAA(egx::Device& dev, const ema::point2D& window_size, int sample_count, float upsample_factor);
 
 	egx::ConstantBuffer& GetJitterBuffer() { return jitter_buffer; };
 
@@ -37,7 +37,7 @@ private:
 	Jitter jitter;
 	int sample_count;
 	int current_index;
-	int upsample_factor;
+	float upsample_factor;
 
 	egx::RootSignature taa_rs;
 	egx::PipelineState taa_ps;

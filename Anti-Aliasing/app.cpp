@@ -16,18 +16,20 @@ namespace
 	const static float far_plane = 1000.0f;
 
 	// Upsampling
-	static const int upsample_factor = 1;
+	static const int upsample_numerator = 4;
+	static const int upsample_denominator = 3;
+	static const bool use_upsample = upsample_numerator != 1 || upsample_denominator != 1;
 }
 
 App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	:
-	camera(dev, context, ema::vec2(im.Window().WindowSize()) / upsample_factor, near_plane, far_plane, 3.141592f / 3.0f, 2.0f, 0.001f),
-	renderer_target(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize() / upsample_factor),
-	aa_target(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize() / upsample_factor),
+	camera(dev, context, ema::vec2(im.Window().WindowSize()) * upsample_denominator / upsample_numerator, near_plane, far_plane, 3.141592f / 3.0f, 2.0f, 0.001f),
+	renderer_target(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize() * upsample_denominator / upsample_numerator),
+	aa_target(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize() * upsample_denominator / upsample_numerator),
 	aa_target_upsampled(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
-	renderer(dev, context, im.Window().WindowSize() / upsample_factor, far_plane),
+	renderer(dev, context, im.Window().WindowSize() * upsample_denominator / upsample_numerator, far_plane),
 	fxaa(dev, im.Window().WindowSize()),
-	taa(dev, im.Window().WindowSize(), 16, upsample_factor),
+	taa(dev, im.Window().WindowSize(), 16*16, (float)upsample_numerator / (float)upsample_denominator),
 	ssaa(dev, im.Window().WindowSize(), 32),
 	aa_mode(AAMode::TAA),
 	render_mode(RenderMode::Rasterizer),
@@ -64,7 +66,7 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	camera.UpdateBuffer(dev, context);
 
 	// Use bigger render target if using temporal supersampling
-	auto& caa_target = (aa_mode == AAMode::TAA && upsample_factor != 1) ? aa_target_upsampled : aa_target;
+	auto& caa_target = (aa_mode == AAMode::TAA && use_upsample) ? aa_target_upsampled : aa_target;
 
 	// Only update target2 if in Realtime mode or if in demand mode and progress frame is true
 	if (scene_update_mode != SceneUpdateMode::OnDemand || progress_frame == true)
@@ -180,7 +182,7 @@ void App::initializeRayTracing(egx::Device& dev, egx::CommandContext& context, c
 	// Create acceleration structures
 	if (dev.SupportsRayTracing())
 	{
-		ray_tracer = std::make_shared<RayTracer>(dev, context, window_size / upsample_factor);
+		ray_tracer = std::make_shared<RayTracer>(dev, context, window_size * upsample_denominator / upsample_numerator);
 
 		for (auto pmesh : sponza_mesh)
 		{

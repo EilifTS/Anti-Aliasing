@@ -16,7 +16,7 @@ namespace
 	const static float far_plane = 1000.0f;
 
 	// Upsampling
-	static const int upsample_numerator = 2;
+	static const int upsample_numerator = 1;
 	static const int upsample_denominator = 1;
 	static const bool use_upsample = upsample_numerator != 1 || upsample_denominator != 1;
 }
@@ -114,7 +114,7 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	// Temp screen shotting
 	if (do_screen_shot)
 	{
-		eio::SaveTextureToFile(dev, context, caa_target, "screen_shot" + emisc::ToString(ss_nr++) + ".png");
+		eio::SaveTextureToFile(dev, context, back_buffer, "screen_shot" + emisc::ToString(ss_nr++) + ".png");
 		do_screen_shot = false;
 	}
 }
@@ -133,8 +133,11 @@ void App::initializeInternals(egx::Device& dev)
 		//camera.SetPosition({ -8.0f, 1.0f, 0.0f });
 		//camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.3f });
 		// Look at still knight pos
-		camera.SetPosition({ 5.0f, 1.0f, 0.0f });
-		camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.6f });
+		//camera.SetPosition({ 5.0f, 1.0f, 0.0f });
+		//camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.6f });
+		// FXAA pos
+		camera.SetPosition({ 2.2f, 1.0f, -1.0f });
+		camera.SetRotation({ 0.0f, 0.0f, 3.141592f * 0.2f });
 	}
 
 	renderer_target.CreateShaderResourceView(dev);
@@ -277,7 +280,10 @@ void App::updateScene(float t)
 {
 	auto jitter = taa.GetNextJitter();
 
-	camera.SetJitter(jitter);
+	if (aa_mode == AAMode::TAA || aa_mode == AAMode::SSAA)
+		camera.SetJitter(jitter);
+	else
+		camera.SetJitter(ema::vec2(0.5f));
 	camera.Update();
 	renderer.UpdateLight(camera);
 

@@ -129,7 +129,7 @@ void eio::SaveTextureToFile(egx::Device& dev, egx::CommandContext& context, egx:
 		GUID_ContainerFormatPng,
 		wfile_name.c_str(),
 		texture.state,
-		texture.state), "Failed to save texture to png");
+		texture.state, nullptr, nullptr, true), "Failed to save texture to png");
 }
 
 void eio::SaveTextureToFileDDS(egx::Device& dev, egx::CommandContext& context, egx::Texture2D& texture, const std::string& file_name)

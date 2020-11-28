@@ -100,6 +100,19 @@ egx::FPCamera::FPCamera(Device& dev, CommandContext& context, const ema::vec2& w
 	up = ema::vec3(0.0f, 1.0f, 0.0f);
 }
 
+// Not very efficient but needed it
+void egx::FPCamera::SetRotation(const ema::vec3& new_roll_pitch_yaw) 
+{ 
+	roll_pitch_yaw = new_roll_pitch_yaw; 
+	auto m_roll_pitch_yaw = ema::mat4::RollPitchYaw(roll_pitch_yaw);
+	auto forward4 = ema::vec4(0.0f, 0.0f, 1.0f, 1.0f) * m_roll_pitch_yaw;
+	auto right4 = ema::vec4(1.0f, 0.0f, 0.0f, 1.0f) * m_roll_pitch_yaw;
+	auto up4 = ema::vec4(0.0f, 1.0f, 0.0f, 1.0f) * m_roll_pitch_yaw;
+
+	look_at = position + ema::vec3(forward4.x, forward4.y, forward4.z);
+	right = ema::vec3(right4.x, right4.y, right4.z);
+	up = ema::vec3(up4.x, up4.y, up4.z);
+};
 
 void egx::FPCamera::HandleInput(const eio::InputManager& im)
 {

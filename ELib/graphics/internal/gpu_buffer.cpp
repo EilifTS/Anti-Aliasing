@@ -29,8 +29,10 @@ egx::GPUBuffer::GPUBuffer(
 	desc.Layout = layout;
 	desc.Flags = flags;
 
+	D3D12_HEAP_PROPERTIES h_props = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+
 	THROWIFFAILED(dev.device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		&h_props,
 		D3D12_HEAP_FLAG_NONE,
 		&desc,
 		state,

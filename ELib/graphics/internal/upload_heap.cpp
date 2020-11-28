@@ -19,8 +19,11 @@ egx::UploadHeap::UploadHeap(Device& dev, int buffer_size)
 	desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 	desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
+
+	D3D12_HEAP_PROPERTIES h_props = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+
 	THROWIFFAILED(dev.device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		&h_props,
 		D3D12_HEAP_FLAG_NONE,
 		&desc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,

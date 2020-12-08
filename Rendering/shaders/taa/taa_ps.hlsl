@@ -13,6 +13,10 @@
 #define TAA_USE_RASTERIZER 1
 #endif
 
+#ifndef TAA_DILATE_MV
+#define TAA_DILATE_MV 1
+#endif
+
 #ifndef TAA_USE_CATMUL_ROM
 #define TAA_USE_CATMUL_ROM 1
 #endif
@@ -132,6 +136,9 @@ float calculateBeta(int2 pixel_pos, float2 j)
 
 float2 calculatePreviousFrameUV(int2 new_sample_pos, float2 uv, float4 clip_position)
 {
+	int2 velocity_offset = int2(0, 0);
+
+#if TAA_DILATE_MV
 	// Dialate forground objects
 	const int dialation_offset = 1;
 	int2 offset_nw = int2(-dialation_offset, -dialation_offset);
@@ -143,7 +150,7 @@ float2 calculatePreviousFrameUV(int2 new_sample_pos, float2 uv, float4 clip_posi
 	float depth_sw = depth_buffer.Sample(linear_clamp, uv, offset_sw);
 	float depth_se = depth_buffer.Sample(linear_clamp, uv, offset_se);
 
-	int2 velocity_offset = offset_nw;
+	velocity_offset = offset_nw;
 	float frontmost_depth = depth_nw;
 	if (frontmost_depth > depth_ne)
 	{
@@ -168,6 +175,7 @@ float2 calculatePreviousFrameUV(int2 new_sample_pos, float2 uv, float4 clip_posi
 	{
 		clip_position.z = frontmost_depth;
 	}
+#endif
 
 	// Calculate uv in history buffer
 	float2 prev_frame_uv = float2(0.0, 0.0);

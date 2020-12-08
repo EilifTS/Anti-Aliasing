@@ -13,7 +13,7 @@
 //#define SUBPIXEL_QUALITY 0.75
 
 // Debug flags
-#define DEBUG_SHOW_EDGES
+//#define DEBUG_SHOW_EDGES
 //#define DEBUG_SHOW_EDGE_DIRECTION
 //#define DEBUG_SHOW_EDGE_SIDE
 //#define DEBUG_SHOW_CLOSEST_END

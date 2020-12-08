@@ -30,10 +30,10 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	renderer(dev, context, im.Window().WindowSize() * upsample_denominator / upsample_numerator, far_plane),
 	fxaa(dev, im.Window().WindowSize() * upsample_denominator / upsample_numerator),
 	taa(dev, im.Window().WindowSize(), 16, (float)upsample_numerator / (float)upsample_denominator),
-	ssaa(dev, im.Window().WindowSize(), 32),
+	ssaa(dev, im.Window().WindowSize(), 64),
 	aa_mode(AAMode::TAA),
 	render_mode(RenderMode::Rasterizer),
-	scene_update_mode(SceneUpdateMode::OnDemand)
+	scene_update_mode(SceneUpdateMode::Realtime)
 {
 	initializeInternals(dev);
 	initializeAssets(dev, context);
@@ -121,13 +121,13 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 
 void App::initializeInternals(egx::Device& dev)
 {
-	if (scene_update_mode == SceneUpdateMode::Realtime)
-	{
+	//if (scene_update_mode == SceneUpdateMode::Realtime)
+	//{
 		// Default pos
-		camera.SetPosition({ 10.0f, 1.0f, 0.0f });
-		camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.5f });
-	}
-	else
+		//camera.SetPosition({ 10.0f, 1.0f, 0.0f });
+		//camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.5f });
+	//}
+	//else
 	{
 		// Look at moving knight pos
 		//camera.SetPosition({ -8.0f, 1.0f, 0.0f });
@@ -136,8 +136,23 @@ void App::initializeInternals(egx::Device& dev)
 		//camera.SetPosition({ 5.0f, 1.0f, 0.0f });
 		//camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.6f });
 		// FXAA pos
-		camera.SetPosition({ 2.2f, 1.0f, -1.0f });
-		camera.SetRotation({ 0.0f, 0.0f, 3.141592f * 0.2f });
+		//camera.SetPosition({ 2.2f, 1.0f, -1.0f });
+		//camera.SetRotation({ 0.0f, 0.0f, 3.141592f * 0.2f });
+		// FXAA pos1
+		//camera.SetPosition({ 2.2f, 20.0f, -1.0f });
+		//camera.SetRotation({ 0.0f, -3.141592f * 0.5f, 0.0f });
+		// FXAA pos2
+		//camera.SetPosition({ 0.0f, 2.0f, 1.0f });
+		//camera.SetRotation({ 0.0f, 3.141592f * 0.5f, 0.0f });
+		// FXAA pos3
+		//camera.SetPosition({ 9.0f, 1.5f, -0.4f });
+		//camera.SetRotation({ 0.0f, 0.0f, 3.141592f * 0.5f });
+		// TAA pos1
+		camera.SetPosition({ 0.5f, 1.2f, -0.5f });
+		camera.SetRotation({ 0.0f, 0.0f, -3.141592f * 0.4f });
+		// TAA pos2
+		//camera.SetPosition({ 7.0f, 1.5f, -1.5f });
+		//camera.SetRotation({ 0.0f, 0.0f, 0.0f });
 	}
 
 	renderer_target.CreateShaderResourceView(dev);
@@ -236,7 +251,7 @@ void App::handleInput(eio::InputManager& im)
 	{
 		aa_mode = AAMode::SSAA;
 
-		renderer.SetSampler(DeferrdRenderer::TextureSampler::SSAABias);
+		renderer.SetSampler(DeferrdRenderer::TextureSampler::TAABias);
 	}
 	if (im.Keyboard().IsKeyReleased('5'))
 	{

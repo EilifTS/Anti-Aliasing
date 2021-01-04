@@ -27,7 +27,8 @@ egx::CommandContext::CommandContext(Device& dev, const ema::point2D& window_size
 			IID_PPV_ARGS(&command_list)),
 		"Failed to create command list");
 
-	current_bb = &dev.back_buffers[dev.current_frame];
+	if(dev.back_buffers.size() > 0)
+		current_bb = &dev.back_buffers[dev.current_frame];
 
 	eio::Console::Log("Created: Command context");
 	//THROWIFFAILED(command_list->Close(), "Failed to close command list");

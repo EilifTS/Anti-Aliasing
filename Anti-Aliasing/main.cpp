@@ -37,7 +37,7 @@ int WINAPI wWinMain(
 		eio::Console::InitConsole(&input_manager.Clock());
 		eio::Console::Log("Console open!");
 
-		egx::Device device(window, input_manager, false);
+		egx::Device device(window, input_manager, false, 3);
 		egx::CommandContext context(device, input_manager.Window().WindowSize());
 
 		App app(device, context, input_manager);

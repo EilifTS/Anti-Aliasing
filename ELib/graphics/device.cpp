@@ -128,6 +128,27 @@ namespace
 
 		return { (int)refreshrate_numerator, (int)refreshrate_denominator };
 	}
+	ComPtr<ID3D12Device5> createDevice()
+	{
+		ComPtr<ID3D12Device> d3d12Device;
+		ComPtr<ID3D12Device5> d3d12Device5;
+		THROWIFFAILED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device)), "Could not create dx12 device");
+		d3d12Device.As(&d3d12Device5);
+
+
+		// Enable debug messages in debug mode.
+#if defined(_DEBUG)
+		ComPtr<ID3D12InfoQueue> pInfoQueue;
+		if (SUCCEEDED(d3d12Device5.As(&pInfoQueue)))
+		{
+			pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+			pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+			pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+		}
+#endif
+		eio::Console::Log("Created: Device");
+		return d3d12Device5;
+	}
 	ComPtr<ID3D12Device5> createDevice(ComPtr<IDXGIAdapter4> adapter)
 	{
 		ComPtr<ID3D12Device> d3d12Device;
@@ -255,6 +276,23 @@ namespace
 	}
 }
 
+
+egx::Device::Device() 
+	: v_sync(false), current_frame(0), fence_values(), fence_event()
+{
+	eio::Console::SetColor(3);
+	enableDebugLayer();
+
+	device = createDevice();
+	supports_rt = checkForRayTracingSupport(device);
+	command_queue = createCommandQueue(device);
+	command_allocators = createCommandAllocators(device, 1);
+
+	initializeFence();
+
+	eio::Console::SetColor(15);
+}
+
 egx::Device::Device(const Window& window, const eio::InputManager& im, bool v_sync)
 	: v_sync(v_sync), current_frame(0), fence_values(), fence_event()
 {
@@ -291,7 +329,8 @@ egx::Device::Device(const Window& window, const eio::InputManager& im, bool v_sy
 
 egx::Device::~Device()
 {
-	swap_chain->SetFullscreenState(false, nullptr);
+	if(swap_chain)
+		swap_chain->SetFullscreenState(false, nullptr);
 }
 
 void egx::Device::WaitForGPU()
@@ -406,7 +445,10 @@ void egx::Device::Present(CommandContext& context)
 
 void egx::Device::initializeFence()
 {
-	current_frame = swap_chain->GetCurrentBackBufferIndex();
+	if (swap_chain)
+		current_frame = swap_chain->GetCurrentBackBufferIndex();
+	else
+		current_frame = 0;
 	fence_values[current_frame] = 0;
 	THROWIFFAILED(device->CreateFence(fence_values[current_frame], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)),
 		"Failed to create fence");

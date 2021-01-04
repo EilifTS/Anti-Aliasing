@@ -20,6 +20,7 @@ namespace egx
 	class Device
 	{
 	public:
+		Device();
 		Device(const Window& window, const eio::InputManager& im, bool v_sync);
 		~Device();
 

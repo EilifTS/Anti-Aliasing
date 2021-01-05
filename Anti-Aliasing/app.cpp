@@ -3,7 +3,6 @@
 #include "graphics/shader.h"
 #include "graphics/input_layout.h"
 #include "graphics/cpu_buffer.h"
-#include "io/mesh_io.h"
 #include "graphics/mesh.h"
 
 // Temp
@@ -33,7 +32,8 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	ssaa(dev, im.Window().WindowSize(), 64),
 	aa_mode(AAMode::TAA),
 	render_mode(RenderMode::Rasterizer),
-	scene_update_mode(SceneUpdateMode::Realtime)
+	scene_update_mode(SceneUpdateMode::Realtime),
+	scene(dev, context, mat_manager)
 {
 	initializeInternals(dev);
 	initializeAssets(dev, context);
@@ -165,33 +165,12 @@ void App::initializeInternals(egx::Device& dev)
 
 void App::initializeAssets(egx::Device& dev, egx::CommandContext& context)
 {
-	// Load assets
-	sponza_mesh = eio::LoadMeshFromOBJB(dev, context, "../Rendering/models/sponza", mat_manager);
-	sponza_model = std::make_shared<egx::Model>(dev, sponza_mesh);
-	sponza_model->SetScale(0.01f);
-	sponza_model->SetStatic(true);
-
-	knight_mesh = eio::LoadMeshFromOBJB(dev, context, "../Rendering/models/knight", mat_manager);
-	knight_model1 = std::make_shared<egx::Model>(dev, knight_mesh);
-	knight_model2 = std::make_shared<egx::Model>(dev, knight_mesh);
-	knight_model3 = std::make_shared<egx::Model>(dev, knight_mesh);
-	knight_model1->SetScale(1.2f);
-	knight_model2->SetScale(1.2f);
-	knight_model3->SetScale(1.2f);
-	knight_model1->SetPosition(ema::vec3(-0.8f, 0.0f, 0.5f));
-	knight_model2->SetPosition(ema::vec3(-4.4f, 0.0f, 0.5f));
-	knight_model3->SetPosition(ema::vec3(3.0f, 0.0f, 0.5f));
-	knight_model1->SetRotation(ema::vec3(0.0f, 0.0f, 0.0f));
-	knight_model2->SetRotation(ema::vec3(0.0f, 0.0f, 3.141692f));
-	knight_model3->SetRotation(ema::vec3(0.0f, 0.0f, 3.141692f));
-	//knight_model3->SetStatic(true);
 
 	//mat_manager.DisableDiffuseTextures();
 	//mat_manager.DisableNormalMaps();
 	//mat_manager.DisableSpecularMaps();
 	//mat_manager.DisableMaskTextures();
 	mat_manager.LoadMaterialAssets(dev, context, texture_loader);
-
 	
 }
 
@@ -201,21 +180,16 @@ void App::initializeRayTracing(egx::Device& dev, egx::CommandContext& context, c
 	if (dev.SupportsRayTracing())
 	{
 		ray_tracer = std::make_shared<RayTracer>(dev, context, window_size * upsample_denominator / upsample_numerator);
+		auto models = scene.GetModels();
+		auto meshes = scene.GetMeshes();
 
-		for (auto pmesh : sponza_mesh)
+		for (auto pmesh : scene.GetMeshes())
 		{
 			pmesh->BuildAccelerationStructure(dev, context);
 		}
-		for (auto pmesh : knight_mesh)
-		{
-			pmesh->BuildAccelerationStructure(dev, context);
-		}
-		std::vector<std::shared_ptr<egx::Model>> models_vector = { sponza_model, knight_model1, knight_model2, knight_model3 };
-		ray_tracer->BuildTLAS(dev, context, models_vector);
+		ray_tracer->BuildTLAS(dev, context, models);
 
-		std::vector<std::shared_ptr<egx::Mesh>> mesh_vector(sponza_mesh);
-		mesh_vector.insert(std::end(mesh_vector), std::begin(knight_mesh), std::end(knight_mesh));
-		ray_tracer->UpdateShaderTable(dev, camera.GetBuffer(), taa.GetJitterBuffer(), mesh_vector);
+		ray_tracer->UpdateShaderTable(dev, camera.GetBuffer(), taa.GetJitterBuffer(), meshes);
 	}
 }
 
@@ -310,17 +284,14 @@ void App::updateScene(float t)
 			camera.LastViewMatrix(),
 			camera.LastProjectionMatrixNoJitter());
 	}
-
-	float rot = t;
-	knight_model1->SetRotation(ema::vec3(0.0f, 0.0f, rot));
-	knight_model2->SetPosition(ema::vec3(-4.4f, 0.0f, 0.5f + 0.5f * sinf(10.0f * t)));
+	scene.Update(t);
 }
 
 void App::renderRasterizer(egx::Device& dev, egx::CommandContext& context)
 {
-	std::vector<std::shared_ptr<egx::Model>> models = { sponza_model, knight_model1, knight_model2, knight_model3 };
-	std::vector<std::shared_ptr<egx::Model>> static_models = { sponza_model };
-	std::vector<std::shared_ptr<egx::Model>> dynamic_models = { knight_model1, knight_model2, knight_model3 };
+	auto models = scene.GetModels();
+	auto static_models = scene.GetStaticModels();
+	auto dynamic_models = scene.GetDynamicModels();
 
 	for (auto pmodel : models) pmodel->UpdateBuffer(dev, context);
 	renderer.PrepareFrame(dev, context);
@@ -332,8 +303,8 @@ void App::renderRasterizer(egx::Device& dev, egx::CommandContext& context)
 }
 void App::renderRayTracer(egx::Device& dev, egx::CommandContext& context)
 {
-	std::vector<std::shared_ptr<egx::Model>> models = { sponza_model, knight_model1, knight_model2, knight_model3 };
-	std::vector<std::shared_ptr<egx::Model>> dynamic_models = { knight_model1, knight_model2, knight_model3 };
+	auto models = scene.GetModels();
+	auto dynamic_models = scene.GetDynamicModels();
 
 	for (auto pmodel : models) pmodel->UpdateBuffer(dev, context);
 	ray_tracer->ReBuildTLAS(context, models);

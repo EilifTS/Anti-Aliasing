@@ -27,6 +27,7 @@
     <ClCompile Include="deferred_rendering\light_manager.cpp" />
     <ClCompile Include="deferred_rendering\tone_mapper.cpp" />
     <ClCompile Include="ray_tracer\ray_tracer.cpp" />
+    <ClCompile Include="scenes\scene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="aa\fxaa\fxaa.h" />
@@ -38,6 +39,7 @@
     <ClInclude Include="deferred_rendering\light_manager.h" />
     <ClInclude Include="deferred_rendering\tone_mapper.h" />
     <ClInclude Include="ray_tracer\ray_tracer.h" />
+    <ClInclude Include="scenes\scene.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\deferred\deferred_light_ps.hlsl">

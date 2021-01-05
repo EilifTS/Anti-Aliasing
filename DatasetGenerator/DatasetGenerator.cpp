@@ -16,7 +16,11 @@ int main()
 	// Create device and context
 	egx::Device device;
 	egx::CommandContext context(device, output_size);
+
 	// Create scene
+	// Create camera
+	// Create different AA-modes
+
 	// Load camera positions
 	// Setup the different render options
 	// Loop over camera positions and save images

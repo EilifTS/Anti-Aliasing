@@ -288,6 +288,15 @@ egx::Device::Device()
 	command_queue = createCommandQueue(device);
 	command_allocators = createCommandAllocators(device, 1);
 
+	// Init upload heaps
+	upload_heaps.reserve(1);
+	upload_heaps.emplace_back(*this, first_frame_heap_chunk_size);
+
+	buffer_heap = std::make_unique<DescriptorHeap>(device, DescriptorType::Buffer, max_descriptors_in_heap);
+	sampler_heap = std::make_unique<DescriptorHeap>(device, DescriptorType::Sampler, max_descriptors_in_heap);
+	rtv_heap = std::make_unique<DescriptorHeap>(device, DescriptorType::RenderTarget, max_descriptors_in_heap);
+	dsv_heap = std::make_unique<DescriptorHeap>(device, DescriptorType::DepthStencil, max_descriptors_in_heap);
+
 	initializeFence();
 
 	eio::Console::SetColor(15);

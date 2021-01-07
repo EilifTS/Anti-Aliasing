@@ -65,7 +65,7 @@ private:
 	SSAA ssaa;
 
 	// Renderers
-	DeferrdRenderer renderer;
+	DeferredRenderer renderer;
 	std::shared_ptr<RayTracer> ray_tracer;
 
 	// Network

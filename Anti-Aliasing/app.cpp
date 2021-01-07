@@ -183,7 +183,7 @@ void App::initializeRayTracing(egx::Device& dev, egx::CommandContext& context, c
 		auto models = scene.GetModels();
 		auto meshes = scene.GetMeshes();
 
-		for (auto pmesh : scene.GetMeshes())
+		for (auto& pmesh : scene.GetMeshes())
 		{
 			pmesh->BuildAccelerationStructure(dev, context);
 		}
@@ -208,24 +208,24 @@ void App::handleInput(eio::InputManager& im)
 	if (im.Keyboard().IsKeyReleased('1'))
 	{
 		aa_mode = AAMode::None;
-		renderer.SetSampler(DeferrdRenderer::TextureSampler::NoBias);
+		renderer.SetSampler(DeferredRenderer::TextureSampler::NoBias);
 	}
 	
 	if (im.Keyboard().IsKeyReleased('2'))
 	{
 		aa_mode = AAMode::FXAA;
-		renderer.SetSampler(DeferrdRenderer::TextureSampler::NoBias);
+		renderer.SetSampler(DeferredRenderer::TextureSampler::NoBias);
 	}
 	if (im.Keyboard().IsKeyReleased('3'))
 	{
 		aa_mode = AAMode::TAA;
-		renderer.SetSampler(DeferrdRenderer::TextureSampler::TAABias);
+		renderer.SetSampler(DeferredRenderer::TextureSampler::TAABias);
 	}
 	if (im.Keyboard().IsKeyReleased('4'))
 	{
 		aa_mode = AAMode::SSAA;
 
-		renderer.SetSampler(DeferrdRenderer::TextureSampler::TAABias);
+		renderer.SetSampler(DeferredRenderer::TextureSampler::TAABias);
 	}
 	if (im.Keyboard().IsKeyReleased('5'))
 	{

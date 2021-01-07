@@ -6,9 +6,9 @@
 
 namespace
 {
-	static const std::string dataset_folder_name = "dataset/";
-	static const std::string dataset_video_filename = "dataset_video";
-	static const std::string dataset_count_filename = "dataset_video_count.txt";
+	static const std::string dataset_folder_name = "../DatasetGenerator/camera_positions/";
+	static const std::string dataset_video_filename = "cam_pos_video";
+	static const std::string dataset_count_filename = "cam_pos_video_count.txt";
 }
 
 /*

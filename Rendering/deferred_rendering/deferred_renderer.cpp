@@ -1,7 +1,7 @@
 #include "deferred_renderer.h"
 #include "graphics/cpu_buffer.h"
 
-DeferrdRenderer::DeferrdRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size, float far_plane)
+DeferredRenderer::DeferredRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size, float far_plane)
 	: g_buffer(dev, size, far_plane),
 	size(size),
 	light_manager(dev, context),
@@ -19,13 +19,13 @@ DeferrdRenderer::DeferrdRenderer(egx::Device& dev, egx::CommandContext& context,
 	initializeMotionVectorRenderer(dev);
 }
 
-void DeferrdRenderer::UpdateLight(egx::Camera& camera)
+void DeferredRenderer::UpdateLight(egx::Camera& camera)
 {
 	light_manager.Update(camera);
 }
 
 
-void DeferrdRenderer::PrepareFrame(egx::Device& dev, egx::CommandContext& context)
+void DeferredRenderer::PrepareFrame(egx::Device& dev, egx::CommandContext& context)
 {
 	if (recompile_shaders) recompileShaders(dev);
 
@@ -42,7 +42,7 @@ void DeferrdRenderer::PrepareFrame(egx::Device& dev, egx::CommandContext& contex
 	context.ClearDepthStencil(g_buffer.DepthBuffer());
 }
 
-void DeferrdRenderer::RenderDepthOnly(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model)
+void DeferredRenderer::RenderDepthOnly(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model)
 {
 	context.SetDepthStencilBuffer(g_buffer.DepthBuffer());
 
@@ -80,7 +80,7 @@ void DeferrdRenderer::RenderDepthOnly(egx::Device& dev, egx::CommandContext& con
 	}
 }
 
-void DeferrdRenderer::RenderModel(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model)
+void DeferredRenderer::RenderModel(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model)
 {
 	light_manager.RenderToShadowMap(dev, context, model);
 
@@ -127,7 +127,7 @@ void DeferrdRenderer::RenderModel(egx::Device& dev, egx::CommandContext& context
 
 }
 
-void DeferrdRenderer::RenderLight(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::RenderTarget& target)
+void DeferredRenderer::RenderLight(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::RenderTarget& target)
 {
 	context.SetTransitionBuffer(target, egx::GPUBufferState::RenderTarget);
 	context.SetTransitionBuffer(g_buffer.DiffuseBuffer(), egx::GPUBufferState::PixelResource);
@@ -157,7 +157,7 @@ void DeferrdRenderer::RenderLight(egx::Device& dev, egx::CommandContext& context
 	context.Draw(4);
 }
 
-void DeferrdRenderer::RenderMotionVectors(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model)
+void DeferredRenderer::RenderMotionVectors(egx::Device& dev, egx::CommandContext& context, egx::Camera& camera, egx::Model& model)
 {
 	context.SetRenderTarget(motion_vectors, g_buffer.DepthBuffer());
 
@@ -189,17 +189,17 @@ void DeferrdRenderer::RenderMotionVectors(egx::Device& dev, egx::CommandContext&
 	}
 }
 
-void DeferrdRenderer::SetSampler(TextureSampler sampler)
+void DeferredRenderer::SetSampler(TextureSampler sampler)
 {
 	switch (sampler)
 	{
-	case DeferrdRenderer::TextureSampler::SSAABias:
+	case DeferredRenderer::TextureSampler::SSAABias:
 		macro_list.SetMacro("SAMPLER", "linear_wrap_ssaa_bias");
 		break;
-	case DeferrdRenderer::TextureSampler::TAABias:
+	case DeferredRenderer::TextureSampler::TAABias:
 		macro_list.SetMacro("SAMPLER", "linear_wrap_taa_bias");
 		break;
-	case DeferrdRenderer::TextureSampler::NoBias:
+	case DeferredRenderer::TextureSampler::NoBias:
 		macro_list.SetMacro("SAMPLER", "linear_wrap_no_bias");
 		break;
 	default:
@@ -208,7 +208,7 @@ void DeferrdRenderer::SetSampler(TextureSampler sampler)
 	recompile_shaders = true;
 }
 
-void DeferrdRenderer::initializeDepthOnlyRenderer(egx::Device& dev)
+void DeferredRenderer::initializeDepthOnlyRenderer(egx::Device& dev)
 {
 	// Create root signature
 	depth_only_rs.InitConstantBuffer(0); // Camera
@@ -242,7 +242,7 @@ void DeferrdRenderer::initializeDepthOnlyRenderer(egx::Device& dev)
 	depth_only_ps.Finalize(dev);
 }
 
-void DeferrdRenderer::initializeModelRenderer(egx::Device& dev)
+void DeferredRenderer::initializeModelRenderer(egx::Device& dev)
 {
 	// Create root signature
 	auto taa_sampler = egx::Sampler::LinearWrap();
@@ -287,7 +287,7 @@ void DeferrdRenderer::initializeModelRenderer(egx::Device& dev)
 	model_ps.Finalize(dev);
 }
 
-void DeferrdRenderer::initializeLightRenderer(egx::Device& dev)
+void DeferredRenderer::initializeLightRenderer(egx::Device& dev)
 {
 	// Create root signature
 	light_rs.InitConstantBuffer(0);
@@ -320,7 +320,7 @@ void DeferrdRenderer::initializeLightRenderer(egx::Device& dev)
 	light_ps.Finalize(dev);
 }
 
-void DeferrdRenderer::initializeMotionVectorRenderer(egx::Device& dev)
+void DeferredRenderer::initializeMotionVectorRenderer(egx::Device& dev)
 {
 	// Create root signature
 	motion_vector_rs.InitConstantBuffer(0); // Camera buffer
@@ -353,7 +353,7 @@ void DeferrdRenderer::initializeMotionVectorRenderer(egx::Device& dev)
 	motion_vector_ps.Finalize(dev);
 }
 
-void DeferrdRenderer::recompileShaders(egx::Device& dev)
+void DeferredRenderer::recompileShaders(egx::Device& dev)
 {
 	dev.WaitForGPU();
 	auto input_layout = egx::MeshVertex::GetInputLayout();

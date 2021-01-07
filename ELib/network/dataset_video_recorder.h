@@ -44,6 +44,6 @@ namespace enn
 		void saveDatasetCount();
 	};
 
-	static int LoadDatasetCount();
+	int LoadDatasetCount();
 
 }

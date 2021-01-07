@@ -6,10 +6,10 @@
 #include "graphics/model.h"
 #include "tone_mapper.h"
 
-class DeferrdRenderer
+class DeferredRenderer
 {
 public:
-	DeferrdRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size, float far_plane);
+	DeferredRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size, float far_plane);
 
 	void UpdateLight(egx::Camera& camera);
 

@@ -25,7 +25,7 @@ namespace
 	static const float near_plane = 0.1f;
 	static const float far_plane = 1000.0f;
 
-	static const int super_sample_options[] = { 2 };
+	static const int super_sample_options[] = { 32 };
 	static const int upsample_factor_options[] = { 2, 3, 4 };
 
 }
@@ -77,7 +77,7 @@ int main()
 	CreateDirectoryA(common_dir.c_str(), NULL);
 	
 
-	/*{ // SSAA images
+	{ // SSAA images
 
 		// Create resolution dependent resources
 		DeferredRenderer renderer(device, context, output_size, far_plane);
@@ -150,7 +150,7 @@ int main()
 			}
 		}
 
-	}*/
+	}
 
 	// Downsampled images
 	for (int upsampling_factor : upsample_factor_options)
@@ -168,17 +168,27 @@ int main()
 
 		eio::Console::Log("Processing images with a resolution of " + emisc::ToString(input_resolution.x) + "x" + emisc::ToString(input_resolution.y));
 
-		// Make folder for all images with current spp
+		// Make folders for all images with current spp
 		std::string directory_name = common_dir + "/us" + emisc::ToString(upsampling_factor);
+		std::string image_directory_name = directory_name + "/images";
+		std::string depth_directory_name = directory_name + "/depth";
+		std::string mv_directory_name = directory_name + "/motion_vectors";
 		CreateDirectoryA(directory_name.c_str(), NULL);
+		CreateDirectoryA(image_directory_name.c_str(), NULL);
+		CreateDirectoryA(depth_directory_name.c_str(), NULL);
+		CreateDirectoryA(mv_directory_name.c_str(), NULL);
 
 		for (int video_index = 0; video_index < video_count; video_index++)
 		{
 			video.LoadFromFile(video_index);
 
 			// Make folder for all images in this video
-			std::string video_directory_name = directory_name + "/video" + emisc::ToString(video_index);
-			CreateDirectoryA(video_directory_name.c_str(), NULL);
+			std::string image_video_directory_name = image_directory_name + "/video" + emisc::ToString(video_index);
+			std::string depth_video_directory_name = depth_directory_name + "/video" + emisc::ToString(video_index);
+			std::string mv_video_directory_name = mv_directory_name + "/video" + emisc::ToString(video_index);
+			CreateDirectoryA(image_video_directory_name.c_str(), NULL);
+			CreateDirectoryA(depth_video_directory_name.c_str(), NULL);
+			CreateDirectoryA(mv_video_directory_name.c_str(), NULL);
 
 			int frame_count = (int)video.frames.size();
 			for (int frame_index = 0; frame_index < frame_count; frame_index++)
@@ -205,10 +215,22 @@ int main()
 				device.WaitForGPU();
 
 				eio::SaveTextureToFile(device, context, target2,
-					video_directory_name +
-					"/us" + emisc::ToString(upsampling_factor) +
+					image_video_directory_name +
+					"/image_us" + emisc::ToString(upsampling_factor) +
 					"_v" + emisc::ToString(video_index) +
 					"_f" + emisc::ToString(frame_index) + ".png");
+
+				eio::SaveTextureToFileDDS(device, context, renderer.GetGBuffer().DepthBuffer(),
+					depth_video_directory_name +
+					"/depth_us" + emisc::ToString(upsampling_factor) +
+					"_v" + emisc::ToString(video_index) +
+					"_f" + emisc::ToString(frame_index) + ".dds");
+
+				eio::SaveTextureToFileDDS(device, context, renderer.GetMotionVectors(),
+					mv_video_directory_name +
+					"/motion_vectors_us" + emisc::ToString(upsampling_factor) +
+					"_v" + emisc::ToString(video_index) +
+					"_f" + emisc::ToString(frame_index) + ".dds");
 			}
 		}
 	}

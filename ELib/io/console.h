@@ -21,6 +21,7 @@ namespace eio
 		static void InitConsole2(const GameClock* game_clock); // Used for pure console apps
 		static void SetColor(int c);
 		static void Log(const std::string& s);
+		static void LogProgress(const std::string& s);
 
 #endif
 

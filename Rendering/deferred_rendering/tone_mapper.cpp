@@ -43,8 +43,8 @@ void ToneMapper::Apply(egx::Device& dev, egx::CommandContext& context, egx::Text
 
 	context.SetRenderTarget(target);
 
-	context.SetViewport();
-	context.SetScissor();
+	context.SetViewport(target.Size());
+	context.SetScissor(target.Size());
 	context.SetPrimitiveTopology(egx::Topology::TriangleStrip);
 
 	context.Draw(4);

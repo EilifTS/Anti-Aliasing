@@ -50,4 +50,9 @@ void eio::Console::Log(const std::string& s)
 	std::cout << emisc::TimeToString(pgame_clock->GetTime()) << ": " << s << std::endl;
 }
 
+void eio::Console::LogProgress(const std::string& s)
+{
+	std::cout << emisc::TimeToString(pgame_clock->GetTime()) << ": " << s << "\r";
+}
+
 #endif

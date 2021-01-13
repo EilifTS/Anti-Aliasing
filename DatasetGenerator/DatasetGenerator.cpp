@@ -17,6 +17,7 @@
 #include <wrl/wrappers/corewrappers.h>
 #include <stdio.h>
 #include <io.h>
+#include <fstream>
 
 namespace
 {
@@ -27,6 +28,7 @@ namespace
 
 	static const int super_sample_options[] = { 32 };
 	static const int upsample_factor_options[] = { 2, 3, 4 };
+	static const int jitter_count = 16;
 
 }
 
@@ -43,6 +45,12 @@ void renderRasterizer(egx::Device& dev, egx::CommandContext& context, Scene& sce
 	for (auto pmodel : dynamic_models) renderer.RenderMotionVectors(dev, context, camera, *pmodel);
 	renderer.RenderLight(dev, context, camera, target);
 	renderer.PrepareFrameEnd();
+}
+
+void saveJitter(const std::string& file_name, const ema::vec2& jitter)
+{
+	std::ofstream file(file_name + ".txt");
+	file << jitter.x << " " << jitter.y;
 }
 
 int main()
@@ -170,10 +178,12 @@ int main()
 
 		// Make folders for all images with current spp
 		std::string directory_name = common_dir + "/us" + emisc::ToString(upsampling_factor);
+		std::string jitter_directory_name = directory_name + "/jitter";
 		std::string image_directory_name = directory_name + "/images";
 		std::string depth_directory_name = directory_name + "/depth";
 		std::string mv_directory_name = directory_name + "/motion_vectors";
 		CreateDirectoryA(directory_name.c_str(), NULL);
+		CreateDirectoryA(jitter_directory_name.c_str(), NULL);
 		CreateDirectoryA(image_directory_name.c_str(), NULL);
 		CreateDirectoryA(depth_directory_name.c_str(), NULL);
 		CreateDirectoryA(mv_directory_name.c_str(), NULL);
@@ -181,11 +191,14 @@ int main()
 		for (int video_index = 0; video_index < video_count; video_index++)
 		{
 			video.LoadFromFile(video_index);
+			Jitter jitter = Jitter::Halton(2, 3, jitter_count);
 
 			// Make folder for all images in this video
+			std::string jitter_video_directory_name = jitter_directory_name + "/video" + emisc::ToString(video_index);
 			std::string image_video_directory_name = image_directory_name + "/video" + emisc::ToString(video_index);
 			std::string depth_video_directory_name = depth_directory_name + "/video" + emisc::ToString(video_index);
 			std::string mv_video_directory_name = mv_directory_name + "/video" + emisc::ToString(video_index);
+			CreateDirectoryA(jitter_video_directory_name.c_str(), NULL);
 			CreateDirectoryA(image_video_directory_name.c_str(), NULL);
 			CreateDirectoryA(depth_video_directory_name.c_str(), NULL);
 			CreateDirectoryA(mv_video_directory_name.c_str(), NULL);
@@ -199,8 +212,9 @@ int main()
 
 				camera.SetPosition(frame.camera_position);
 				camera.SetRotation(frame.camera_rotation);
-				//camera.SetJitter(ssaa.GetJitter());
+				camera.SetJitter(jitter.Get(frame_index % jitter.SampleCount()));
 				camera.Update();
+
 				scene.Update((float)frame.time);
 				renderer.UpdateLight(camera);
 
@@ -213,6 +227,11 @@ int main()
 
 				device.QueueList(context);
 				device.WaitForGPU();
+
+				saveJitter(jitter_video_directory_name +
+					"/jitter_us" + emisc::ToString(upsampling_factor) +
+					"_v" + emisc::ToString(video_index) +
+					"_f" + emisc::ToString(frame_index) + ".png", jitter.Get(frame_index% jitter.SampleCount()));
 
 				eio::SaveTextureToFile(device, context, target2,
 					image_video_directory_name +

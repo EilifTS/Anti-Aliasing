@@ -9,7 +9,6 @@
 #include <iostream>
 #include <fstream>
 
-#ifdef USE_CONSOLE
 static const WORD MAX_CONSOLE_LINES = 500;
 
 namespace
@@ -17,7 +16,7 @@ namespace
 	static const eio::GameClock* pgame_clock;
 }
 
-void eio::Console::InitConsole(const GameClock* game_clock)
+void eio::Console::initConsole(const GameClock* game_clock)
 {
 	pgame_clock = game_clock;
 	// allocate a console for this app
@@ -34,25 +33,23 @@ void eio::Console::InitConsole(const GameClock* game_clock)
 	SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), coninfo.dwSize);
 }
 
-void eio::Console::InitConsole2(const GameClock* game_clock)
+void eio::Console::initConsole2(const GameClock* game_clock)
 {
 	pgame_clock = game_clock;
 }
 
-void eio::Console::SetColor(int c	)
+void eio::Console::setColor(int c	)
 {
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), c);
 }
 
 
-void eio::Console::Log(const std::string& s)
+void eio::Console::log(const std::string& s)
 {
 	std::cout << emisc::TimeToString(pgame_clock->GetTime()) << ": " << s << std::endl;
 }
 
-void eio::Console::LogProgress(const std::string& s)
+void eio::Console::logProgress(const std::string& s)
 {
 	std::cout << emisc::TimeToString(pgame_clock->GetTime()) << ": " << s << "\r";
 }
-
-#endif

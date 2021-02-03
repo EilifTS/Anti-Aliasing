@@ -26,6 +26,7 @@ namespace
 	static const float near_plane = 0.1f;
 	static const float far_plane = 1000.0f;
 
+	static const bool disable_super_sampling = true;
 	static const int super_sample_options[] = { 32 };
 	static const int upsample_factor_options[] = { 2, 3, 4 };
 	static const int jitter_count = 16;
@@ -85,6 +86,7 @@ int main()
 	CreateDirectoryA(common_dir.c_str(), NULL);
 	
 
+	if(!disable_super_sampling)
 	{ // SSAA images
 
 		// Create resolution dependent resources
@@ -173,6 +175,7 @@ int main()
 		target1.CreateRenderTargetView(device);
 		target2.CreateShaderResourceView(device);
 		target2.CreateRenderTargetView(device);
+		egx::Texture2D depth_copy(device, egx::TextureFormat::FLOAT32x1, input_resolution);
 
 		eio::Console::Log("Processing images with a resolution of " + emisc::ToString(input_resolution.x) + "x" + emisc::ToString(input_resolution.y));
 
@@ -225,6 +228,11 @@ int main()
 				
 				renderer.ApplyToneMapping(device, context, target1, target2);
 
+				context.SetTransitionBuffer(renderer.GetGBuffer().DepthBuffer(), egx::GPUBufferState::CopySource);
+				context.SetTransitionBuffer(depth_copy, egx::GPUBufferState::CopyDest);
+				context.CopyBuffer(renderer.GetGBuffer().DepthBuffer(), depth_copy);
+				context.SetTransitionBuffer(renderer.GetGBuffer().DepthBuffer(), egx::GPUBufferState::DepthWrite);
+
 				device.QueueList(context);
 				device.WaitForGPU();
 
@@ -238,18 +246,18 @@ int main()
 					"/image_us" + emisc::ToString(upsampling_factor) +
 					"_v" + emisc::ToString(video_index) +
 					"_f" + emisc::ToString(frame_index) + ".png");
-
-				eio::SaveTextureToFileDDS(device, context, renderer.GetGBuffer().DepthBuffer(),
+				
+				eio::SaveTextureToFile(device, context, depth_copy,
 					depth_video_directory_name +
 					"/depth_us" + emisc::ToString(upsampling_factor) +
 					"_v" + emisc::ToString(video_index) +
-					"_f" + emisc::ToString(frame_index) + ".dds");
-
-				eio::SaveTextureToFileDDS(device, context, renderer.GetMotionVectors(),
+					"_f" + emisc::ToString(frame_index) + ".png");
+				
+				eio::SaveTextureToFile(device, context, renderer.GetMotionVectors(),
 					mv_video_directory_name +
 					"/motion_vectors_us" + emisc::ToString(upsampling_factor) +
 					"_v" + emisc::ToString(video_index) +
-					"_f" + emisc::ToString(frame_index) + ".dds");
+					"_f" + emisc::ToString(frame_index) + ".png");
 			}
 		}
 	}

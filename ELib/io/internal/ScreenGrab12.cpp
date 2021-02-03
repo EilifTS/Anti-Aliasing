@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <algorithm>
 #include <memory>
+#include <vector>
 
 #include <wincodec.h>
 
@@ -1098,7 +1099,7 @@ HRESULT DirectX::SaveWICTextureToFile(
     {
     case DXGI_FORMAT_R32G32B32A32_FLOAT:            pfGuid = GUID_WICPixelFormat128bppRGBAFloat; break;
     case DXGI_FORMAT_R16G16B16A16_FLOAT:            pfGuid = GUID_WICPixelFormat64bppRGBAHalf; break;
-    case DXGI_FORMAT_R16G16_FLOAT:                  pfGuid = GUID_WICPixelFormat32bppGrayFloat; break; // MV TEST
+    case DXGI_FORMAT_R16G16_FLOAT:                  pfGuid = GUID_WICPixelFormat16bppGrayHalf; break; // MV TEST
     case DXGI_FORMAT_R16G16B16A16_UNORM:            pfGuid = GUID_WICPixelFormat64bppRGBA; break;
     case DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM:    pfGuid = GUID_WICPixelFormat32bppRGBA1010102XR; break;
     case DXGI_FORMAT_R10G10B10A2_UNORM:             pfGuid = GUID_WICPixelFormat32bppRGBA1010102; break;
@@ -1192,7 +1193,11 @@ HRESULT DirectX::SaveWICTextureToFile(
     if (FAILED(hr))
         return hr;
 
-    hr = frame->SetSize(static_cast<UINT>(desc.Width), desc.Height);
+    int width_multiplier = 1;
+    if (desc.Format == DXGI_FORMAT_R16G16_FLOAT || desc.Format == DXGI_FORMAT_R32_FLOAT) // MV test
+        width_multiplier = 4;
+    
+    hr = frame->SetSize(static_cast<UINT>(desc.Width * width_multiplier), desc.Height);
     if (FAILED(hr))
         return hr;
 
@@ -1214,7 +1219,7 @@ HRESULT DirectX::SaveWICTextureToFile(
         case DXGI_FORMAT_R32G32B32A32_FLOAT:
         case DXGI_FORMAT_R16G16B16A16_FLOAT:
         case DXGI_FORMAT_R16G16_FLOAT: // MV TEST
-            targetGuid = GUID_WICPixelFormat96bppRGBFloat; // WIC 2
+            targetGuid = GUID_WICPixelFormat8bppGray; // WIC 2
             break;
 
         case DXGI_FORMAT_R16G16B16A16_UNORM: targetGuid = GUID_WICPixelFormat48bppBGR; break;
@@ -1222,7 +1227,11 @@ HRESULT DirectX::SaveWICTextureToFile(
         case DXGI_FORMAT_B5G6R5_UNORM:       targetGuid = GUID_WICPixelFormat16bppBGR565; break;
 
         case DXGI_FORMAT_R32_FLOAT:
+            targetGuid = GUID_WICPixelFormat8bppGray; // Depth test
+            break;
         case DXGI_FORMAT_R16_FLOAT:
+            targetGuid = GUID_WICPixelFormat16bppGrayHalf; // Depth test
+            break;
         case DXGI_FORMAT_R16_UNORM:
         case DXGI_FORMAT_R8_UNORM:
         case DXGI_FORMAT_A8_UNORM:
@@ -1304,11 +1313,20 @@ HRESULT DirectX::SaveWICTextureToFile(
     if (FAILED(hr))
         return hr;
 
-    if (memcmp(&targetGuid, &pfGuid, sizeof(WICPixelFormatGUID)) != 0)
+
+    if (desc.Format == DXGI_FORMAT_R32_FLOAT || desc.Format == DXGI_FORMAT_R16G16_FLOAT)
     {
+        hr = frame->WritePixels(desc.Height, static_cast<UINT>(dstRowPitch), static_cast<UINT>(imageSize), static_cast<BYTE*>(pMappedMemory));
+    }
+    else if (memcmp(&targetGuid, &pfGuid, sizeof(WICPixelFormatGUID)) != 0)
+    {
+        int size_multiplier = 1; 
+        if (desc.Format == DXGI_FORMAT_R16G16_FLOAT) // MV test
+            size_multiplier = 2;
+
         // Conversion required to write
         ComPtr<IWICBitmap> source;
-        hr = pWIC->CreateBitmapFromMemory(static_cast<UINT>(desc.Width), desc.Height,
+        hr = pWIC->CreateBitmapFromMemory(static_cast<UINT>(desc.Width* size_multiplier), desc.Height,
             pfGuid,
             static_cast<UINT>(dstRowPitch), static_cast<UINT>(imageSize),
             static_cast<BYTE*>(pMappedMemory), source.GetAddressOf());
@@ -1341,7 +1359,8 @@ HRESULT DirectX::SaveWICTextureToFile(
             return hr;
         }
 
-        WICRect rect = { 0, 0, static_cast<INT>(desc.Width), static_cast<INT>(desc.Height) };
+        WICRect rect = { 0, 0, static_cast<INT>(desc.Width* size_multiplier), static_cast<INT>(desc.Height) };
+        
         hr = frame->WriteSource(FC.Get(), &rect);
     }
     else

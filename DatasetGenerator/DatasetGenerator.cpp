@@ -239,7 +239,7 @@ int main()
 				saveJitter(jitter_video_directory_name +
 					"/jitter_us" + emisc::ToString(upsampling_factor) +
 					"_v" + emisc::ToString(video_index) +
-					"_f" + emisc::ToString(frame_index) + ".png", jitter.Get(frame_index% jitter.SampleCount()));
+					"_f" + emisc::ToString(frame_index), jitter.Get(frame_index% jitter.SampleCount()));
 
 				eio::SaveTextureToFile(device, context, target2,
 					image_video_directory_name +

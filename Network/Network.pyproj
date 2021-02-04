@@ -24,12 +24,10 @@
     <Compile Include="dataset.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="metrics.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Network.py" />
-    <Compile Include="pytorch_ssim\__init__.py" />
-    <Compile Include="vgg_perceptual_loss.py" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="pytorch_ssim\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

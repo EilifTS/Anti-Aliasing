@@ -1,8 +1,56 @@
+
 import torch
+import torchvision
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
 from math import exp
+
+class VGGPerceptualLoss(torch.nn.Module):
+    def __init__(self, resize=True):
+        super(VGGPerceptualLoss, self).__init__()
+        blocks = []
+        blocks.append(torchvision.models.vgg16(pretrained=True).features[:4].eval())
+        blocks.append(torchvision.models.vgg16(pretrained=True).features[4:9].eval())
+        blocks.append(torchvision.models.vgg16(pretrained=True).features[9:16].eval())
+        blocks.append(torchvision.models.vgg16(pretrained=True).features[16:23].eval())
+        for bl in blocks:
+            for p in bl:
+                p.requires_grad = False
+                p = p.cuda()
+        self.blocks = torch.nn.ModuleList(blocks)
+        self.transform = torch.nn.functional.interpolate
+        self.mean = torch.nn.Parameter(torch.tensor([0.485, 0.456, 0.406], device='cuda').view(1,3,1,1))
+        self.std = torch.nn.Parameter(torch.tensor([0.229, 0.224, 0.225], device='cuda').view(1,3,1,1))
+        self.resize = resize
+
+    def forward(self, input, target):
+        if input.shape[1] != 3:
+            input = input.repeat(1, 3, 1, 1)
+            target = target.repeat(1, 3, 1, 1)
+        input = (input-self.mean) / self.std
+        target = (target-self.mean) / self.std
+        if self.resize:
+            input = self.transform(input, mode='bilinear', size=(224, 224), align_corners=False)
+            target = self.transform(target, mode='bilinear', size=(224, 224), align_corners=False)
+        loss = 0.0
+        x = input
+        y = target
+        for block in self.blocks:
+            x = block(x)
+            y = block(y)
+            loss += torch.nn.functional.l1_loss(x, y)
+        return loss
+
+
+class PSNR(torch.nn.Module):
+    def __init__(self):
+        super(PSNR, self).__init__()
+
+    def forward(self, img1, img2):
+        mse = F.mse_loss(img1, img2)
+        psnr = 20*torch.log10(1.0 / torch.sqrt(mse))
+        return psnr
 
 def gaussian(window_size, sigma):
     gauss = torch.Tensor([exp(-(x - window_size//2)**2/float(2*sigma**2)) for x in range(window_size)])
@@ -11,7 +59,7 @@ def gaussian(window_size, sigma):
 def create_window(window_size, channel):
     _1D_window = gaussian(window_size, 1.5).unsqueeze(1)
     _2D_window = _1D_window.mm(_1D_window.t()).float().unsqueeze(0).unsqueeze(0)
-    window = Variable(_2D_window.expand(channel, 1, window_size, window_size).contiguous())
+    window = _2D_window.expand(channel, 1, window_size, window_size).contiguous()
     return window
 
 def _ssim(img1, img2, window, window_size, channel, size_average = True):
@@ -25,7 +73,7 @@ def _ssim(img1, img2, window, window_size, channel, size_average = True):
     sigma1_sq = F.conv2d(img1*img1, window, padding = window_size//2, groups = channel) - mu1_sq
     sigma2_sq = F.conv2d(img2*img2, window, padding = window_size//2, groups = channel) - mu2_sq
     sigma12 = F.conv2d(img1*img2, window, padding = window_size//2, groups = channel) - mu1_mu2
-
+    
     C1 = 0.01**2
     C2 = 0.03**2
 

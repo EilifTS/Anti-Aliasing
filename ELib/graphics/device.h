@@ -32,6 +32,7 @@ namespace egx
 		void ScheduleUpload(CommandContext& context, const CPUBuffer& cpu_buffer, GPUBuffer& gpu_buffer);
 
 		void QueueList(CommandContext& context);
+		void QueueListAndWaitForFinish(CommandContext& context);
 		void Present(CommandContext& context);
 
 	public:

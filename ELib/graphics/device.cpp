@@ -438,6 +438,31 @@ void egx::Device::QueueList(CommandContext& context)
 
 	command_list->Reset(command_allocators[current_frame].Get(), nullptr);
 }
+void egx::Device::QueueListAndWaitForFinish(CommandContext& context)
+{
+	auto* command_list = context.command_list.Get();
+	THROWIFFAILED(command_list->Close(), "Failed to close command list");
+
+	ID3D12CommandList* command_lists[] = { command_list };
+	command_queue->ExecuteCommandLists(1, command_lists);
+
+	// Scedule a Signal command in the queue
+	THROWIFFAILED(command_queue->Signal(fence.Get(), fence_values[current_frame]), "Failed to create signal command");
+
+	// Wait for gpu to process fence
+	THROWIFFAILED(fence->SetEventOnCompletion(fence_values[current_frame], fence_event), "Failed to set fence event");
+	WaitForSingleObjectEx(fence_event, INFINITE, FALSE);
+
+	// Fence value is used up
+	fence_values[current_frame]++;
+
+	// Resetting current command allocator is safe
+	THROWIFFAILED(command_allocators[current_frame]->Reset(), "Failed to reset command allocator");
+
+	upload_heaps[current_frame].Clear(*this, heap_chunk_size);
+
+	command_list->Reset(command_allocators[current_frame].Get(), nullptr);
+}
 void egx::Device::Present(CommandContext& context)
 {
 	context.SetTransitionBuffer(back_buffers[current_frame], GPUBufferState::Present);

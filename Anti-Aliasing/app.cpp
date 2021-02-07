@@ -297,7 +297,7 @@ void App::renderRasterizer(egx::Device& dev, egx::CommandContext& context)
 	renderer.PrepareFrame(dev, context);
 	for (auto pmodel : static_models) renderer.RenderModel(dev, context, camera, *pmodel);
 	for (auto pmodel : dynamic_models) renderer.RenderModel(dev, context, camera, *pmodel);
-	for (auto pmodel : dynamic_models) renderer.RenderMotionVectors(dev, context, camera, *pmodel);
+	for (auto pmodel : models) renderer.RenderMotionVectors(dev, context, camera, *pmodel);
 	renderer.RenderLight(dev, context, camera, renderer_target);
 	renderer.PrepareFrameEnd();
 }

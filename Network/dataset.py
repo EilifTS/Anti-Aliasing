@@ -22,13 +22,13 @@ def LoadMotionVector(ds_factor, video_index, frame_index):
 
     # Change from 8-bit ints to 16-bit ints and split into the 4 components of the floats
     i1 = np.array(im[:,0::4], dtype=np.int16)
-    i2 = np.array(im[:,0::4], dtype=np.int16)
-    i3 = np.array(im[:,0::4], dtype=np.int16)
-    i4 = np.array(im[:,0::4], dtype=np.int16)
-    i1 = np.left_shift(i1, 8*1)
-    i2 = np.left_shift(i2, 8*0)
-    i3 = np.left_shift(i3, 8*1)
-    i4 = np.left_shift(i4, 8*0)
+    i2 = np.array(im[:,1::4], dtype=np.int16)
+    i3 = np.array(im[:,2::4], dtype=np.int16)
+    i4 = np.array(im[:,3::4], dtype=np.int16)
+    i1 = np.left_shift(i1, 8*0)
+    i2 = np.left_shift(i2, 8*1)
+    i3 = np.left_shift(i3, 8*0)
+    i4 = np.left_shift(i4, 8*1)
 
     # Combine into two image
     im2 = np.bitwise_or(i1, i2)
@@ -36,8 +36,9 @@ def LoadMotionVector(ds_factor, video_index, frame_index):
 
     # Combine the two images into a single 2 component image
     im4 = np.dstack((im2, im3))
+    im4 = im4.view(np.float16) # Return as float
 
-    return im4.view(np.float16) # Return as float
+    return im4 
 
 # Depth is stored as 4 8bit ints representing a 32bit float
 def LoadDepthBuffer(ds_factor, video_index, frame_index):
@@ -46,13 +47,13 @@ def LoadDepthBuffer(ds_factor, video_index, frame_index):
 
     # Change from 8-bit ints to 32-bit ints and split into the 4 components of the float
     i1 = np.array(im[:,0::4], dtype=np.int32)
-    i2 = np.array(im[:,0::4], dtype=np.int32)
-    i3 = np.array(im[:,0::4], dtype=np.int32)
-    i4 = np.array(im[:,0::4], dtype=np.int32)
-    i1 = np.left_shift(i1, 8*3)
-    i2 = np.left_shift(i2, 8*2)
-    i3 = np.left_shift(i3, 8*1)
-    i4 = np.left_shift(i4, 8*0)
+    i2 = np.array(im[:,1::4], dtype=np.int32)
+    i3 = np.array(im[:,2::4], dtype=np.int32)
+    i4 = np.array(im[:,3::4], dtype=np.int32)
+    i1 = np.left_shift(i1, 8*0)
+    i2 = np.left_shift(i2, 8*1)
+    i3 = np.left_shift(i3, 8*2)
+    i4 = np.left_shift(i4, 8*3)
 
     # Combine into one image
     im2 = np.bitwise_or(i1, 
@@ -84,6 +85,25 @@ def ImageTorchToNumpy(image):
     image = np.swapaxes(image, 2, 0)
     return image
 
+def MVNumpyToTorch(mv):
+    mv = torch.from_numpy(mv)
+    mv = mv.float() # Grid sample requires same format as image :(
+    
+    # MVs are stored as offsets, but absolute coordinates are needed by grid_sample
+    height, width, channels = mv.shape
+    x_ten = ((torch.arange(width*height, dtype=torch.float) % width + 0.5) / width - 0.5) * 2.0
+    y_ten = ((torch.arange(width*height, dtype=torch.float) % height + 0.5) / height - 0.5) * 2.0
+    x_ten = torch.reshape(x_ten, (height, width))
+    y_ten = torch.reshape(y_ten, (width, height))
+    y_ten = torch.t(y_ten)
+    pixel_pos = torch.dstack((x_ten, y_ten))
+
+    return pixel_pos + mv * 2.0
+
+def MVTorchToNumpy(mv):
+    mv = mv.numpy()
+    return mv
+
 class SSDatasetItem():
     def __init__(self, ss_factor, us_factor, video, frame):
         self.ss_factor = ss_factor
@@ -106,6 +126,7 @@ class SSDatasetItem():
     def ToTorch(self):
         self.target_image = ImageNumpyToTorch(self.target_image)
         self.input_image = ImageNumpyToTorch(self.input_image)
+        self.motion_vector = MVNumpyToTorch(self.motion_vector)
 
         
 num_videos = 2

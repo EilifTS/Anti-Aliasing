@@ -25,7 +25,8 @@ struct VSInput
 struct VSOutput
 {
 	float4 position : SV_POSITION;
-	float2 mv : TEXCOORD0;
+	float3 curr_pos: TEXCOORD0;
+	float3 last_pos: TEXCOORD1;
 };
 
 VSOutput VS(VSInput input)
@@ -39,10 +40,14 @@ VSOutput VS(VSInput input)
 	curr_pos = mul(curr_pos, curr_cam.projection_matrix_no_jitter);
 	last_pos = mul(last_pos, last_cam.projection_matrix_no_jitter);
 	
-	curr_pos /= curr_pos.w;
-	last_pos /= last_pos.w;
-	output.mv = last_pos.xy - curr_pos.xy;
-	output.mv = output.mv * float2(0.5, -0.5);
+	// This part does not work when one of the vertices are behind the camera
+	//curr_pos /= curr_pos.w;
+	//last_pos /= last_pos.w;
+	//output.mv = last_pos.xy - curr_pos.xy;
+	//output.mv = output.mv * float2(0.5, -0.5);
+	output.curr_pos = curr_pos.xyw;
+	output.last_pos = last_pos.xyw;
+
 
 	return output;
 }

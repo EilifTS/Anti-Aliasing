@@ -26,9 +26,9 @@ namespace
 	static const float near_plane = 0.1f;
 	static const float far_plane = 1000.0f;
 
-	static const bool disable_super_sampling = true;
-	static const int super_sample_options[] = { 32 };
-	static const int upsample_factor_options[] = { 2, 3, 4 };
+	static const bool disable_super_sampling = false;
+	static const int super_sample_options[] = { 64, 32 };
+	static const int upsample_factor_options[] = { 1, 2, 3, 4 };
 	static const int jitter_count = 16;
 
 }
@@ -43,7 +43,7 @@ void renderRasterizer(egx::Device& dev, egx::CommandContext& context, Scene& sce
 	renderer.PrepareFrame(dev, context);
 	for (auto pmodel : static_models) renderer.RenderModel(dev, context, camera, *pmodel);
 	for (auto pmodel : dynamic_models) renderer.RenderModel(dev, context, camera, *pmodel);
-	for (auto pmodel : dynamic_models) renderer.RenderMotionVectors(dev, context, camera, *pmodel);
+	for (auto pmodel : models) renderer.RenderMotionVectors(dev, context, camera, *pmodel); // Need static motion vectors
 	renderer.RenderLight(dev, context, camera, target);
 	renderer.PrepareFrameEnd();
 }
@@ -131,7 +131,8 @@ int main()
 					camera.SetPosition(frame.camera_position);
 					camera.SetRotation(frame.camera_rotation);
 					camera.Update();
-					scene.Update((float)frame.time);
+					float time = (float)((double)frame.time / 1000000.0);
+					scene.Update(time);
 					renderer.UpdateLight(camera);
 
 					eio::Console::LogProgress("Processing frame " + emisc::ToString(frame_index + video_index * frame_count) + "/" + emisc::ToString(video_count * frame_count));
@@ -148,8 +149,7 @@ int main()
 
 					renderer.ApplyToneMapping(device, context, target2, target3);
 
-					device.QueueList(context);
-					device.WaitForGPU();
+					device.QueueListAndWaitForFinish(context);
 
 					eio::SaveTextureToFile(device, context, target3,
 						video_directory_name + 
@@ -216,9 +216,11 @@ int main()
 				camera.SetPosition(frame.camera_position);
 				camera.SetRotation(frame.camera_rotation);
 				camera.SetJitter(jitter.Get(frame_index % jitter.SampleCount()));
+				//camera.SetJitter(ema::vec2());
 				camera.Update();
 
-				scene.Update((float)frame.time);
+				float time = (float)((double)frame.time / 1000000.0);
+				scene.Update(time);
 				renderer.UpdateLight(camera);
 
 				eio::Console::LogProgress("Processing frame " + emisc::ToString(frame_index + video_index * frame_count) + "/" + emisc::ToString(video_count * frame_count));
@@ -233,8 +235,7 @@ int main()
 				context.CopyBuffer(renderer.GetGBuffer().DepthBuffer(), depth_copy);
 				context.SetTransitionBuffer(renderer.GetGBuffer().DepthBuffer(), egx::GPUBufferState::DepthWrite);
 
-				device.QueueList(context);
-				device.WaitForGPU();
+				device.QueueListAndWaitForFinish(context);
 
 				saveJitter(jitter_video_directory_name +
 					"/jitter_us" + emisc::ToString(upsampling_factor) +

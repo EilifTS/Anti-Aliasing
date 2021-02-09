@@ -27,7 +27,7 @@ namespace
 	static const float far_plane = 1000.0f;
 
 	static const bool disable_super_sampling = false;
-	static const int super_sample_options[] = { 64, 32 };
+	static const int super_sample_options[] = { 64, 16 };
 	static const int upsample_factor_options[] = { 1, 2, 3, 4 };
 	static const int jitter_count = 16;
 

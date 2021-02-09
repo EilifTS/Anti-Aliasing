@@ -104,6 +104,13 @@ def MVTorchToNumpy(mv):
     mv = mv.numpy()
     return mv
 
+def DepthNumpyToTorch(depth):
+    depth = torch.from_numpy(depth)
+    return depth.contiguous()
+
+def DepthTorchToNumpy(depth):
+    return depth.numpy()
+
 class SSDatasetItem():
     def __init__(self, ss_factor, us_factor, video, frame):
         self.ss_factor = ss_factor
@@ -127,18 +134,45 @@ class SSDatasetItem():
         self.target_image = ImageNumpyToTorch(self.target_image)
         self.input_image = ImageNumpyToTorch(self.input_image)
         self.motion_vector = MVNumpyToTorch(self.motion_vector)
+        self.depth_buffer = DepthNumpyToTorch(self.depth_buffer)
+        self.jitter = torch.from_numpy(self.jitter)
 
+class RandomCrop():
+    def __init__(self, size):
+        self.size = size
+
+    def __call__(self, item : SSDatasetItem):
+        torch.manual_seed(17)
+        _, height, width = item.input_image.shape
+        us = item.us_factor
+        x1 = torch.randint(width - self.size, (1,))
+        x2 = x1 + self.size
+        y1 = torch.randint(height - self.size, (1,))
+        y2 = y1 + self.size
+
+        out_item = SSDatasetItem(item.ss_factor, item.us_factor, item.video, item.frame)
+        out_item.target_image = item.target_image[:,y1*us:y2*us,x1*us:x2*us]
+        out_item.input_image = item.input_image[:,y1:y2,x1:x2]
+        out_item.depth_buffer = item.depth_buffer[y1:y2,x1:x2]
+
+        out_item.motion_vector = item.motion_vector[y1:y2,x1:x2,:]
+        out_item.motion_vector = (out_item.motion_vector + 1.0) * 0.5
+        out_item.motion_vector = out_item.motion_vector * torch.tensor([width, height])
+        out_item.motion_vector = out_item.motion_vector - torch.tensor([x1, y1])
+        out_item.motion_vector = out_item.motion_vector / self.size
+        out_item.motion_vector = (out_item.motion_vector - 0.5) * 2.0
+        return out_item
         
 num_videos = 2
 num_frames_per_video = 60
 
 class SSDataset(Dataset):
 
-    def __init__(self, ss_factor, us_factor, videos, transforms):
+    def __init__(self, ss_factor, us_factor, videos, transform=None):
         self.ss_factor = ss_factor
         self.us_factor = us_factor
         self.videos = videos
-        self.transforms = transforms
+        self.transform = transform
 
     def __len__(self):
         return len(videos) * num_frames_per_video
@@ -152,5 +186,7 @@ class SSDataset(Dataset):
         d = SSDatasetItem(self.ss_factor, self.us_factor, self.videos[video_index], frame_index)
         d.Load()
         d.ToTorch()
+        if(self.transform):
+            d = self.transform(d)
 
         return d

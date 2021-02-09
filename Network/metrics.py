@@ -52,6 +52,12 @@ class PSNR(torch.nn.Module):
         psnr = 20*torch.log10(1.0 / torch.sqrt(mse))
         return psnr
 
+    def name(self):
+        return "PSNR"
+
+    def unit(self):
+        return "dB"
+
 def gaussian(window_size, sigma):
     gauss = torch.Tensor([exp(-(x - window_size//2)**2/float(2*sigma**2)) for x in range(window_size)])
     return gauss/gauss.sum()
@@ -109,6 +115,12 @@ class SSIM(torch.nn.Module):
 
 
         return _ssim(img1, img2, window, self.window_size, channel, self.size_average)
+
+    def name(self):
+        return "SSIM"
+
+    def unit(self):
+        return ""
 
 def ssim(img1, img2, window_size = 11, size_average = True):
     (_, channel, _, _) = img1.size()

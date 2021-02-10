@@ -112,81 +112,100 @@ def DepthTorchToNumpy(depth):
     return depth.numpy()
 
 class SSDatasetItem():
-    def __init__(self, ss_factor, us_factor, video, frame):
+    def __init__(self, ss_factor, us_factor, video, frame, seq_length):
         self.ss_factor = ss_factor
         self.us_factor = us_factor
         self.video = video
         self.frame = frame
-        self.target_image = ""
-        self.input_image = ""
-        self.motion_vector = ""
-        self.depth_buffer = ""
-        self.jitter = ""
+        self.seq_length = seq_length
+        self.target_images = []
+        self.input_images = []
+        self.motion_vectors = []
+        self.depth_buffers = []
+        self.jitters = []
 
     def Load(self):
-        self.target_image = LoadTargetImage(self.ss_factor, self.video, self.frame)
-        self.input_image = LoadInputImage(self.us_factor, self.video, self.frame)
-        self.motion_vector = LoadMotionVector(self.us_factor, self.video, self.frame)
-        self.depth_buffer = LoadDepthBuffer(self.us_factor, self.video, self.frame)
-        self.jitter = LoadJitter(self.us_factor, self.video, self.frame)
+        self.target_images =    [LoadTargetImage(self.ss_factor, self.video, self.frame - i)    for i in range(self.seq_length)]
+        self.input_images =     [LoadInputImage(self.us_factor, self.video, self.frame - i)     for i in range(self.seq_length)]
+        self.motion_vectors =   [LoadMotionVector(self.us_factor, self.video, self.frame - i)   for i in range(self.seq_length)]
+        self.depth_buffers =    [LoadDepthBuffer(self.us_factor, self.video, self.frame - i)    for i in range(self.seq_length)]
+        self.jitters =          [LoadJitter(self.us_factor, self.video, self.frame - i)         for i in range(self.seq_length)]
 
     def ToTorch(self):
-        self.target_image = ImageNumpyToTorch(self.target_image)
-        self.input_image = ImageNumpyToTorch(self.input_image)
-        self.motion_vector = MVNumpyToTorch(self.motion_vector)
-        self.depth_buffer = DepthNumpyToTorch(self.depth_buffer)
-        self.jitter = torch.from_numpy(self.jitter)
+        self.target_images =     [ImageNumpyToTorch(self.target_images[i])   for i in range(self.seq_length)]
+        self.input_images =      [ImageNumpyToTorch(self.input_images[i])    for i in range(self.seq_length)]
+        self.motion_vectors =    [MVNumpyToTorch(self.motion_vectors[i])     for i in range(self.seq_length)]
+        self.depth_buffers =     [DepthNumpyToTorch(self.depth_buffers[i])   for i in range(self.seq_length)]
+        self.jitters =           [torch.from_numpy(self.jitters[i])          for i in range(self.seq_length)]
+
+    def ToCuda(self):
+        for i in range(len(self.target_images)):
+            self.target_images[i] = self.target_images[i].cuda()
+        for i in range(len(self.input_images)):
+            self.input_images[i] = self.input_images[i].cuda()
+        for i in range(len(self.motion_vectors)):
+            self.motion_vectors[i] = self.motion_vectors[i].cuda()
+        for i in range(len(self.depth_buffers)):
+            self.depth_buffers[i] = self.depth_buffers[i].cuda()
+        for i in range(len(self.jitters)):
+            self.jitters[i] = self.jitters[i].cuda()
 
 class RandomCrop():
     def __init__(self, size):
         self.size = size
 
     def __call__(self, item : SSDatasetItem):
-        torch.manual_seed(17)
-        _, height, width = item.input_image.shape
+        #torch.manual_seed(17)
+        _, height, width = item.input_images[0].shape
         us = item.us_factor
-        x1 = torch.randint(width - self.size, (1,))
-        x2 = x1 + self.size
-        y1 = torch.randint(height - self.size, (1,))
-        y2 = y1 + self.size
+        x1 = torch.randint(width - self.size // us, (1,))
+        x2 = x1 + self.size // us
+        y1 = torch.randint(height - self.size // us, (1,))
+        y2 = y1 + self.size // us
+        for i in range(item.seq_length):
+            item.target_images[i] = item.target_images[i][:,y1*us:y2*us,x1*us:x2*us]
+            item.input_images[i] = item.input_images[i][:,y1:y2,x1:x2]
+            item.depth_buffers[i] = item.depth_buffers[i][y1:y2,x1:x2]
 
-        out_item = SSDatasetItem(item.ss_factor, item.us_factor, item.video, item.frame)
-        out_item.target_image = item.target_image[:,y1*us:y2*us,x1*us:x2*us]
-        out_item.input_image = item.input_image[:,y1:y2,x1:x2]
-        out_item.depth_buffer = item.depth_buffer[y1:y2,x1:x2]
-
-        out_item.motion_vector = item.motion_vector[y1:y2,x1:x2,:]
-        out_item.motion_vector = (out_item.motion_vector + 1.0) * 0.5
-        out_item.motion_vector = out_item.motion_vector * torch.tensor([width, height])
-        out_item.motion_vector = out_item.motion_vector - torch.tensor([x1, y1])
-        out_item.motion_vector = out_item.motion_vector / self.size
-        out_item.motion_vector = (out_item.motion_vector - 0.5) * 2.0
-        return out_item
+            item.motion_vectors[i] = item.motion_vectors[i][y1:y2,x1:x2,:]
+            item.motion_vectors[i] = (item.motion_vectors[i] + 1.0) * 0.5
+            item.motion_vectors[i] = item.motion_vectors[i] * torch.tensor([width, height])
+            item.motion_vectors[i] = item.motion_vectors[i] - torch.tensor([x1, y1])
+            item.motion_vectors[i] = item.motion_vectors[i] / (self.size // us)
+            item.motion_vectors[i] = (item.motion_vectors[i] - 0.5) * 2.0
+        return item
         
 num_videos = 2
 num_frames_per_video = 60
 
 class SSDataset(Dataset):
 
-    def __init__(self, ss_factor, us_factor, videos, transform=None):
+    def __init__(self, ss_factor, us_factor, videos, seq_length, transform=None):
         self.ss_factor = ss_factor
         self.us_factor = us_factor
         self.videos = videos
+        self.seq_length = seq_length
         self.transform = transform
 
+    def max_allowed_frames(self):
+        return num_frames_per_video - (self.seq_length - 1)
+
     def __len__(self):
-        return len(videos) * num_frames_per_video
+        return len(self.videos) * self.max_allowed_frames()
 
     def __getitem__(self, idx):
         if (torch.is_tensor(idx)):
             idx = idx.tolist()
 
-        video_index = idx // num_frames_per_video
-        frame_index = idx % num_frames_per_video
-        d = SSDatasetItem(self.ss_factor, self.us_factor, self.videos[video_index], frame_index)
+        video_index = idx // self.max_allowed_frames()
+        frame_index = self.seq_length - 1 + idx % self.max_allowed_frames()
+        d = SSDatasetItem(self.ss_factor, self.us_factor, self.videos[video_index], frame_index, self.seq_length)
         d.Load()
         d.ToTorch()
         if(self.transform):
             d = self.transform(d)
 
         return d
+
+#def SSDatasetCollate(batch):
+#    SSDatasetItem()fdfdfdf

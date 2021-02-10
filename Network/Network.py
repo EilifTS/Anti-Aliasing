@@ -4,57 +4,45 @@ import cv2
 import dataset
 import models
 import utils
+import metrics
 
 videos = [i for i in range(10)]
-ds = dataset.SSDataset(64, 1, videos)#, transform=dataset.RandomCrop(256))
-
-taa1 = models.TAA(0.15, True, True)
-taa2 = models.TAA(0.25, True, True)
-taa3 = models.TAA(0.05, True, True)
+sequence_length = 5
+upsample_factor = 4
+ds = dataset.SSDataset(64, upsample_factor, videos, sequence_length, transform=dataset.RandomCrop(256))
+#data_loader = torch.utils.data.DataLoader(
+#     ds, batch_size=1, shuffle=True, num_workers=0)
+#data_loader_iter = iter(data_loader)
 
 evaluator = utils.DefaultEvaulator()
-evaluator.AddPlot(taa1.name())
-evaluator.AddPlot(taa2.name())
-evaluator.AddPlot(taa3.name())
-evaluator.AddPlot('ss1')
-evaluator.AddPlot('ss16')
 
-jitter_dist = []
+FBNet = models.FBNet(upsample_factor)
+FBNet.to('cuda')
 
-iter = 60
-for i in range(0,0+iter):
+params = [p for p in FBNet.parameters() if p.requires_grad]
+optimizer = torch.optim.Adam(params, lr=1e-4)
+
+ssim = metrics.SSIM()
+
+iter = 600
+for i in range(iter):
     print(i)
     item = ds[i]
+    item.ToCuda()
+    res = FBNet.forward(item)
+    
+    target = item.target_images[0].unsqueeze(0)
+    loss = 1.0 - ssim(target, res)
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    print(loss.item())
 
-    im64 = item.target_image.unsqueeze(0).cuda()
-    im10 = item.input_image.unsqueeze(0).cuda()
-    mv = item.motion_vector.unsqueeze(0).cuda()
+    res = res.squeeze().cpu().detach()
+    res = dataset.ImageTorchToNumpy(res)
+    window_name = "Image"
+    cv2.imshow(window_name, res)
+    cv2.waitKey(0)
+cv2.destroyAllWindows()
 
-    if(i % 60 == 0):
-        taa1.reset_history()
-        taa2.reset_history()
-        taa3.reset_history()
-
-    taa_res1 = taa1.forward(im10, mv)
-    taa_res2 = taa2.forward(im10, mv)
-    taa_res3 = taa3.forward(im10, mv)
-    ss16_img = dataset.ImageNumpyToTorch(dataset.LoadTargetImage(16, item.video, item.frame)).unsqueeze(0).cuda()
-
-    evaluator.Evaluate(im64, taa_res1, taa1.name())
-    evaluator.Evaluate(im64, taa_res2, taa2.name())
-    evaluator.Evaluate(im64, taa_res3, taa3.name())
-    evaluator.Evaluate(im64, im10, 'ss1')
-    #evaluator.Evaluate(im64, ss16_img, 'ss16')
-
-    #print(i, item.jitter, psnr_list4[i])
-    diff = torch.abs(taa_res1 - im64)
-
-    taa_res = taa_res1.squeeze().cpu().detach()
-    taa_res_np = dataset.ImageTorchToNumpy(taa_res)
-
-    #window_name = "Image"
-    #cv2.imshow(window_name, taa_res_np)
-    #cv2.waitKey(0)
-#cv2.destroyAllWindows()
-
-evaluator.Plot()
+#evaluator.Plot()

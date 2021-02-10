@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import cv2
+import dataset
 
 def GridToUV(grid):
     return (grid + 1.0) * 0.5
@@ -72,8 +74,6 @@ def BiCubicGridSample(texture, grid):
    
     return torch.clamp(out[:,:3,:,:], 0, 1)
 
-
-
 class TAA(nn.Module):
 
     def __init__(self, alpha, hist_clamp, use_bic):
@@ -114,3 +114,170 @@ class TAA(nn.Module):
         if(self.use_bic):
             name += "_cube"
         return name
+
+# U-Net helper classes
+class FBFeatureExtractor(nn.Module):
+    def __init__(self, factor):
+        super(FBFeatureExtractor, self).__init__()
+        self.net = nn.Sequential(
+            nn.Conv2d(4, 32, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 8, 3, stride=1, padding=1),
+            nn.ReLU()
+            )
+        self.upsampler = ZeroUpsampling(factor)
+
+    def forward(self, x):
+        return self.upsampler(
+            torch.cat((x, 
+                       self.net(x)
+                       ), dim=1)
+            )
+
+class FBUNet(nn.Module):
+    def __init__(self):
+        super(FBUNet, self).__init__()
+        self.down = nn.MaxPool2d(2)
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+
+        self.start = nn.Sequential(
+            nn.Conv2d(60, 64, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 32, 3, stride=1, padding=1),
+            nn.ReLU()
+            )
+        self.down = nn.Sequential(
+            nn.MaxPool2d(2),
+            nn.Conv2d(32, 64, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, stride=1, padding=1),
+            nn.ReLU()
+            )
+        self.bottom = nn.Sequential(
+            nn.MaxPool2d(2),
+            nn.Conv2d(64, 128, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+            )
+        self.up = nn.Sequential(
+            nn.Conv2d(192, 64, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+            )
+        self.end = nn.Sequential(
+            nn.Conv2d(96, 32, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 3, 3, stride=1, padding=1),
+            nn.ReLU()
+            )
+    def forward(self, x):
+        x1 = self.start(x)
+        x2 = self.down(x1)
+        x3 = self.bottom(x2)
+        x4 = self.up(torch.cat((x2, x3), dim=1))
+        del x2, x3
+        return self.end(torch.cat((x1, x4), dim=1))
+
+class ZeroUpsampling(nn.Module):
+    def __init__(self, factor):
+        super(ZeroUpsampling, self).__init__()
+        self.factor = factor
+
+    def forward(self, x):
+        _, c, _, _ = x.shape
+        w = torch.zeros(size=(self.factor, self.factor))
+        w[0, 0] = 1
+        w = w.expand(c, 1, self.factor, self.factor).cuda()
+        return F.conv_transpose2d(x, w, stride=self.factor, groups=c)
+
+class FBNet(nn.Module):
+    def __init__(self, factor):
+        super(FBNet, self).__init__()
+        self.factor = factor
+        self.feature_extractor = FBFeatureExtractor(factor)
+        self.reweighting = nn.Sequential(
+            nn.Conv2d(20, 32, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 4, 3, stride=1, padding=1),
+            nn.Tanh(),
+            )
+        self.reconstruct = FBUNet()
+
+    def forward(self, x):
+        num_frames = 5
+        frames = [x.input_images[i].unsqueeze(0) for i in range(num_frames)]
+        
+
+        depths = [x.depth_buffers[i].unsqueeze(0).unsqueeze(0) for i in range(num_frames)]
+
+        frames = [torch.cat(x, dim=1) for x in zip(frames, depths)]
+        del depths
+
+        frames = [self.feature_extractor(f) for f in frames]
+        
+        mvs = [x.motion_vectors[i].unsqueeze(0) for i in range(num_frames - 1)]
+
+        for i in range(len(mvs)):
+            mvs[i] = torch.movedim(mvs[i], 3, 1)
+            mvs[i] = F.upsample(mvs[i], scale_factor=self.factor, mode='bilinear')
+            mvs[i] = torch.movedim(mvs[i], 1, 3)
+
+
+        for i in range(1, num_frames):
+            for j in range(i - 1, -1, -1):
+                frames[i] = F.grid_sample(frames[i], mvs[j], mode='bilinear')
+        del mvs
+
+        
+        res1 = frames[0][:,:3,:,:].squeeze().cpu().detach()
+        res2 = frames[1][:,:3,:,:].squeeze().cpu().detach()
+        res3 = frames[2][:,:3,:,:].squeeze().cpu().detach()
+        res4 = frames[3][:,:3,:,:].squeeze().cpu().detach()
+        res5 = frames[4][:,:3,:,:].squeeze().cpu().detach()
+        res1 = dataset.ImageTorchToNumpy(res1)
+        res2 = dataset.ImageTorchToNumpy(res2)
+        res3 = dataset.ImageTorchToNumpy(res3)
+        res4 = dataset.ImageTorchToNumpy(res4)
+        res5 = dataset.ImageTorchToNumpy(res5)
+        cv2.imshow("Image1", res1)
+        cv2.imshow("Image2", res2)
+        cv2.imshow("Image3", res3)
+        cv2.imshow("Image4", res4)
+        cv2.imshow("Image5", res5)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        feature_weight_input = torch.cat((
+            frames[0][:,:4,:,:],
+            frames[1][:,:4,:,:], 
+            frames[2][:,:4,:,:], 
+            frames[3][:,:4,:,:], 
+            frames[4][:,:4,:,:]), dim=1)
+        feature_weights = (self.reweighting(feature_weight_input) + 1.0) * 10.0
+        del feature_weight_input
+
+        frames[1] = frames[1] * feature_weights[:,0,:,:]
+        frames[2] = frames[2] * feature_weights[:,1,:,:]
+        frames[3] = frames[3] * feature_weights[:,2,:,:]
+        frames[4] = frames[4] * feature_weights[:,3,:,:]
+        del feature_weights
+
+        reconstruction_input = torch.cat((
+            frames[0], 
+            frames[1], 
+            frames[2], 
+            frames[3], 
+            frames[4]), dim=1)
+        del frames
+
+        return self.reconstruct(reconstruction_input)
+
+
+

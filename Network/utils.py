@@ -1,6 +1,8 @@
+import torch
 import metrics
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 class Evaluator():
     def __init__(self, metrics):
@@ -31,3 +33,74 @@ class Evaluator():
 
 def DefaultEvaulator():
     return Evaluator([metrics.PSNR(), metrics.SSIM()])
+
+iteration_str = 'Current iteration: {0} \t Loss: {1:.6f} \t ETA: {2:.2f}s   '
+finish_str = 'avg_loss: {0:.4f} \t min_loss {1:.4f} \t max_loss {2:.4f} \t total_time {3:.2f}s   '
+
+def TrainEpoch(model, dataloader, optimizer, loss_function):
+    torch.seed() # To randomize
+    model.train()
+    dataloader_iter = iter(dataloader)
+    num_iterations = len(dataloader)
+    losses = np.zeros(num_iterations)
+    start_time = time.time()
+
+    for i, item in enumerate(dataloader_iter):
+        item.ToCuda()
+
+        # Forward
+        res = model.forward(item)
+        target = item.target_images[0]
+        loss = loss_function(target, res)
+
+        # Backward
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        current_loss = loss.item()
+        losses[i] = current_loss
+
+        # Print info
+        current_time = time.time()
+        avg_time = (current_time - start_time) / (i + 1)
+        remaining_time = avg_time * (num_iterations - (i + 1))
+        print(iteration_str.format(i, current_loss, remaining_time), end='\r')
+
+    # Print epoch summary
+    avg_loss = np.average(losses)
+    min_loss = np.min(losses)
+    max_loss = np.max(losses)
+    print('Training finished \t ' + finish_str.format(avg_loss, min_loss, max_loss, time.time()-start_time))
+    return avg_loss
+
+def ValidateModel(model, dataloader, loss_function):
+    torch.manual_seed(17) # To get consistent results
+    model.eval()
+    
+    with torch.no_grad():
+        dataloader_iter = iter(dataloader)
+        num_iterations = len(dataloader)
+        losses = np.zeros(num_iterations)
+        start_time = time.time()
+        for i, item in enumerate(dataloader_iter):
+            item.ToCuda()
+
+            # Forward
+            res = model.forward(item)
+            target = item.target_images[0]
+            loss = loss_function(target, res)
+            current_loss = loss.item()
+            losses[i] = current_loss
+
+            # Print info
+            current_time = time.time()
+            avg_time = (current_time - start_time) / (i + 1)
+            remaining_time = avg_time * (num_iterations - (i + 1))
+            print(iteration_str.format(i, current_loss, remaining_time), end='\r')
+
+        # Print validation summary
+        avg_loss = np.average(losses)
+        min_loss = np.min(losses)
+        max_loss = np.max(losses)
+        print('Validation finished \t ' + finish_str.format(avg_loss, min_loss, max_loss, time.time()-start_time))
+    return avg_loss

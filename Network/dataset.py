@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
+import torch.autograd.profiler as profiler
 
 ss_path =               '../DatasetGenerator/data/spp{0}/video{1}/spp{0}_v{1}_f{2}.png'
 image_path =            '../DatasetGenerator/data/us{0}/images/video{1}/image_us{0}_v{1}_f{2}.png'
@@ -125,14 +126,14 @@ class SSDatasetItem():
         self.jitters = []
 
     def Load(self):
-        self.target_images =    [LoadTargetImage(self.ss_factor, self.video, self.frame - i)    for i in range(self.seq_length)]
+        self.target_images =    [LoadTargetImage(self.ss_factor, self.video, self.frame - i)    for i in range(1)]
         self.input_images =     [LoadInputImage(self.us_factor, self.video, self.frame - i)     for i in range(self.seq_length)]
         self.motion_vectors =   [LoadMotionVector(self.us_factor, self.video, self.frame - i)   for i in range(self.seq_length)]
         self.depth_buffers =    [LoadDepthBuffer(self.us_factor, self.video, self.frame - i)    for i in range(self.seq_length)]
         self.jitters =          [LoadJitter(self.us_factor, self.video, self.frame - i)         for i in range(self.seq_length)]
 
     def ToTorch(self):
-        self.target_images =     [ImageNumpyToTorch(self.target_images[i])   for i in range(self.seq_length)]
+        self.target_images =     [ImageNumpyToTorch(self.target_images[i])   for i in range(1)]
         self.input_images =      [ImageNumpyToTorch(self.input_images[i])    for i in range(self.seq_length)]
         self.motion_vectors =    [MVNumpyToTorch(self.motion_vectors[i])     for i in range(self.seq_length)]
         self.depth_buffers =     [DepthNumpyToTorch(self.depth_buffers[i])   for i in range(self.seq_length)]
@@ -155,15 +156,14 @@ class RandomCrop():
         self.size = size
 
     def __call__(self, item : SSDatasetItem):
-        #torch.manual_seed(17)
         _, height, width = item.input_images[0].shape
         us = item.us_factor
         x1 = torch.randint(width - self.size // us, (1,))
         x2 = x1 + self.size // us
         y1 = torch.randint(height - self.size // us, (1,))
         y2 = y1 + self.size // us
+        item.target_images[0] = item.target_images[0][:,y1*us:y2*us,x1*us:x2*us]
         for i in range(item.seq_length):
-            item.target_images[i] = item.target_images[i][:,y1*us:y2*us,x1*us:x2*us]
             item.input_images[i] = item.input_images[i][:,y1:y2,x1:x2]
             item.depth_buffers[i] = item.depth_buffers[i][y1:y2,x1:x2]
 
@@ -196,7 +196,7 @@ class SSDataset(Dataset):
     def __getitem__(self, idx):
         if (torch.is_tensor(idx)):
             idx = idx.tolist()
-
+        
         video_index = idx // self.max_allowed_frames()
         frame_index = self.seq_length - 1 + idx % self.max_allowed_frames()
         d = SSDatasetItem(self.ss_factor, self.us_factor, self.videos[video_index], frame_index, self.seq_length)
@@ -204,8 +204,23 @@ class SSDataset(Dataset):
         d.ToTorch()
         if(self.transform):
             d = self.transform(d)
-
+        
         return d
 
-#def SSDatasetCollate(batch):
-#    SSDatasetItem()fdfdfdf
+def SSDatasetCollate(batch):
+    out = SSDatasetItem(batch[0].ss_factor, batch[0].us_factor, -1, -1, batch[0].seq_length)
+    out.target_images.append(batch[0].target_images[0].unsqueeze(0))
+    for i in range(out.seq_length):
+        out.input_images.append(batch[0].input_images[i].unsqueeze(0))
+        out.motion_vectors.append(batch[0].motion_vectors[i].unsqueeze(0))
+        out.depth_buffers.append(batch[0].depth_buffers[i].unsqueeze(0))
+        out.jitters.append(batch[0].jitters[i].unsqueeze(0))
+    for i in range(1, len(batch)):
+        out.target_images[0] =  torch.cat((out.target_images[0],    batch[i].target_images[0].unsqueeze(0)),    dim=0)
+        for j in range(out.seq_length):
+            out.input_images[j] =   torch.cat((out.input_images[j],     batch[i].input_images[j].unsqueeze(0)),     dim=0)
+            out.motion_vectors[j] = torch.cat((out.motion_vectors[j],   batch[i].motion_vectors[j].unsqueeze(0)),   dim=0)
+            out.depth_buffers[j] =  torch.cat((out.depth_buffers[j],    batch[i].depth_buffers[j].unsqueeze(0)),    dim=0)
+            out.jitters[j] =        torch.cat((out.jitters[j],          batch[i].jitters[j].unsqueeze(0)),          dim=0)
+    return out
+

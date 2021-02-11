@@ -42,7 +42,6 @@ class VGGPerceptualLoss(torch.nn.Module):
             loss += torch.nn.functional.l1_loss(x, y)
         return loss
 
-
 class PSNR(torch.nn.Module):
     def __init__(self):
         super(PSNR, self).__init__()
@@ -84,7 +83,6 @@ def _ssim(img1, img2, window, window_size, channel, size_average = True):
     C2 = 0.03**2
 
     ssim_map = ((2*mu1_mu2 + C1)*(2*sigma12 + C2))/((mu1_sq + mu2_sq + C1)*(sigma1_sq + sigma2_sq + C2))
-
     if size_average:
         return ssim_map.mean()
     else:
@@ -132,69 +130,11 @@ def ssim(img1, img2, window_size = 11, size_average = True):
     
     return _ssim(img1, img2, window, window_size, channel, size_average)
 
-''' Code for creating ssim and psnr comparisons TODO: add function and improve code
-ds1 = dataset.SSDataset(64, 2, videos, None)
-ds2 = dataset.SSDataset(32, 3, videos, None)
-ds3 = dataset.SSDataset(1, 4, videos, None)
+class FBLoss(torch.nn.Module):
+    def __init__(self):
+        super(FBLoss, self).__init__()
+        self.ssim = SSIM()
+        self.vgg = VGGPerceptualLoss()
 
-psnr_metric = metrics.PSNR()
-ssim_metric = metrics.SSIM()
-
-
-psnr32_list = []
-psnr10_list = []
-psnr05_list = []
-psnr03_list = []
-psnr02_list = []
-
-ssim32_list = []
-ssim10_list = []
-ssim05_list = []
-ssim03_list = []
-ssim02_list = []
-
-iter = 600
-for i in range(iter):
-    item1 = ds1[i]
-    item2 = ds2[i]
-    item3 = ds3[i]
-
-    im64 = item1.target_image.unsqueeze(0).cuda()
-    im32 = item2.target_image.unsqueeze(0).cuda()
-    im10 = item3.target_image.unsqueeze(0).cuda()
-    im05 = item1.input_image.unsqueeze(0).cuda()
-    im03 = item2.input_image.unsqueeze(0).cuda()
-    im02 = item3.input_image.unsqueeze(0).cuda()
-
-    us05 = F.interpolate(im05, scale_factor=2, mode='bilinear')
-    us03 = F.interpolate(im03, scale_factor=3, mode='bilinear')
-    us02 = F.interpolate(im02, scale_factor=4, mode='bilinear')
-
-    psnr32_list.append(psnr_metric.forward(im64, im32).item())
-    psnr10_list.append(psnr_metric.forward(im64, im10).item())
-    psnr05_list.append(psnr_metric.forward(im64, us05).item())
-    psnr03_list.append(psnr_metric.forward(im64, us03).item())
-    psnr02_list.append(psnr_metric.forward(im64, us02).item())
-
-    ssim32_list.append(ssim_metric.forward(im64, im32).item())
-    ssim10_list.append(ssim_metric.forward(im64, im10).item())
-    ssim05_list.append(ssim_metric.forward(im64, us05).item())
-    ssim03_list.append(ssim_metric.forward(im64, us03).item())
-    ssim02_list.append(ssim_metric.forward(im64, us02).item())
-
-    print(i)
-
-plt.figure()
-plt.plot(range(iter), psnr32_list)
-plt.plot(range(iter), psnr10_list)
-plt.plot(range(iter), psnr05_list)
-plt.plot(range(iter), psnr03_list)
-plt.plot(range(iter), psnr02_list)
-plt.figure()
-plt.plot(range(iter), ssim32_list)
-plt.plot(range(iter), ssim10_list)
-plt.plot(range(iter), ssim05_list)
-plt.plot(range(iter), ssim03_list)
-plt.plot(range(iter), ssim02_list)
-plt.show()
-'''
+    def forward(self, img1, img2):
+        return 1.0 - self.ssim(img1, img2) + 0.1 * self.vgg(img1, img2)

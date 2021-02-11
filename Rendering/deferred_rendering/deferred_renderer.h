@@ -9,7 +9,7 @@
 class DeferredRenderer
 {
 public:
-	DeferredRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size, float far_plane);
+	DeferredRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size, float far_plane, float mipmap_bias = 0.0f);
 
 	void UpdateLight(egx::Camera& camera);
 
@@ -58,7 +58,7 @@ private:
 
 private:
 	void initializeDepthOnlyRenderer(egx::Device& dev);
-	void initializeModelRenderer(egx::Device& dev);
+	void initializeModelRenderer(egx::Device& dev, float mipmap_bias);
 	void initializeLightRenderer(egx::Device& dev);
 	void initializeMotionVectorRenderer(egx::Device& dev);
 

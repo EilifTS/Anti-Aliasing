@@ -127,7 +127,7 @@ class FBFeatureExtractor(nn.Module):
             nn.Conv2d(32, 8, 3, stride=1, padding=1),
             nn.ReLU()
             )
-        self.upsampler = ZeroUpsampling(factor)
+        self.upsampler = ZeroUpsampling(factor, 12)
 
     def forward(self, x):
         return self.upsampler(
@@ -140,7 +140,7 @@ class FBUNet(nn.Module):
     def __init__(self):
         super(FBUNet, self).__init__()
         self.down = nn.MaxPool2d(2)
-        self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear')
 
         self.start = nn.Sequential(
             nn.Conv2d(60, 64, 3, stride=1, padding=1),
@@ -161,14 +161,14 @@ class FBUNet(nn.Module):
             nn.ReLU(),
             nn.Conv2d(128, 128, 3, stride=1, padding=1),
             nn.ReLU(),
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+            nn.Upsample(scale_factor=2, mode='bilinear')
             )
         self.up = nn.Sequential(
             nn.Conv2d(192, 64, 3, stride=1, padding=1),
             nn.ReLU(),
             nn.Conv2d(64, 64, 3, stride=1, padding=1),
             nn.ReLU(),
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+            nn.Upsample(scale_factor=2, mode='bilinear')
             )
         self.end = nn.Sequential(
             nn.Conv2d(96, 32, 3, stride=1, padding=1),
@@ -185,16 +185,16 @@ class FBUNet(nn.Module):
         return self.end(torch.cat((x1, x4), dim=1))
 
 class ZeroUpsampling(nn.Module):
-    def __init__(self, factor):
+    def __init__(self, factor, channels):
         super(ZeroUpsampling, self).__init__()
         self.factor = factor
+        self.channels = channels
+        self.w = torch.zeros(size=(self.factor, self.factor))
+        self.w[0, 0] = 1
+        self.w = self.w.expand(channels, 1, self.factor, self.factor).cuda()
 
     def forward(self, x):
-        _, c, _, _ = x.shape
-        w = torch.zeros(size=(self.factor, self.factor))
-        w[0, 0] = 1
-        w = w.expand(c, 1, self.factor, self.factor).cuda()
-        return F.conv_transpose2d(x, w, stride=self.factor, groups=c)
+        return F.conv_transpose2d(x, self.w, stride=self.factor, groups=self.channels)
 
 class FBNet(nn.Module):
     def __init__(self, factor):
@@ -213,17 +213,14 @@ class FBNet(nn.Module):
 
     def forward(self, x):
         num_frames = 5
-        frames = [x.input_images[i].unsqueeze(0) for i in range(num_frames)]
-        
-
-        depths = [x.depth_buffers[i].unsqueeze(0).unsqueeze(0) for i in range(num_frames)]
-
+        frames = [x.input_images[i] for i in range(num_frames)]
+        depths = [x.depth_buffers[i].unsqueeze(1) for i in range(num_frames)]
         frames = [torch.cat(x, dim=1) for x in zip(frames, depths)]
         del depths
 
         frames = [self.feature_extractor(f) for f in frames]
         
-        mvs = [x.motion_vectors[i].unsqueeze(0) for i in range(num_frames - 1)]
+        mvs = [x.motion_vectors[i] for i in range(num_frames - 1)]
 
         for i in range(len(mvs)):
             mvs[i] = torch.movedim(mvs[i], 3, 1)
@@ -236,24 +233,6 @@ class FBNet(nn.Module):
                 frames[i] = F.grid_sample(frames[i], mvs[j], mode='bilinear')
         del mvs
 
-        
-        res1 = frames[0][:,:3,:,:].squeeze().cpu().detach()
-        res2 = frames[1][:,:3,:,:].squeeze().cpu().detach()
-        res3 = frames[2][:,:3,:,:].squeeze().cpu().detach()
-        res4 = frames[3][:,:3,:,:].squeeze().cpu().detach()
-        res5 = frames[4][:,:3,:,:].squeeze().cpu().detach()
-        res1 = dataset.ImageTorchToNumpy(res1)
-        res2 = dataset.ImageTorchToNumpy(res2)
-        res3 = dataset.ImageTorchToNumpy(res3)
-        res4 = dataset.ImageTorchToNumpy(res4)
-        res5 = dataset.ImageTorchToNumpy(res5)
-        cv2.imshow("Image1", res1)
-        cv2.imshow("Image2", res2)
-        cv2.imshow("Image3", res3)
-        cv2.imshow("Image4", res4)
-        cv2.imshow("Image5", res5)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
         feature_weight_input = torch.cat((
             frames[0][:,:4,:,:],
             frames[1][:,:4,:,:], 
@@ -263,10 +242,10 @@ class FBNet(nn.Module):
         feature_weights = (self.reweighting(feature_weight_input) + 1.0) * 10.0
         del feature_weight_input
 
-        frames[1] = frames[1] * feature_weights[:,0,:,:]
-        frames[2] = frames[2] * feature_weights[:,1,:,:]
-        frames[3] = frames[3] * feature_weights[:,2,:,:]
-        frames[4] = frames[4] * feature_weights[:,3,:,:]
+        frames[1] = frames[1] * feature_weights[:,0:1,:,:]
+        frames[2] = frames[2] * feature_weights[:,1:2,:,:]
+        frames[3] = frames[3] * feature_weights[:,2:3,:,:]
+        frames[4] = frames[4] * feature_weights[:,3:4,:,:]
         del feature_weights
 
         reconstruction_input = torch.cat((

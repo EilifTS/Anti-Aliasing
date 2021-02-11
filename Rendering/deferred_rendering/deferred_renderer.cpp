@@ -1,7 +1,7 @@
 #include "deferred_renderer.h"
 #include "graphics/cpu_buffer.h"
 
-DeferredRenderer::DeferredRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size, float far_plane)
+DeferredRenderer::DeferredRenderer(egx::Device& dev, egx::CommandContext& context, const ema::point2D& size, float far_plane, float mipmap_bias)
 	: g_buffer(dev, size, far_plane),
 	size(size),
 	light_manager(dev, context),
@@ -14,7 +14,7 @@ DeferredRenderer::DeferredRenderer(egx::Device& dev, egx::CommandContext& contex
 	motion_vectors.CreateRenderTargetView(dev);
 
 	initializeDepthOnlyRenderer(dev);
-	initializeModelRenderer(dev);
+	initializeModelRenderer(dev, mipmap_bias);
 	initializeLightRenderer(dev);
 	initializeMotionVectorRenderer(dev);
 }
@@ -242,14 +242,16 @@ void DeferredRenderer::initializeDepthOnlyRenderer(egx::Device& dev)
 	depth_only_ps.Finalize(dev);
 }
 
-void DeferredRenderer::initializeModelRenderer(egx::Device& dev)
+void DeferredRenderer::initializeModelRenderer(egx::Device& dev, float mipmap_bias)
 {
 	// Create root signature
+	auto normal_sampler = egx::Sampler::LinearWrap();
+	normal_sampler.SetMipMapBias(0.0f + mipmap_bias);
 	auto taa_sampler = egx::Sampler::LinearWrap();
-	taa_sampler.SetMipMapBias(-1.0f);
+	taa_sampler.SetMipMapBias(-1.0f + mipmap_bias);
 	auto ssaa_sampler = egx::Sampler::LinearWrap();
 	//ssaa_sampler.SetMaxMipMapLOD(0.0f);
-	ssaa_sampler.SetMipMapBias(-2.5f); // 0.5 * log2(num_samples) (num_samples = 32)
+	ssaa_sampler.SetMipMapBias(-2.5f + mipmap_bias); // 0.5 * log2(num_samples) (num_samples = 32)
 
 	model_rs.InitConstantBuffer(0); // Camera buffer
 	model_rs.InitConstantBuffer(1); // Model buffer
@@ -258,7 +260,7 @@ void DeferredRenderer::initializeModelRenderer(egx::Device& dev)
 	model_rs.InitDescriptorTable(1, egx::ShaderVisibility::Pixel); // Normals
 	model_rs.InitDescriptorTable(2, egx::ShaderVisibility::Pixel); // Specular
 	model_rs.InitDescriptorTable(3, egx::ShaderVisibility::Pixel); // Mask
-	model_rs.AddSampler(egx::Sampler::LinearWrap(), 0);
+	model_rs.AddSampler(normal_sampler, 0);
 	model_rs.AddSampler(taa_sampler, 1);
 	model_rs.AddSampler(ssaa_sampler, 2);
 	model_rs.Finalize(dev);

@@ -248,7 +248,7 @@ void DeferredRenderer::initializeModelRenderer(egx::Device& dev, float mipmap_bi
 	auto normal_sampler = egx::Sampler::LinearWrap();
 	normal_sampler.SetMipMapBias(0.0f + mipmap_bias);
 	auto taa_sampler = egx::Sampler::LinearWrap();
-	taa_sampler.SetMipMapBias(-1.0f + mipmap_bias);
+	taa_sampler.SetMipMapBias(-2.0f + mipmap_bias); // (num_samples = 16)
 	auto ssaa_sampler = egx::Sampler::LinearWrap();
 	//ssaa_sampler.SetMaxMipMapLOD(0.0f);
 	ssaa_sampler.SetMipMapBias(-2.5f + mipmap_bias); // 0.5 * log2(num_samples) (num_samples = 32)

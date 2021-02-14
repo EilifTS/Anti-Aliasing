@@ -161,14 +161,14 @@ class FBUNet(nn.Module):
             nn.ReLU(),
             nn.Conv2d(128, 128, 3, stride=1, padding=1),
             nn.ReLU(),
-            nn.Upsample(scale_factor=2, mode='bilinear')
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
             )
         self.up = nn.Sequential(
             nn.Conv2d(192, 64, 3, stride=1, padding=1),
             nn.ReLU(),
             nn.Conv2d(64, 64, 3, stride=1, padding=1),
             nn.ReLU(),
-            nn.Upsample(scale_factor=2, mode='bilinear')
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
             )
         self.end = nn.Sequential(
             nn.Conv2d(96, 32, 3, stride=1, padding=1),
@@ -200,7 +200,8 @@ class FBNet(nn.Module):
     def __init__(self, factor):
         super(FBNet, self).__init__()
         self.factor = factor
-        self.feature_extractor = FBFeatureExtractor(factor)
+        self.main_feature_extractor = FBFeatureExtractor(factor)
+        self.other_feature_extractor = FBFeatureExtractor(factor)
         self.reweighting = nn.Sequential(
             nn.Conv2d(20, 32, 3, stride=1, padding=1),
             nn.ReLU(),
@@ -218,19 +219,21 @@ class FBNet(nn.Module):
         frames = [torch.cat(x, dim=1) for x in zip(frames, depths)]
         del depths
 
-        frames = [self.feature_extractor(f) for f in frames]
+        frames[0] = self.main_feature_extractor(frames[0])
+        for i in range(1, num_frames):
+            frames[i] = self.other_feature_extractor(frames[i])
         
         mvs = [x.motion_vectors[i] for i in range(num_frames - 1)]
 
         for i in range(len(mvs)):
             mvs[i] = torch.movedim(mvs[i], 3, 1)
-            mvs[i] = F.upsample(mvs[i], scale_factor=self.factor, mode='bilinear')
+            mvs[i] = F.interpolate(mvs[i], scale_factor=self.factor, mode='bilinear', align_corners=False)
             mvs[i] = torch.movedim(mvs[i], 1, 3)
 
 
         for i in range(1, num_frames):
             for j in range(i - 1, -1, -1):
-                frames[i] = F.grid_sample(frames[i], mvs[j], mode='bilinear')
+                frames[i] = F.grid_sample(frames[i], mvs[j], mode='bilinear', align_corners=False)
         del mvs
 
         feature_weight_input = torch.cat((

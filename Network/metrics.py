@@ -137,4 +137,16 @@ class FBLoss(torch.nn.Module):
         self.vgg = VGGPerceptualLoss()
 
     def forward(self, img1, img2):
-        return 1.0 - self.ssim(img1, img2) + 0.1 * self.vgg(img1, img2)
+        return 1.0 - self.ssim(img1[0], img2) + 0.1 * self.vgg(img1[0], img2)
+
+class MasterLoss(torch.nn.Module):
+    def __init__(self):
+        super(MasterLoss, self).__init__()
+        self.ssim = SSIM()
+
+    def forward(self, img1, img2):
+        loss = torch.tensor([0.0], device="cuda")
+        for i in range(len(img1)):
+            #loss += 1.0 - self.ssim(img1[i], img2[i])
+            loss += F.mse_loss(img1[i], img2[i])
+        return loss / len(img1)

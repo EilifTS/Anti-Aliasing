@@ -49,7 +49,7 @@ def BiCubicGridSample(texture, grid):
     c4 = catmullSample(texture, sp4) * (w12[:,:,:,0] * w3[:,:,:,1])
     c5 = center_color * (w12[:,:,:,0] * w12[:,:,:,1])
     out = c1 + c2 + c3 + c4 + c5
-    out = out[:,:3,:,:] / out[:,-1,:,:]
+    out = out[:,:12,:,:] / out[:,-1,:,:]
 
     # More accurate version that uses more samples
     #sp1 = torch.stack((tc0[:,:,:,0], tc0[:,:,:,1]),dim=3)
@@ -72,7 +72,60 @@ def BiCubicGridSample(texture, grid):
     #c9 = catmullSample(texture, sp9) * (w3[:,:,:,0] * w3[:,:,:,1])
     #out = c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8 + c9
    
-    return torch.clamp(out[:,:3,:,:], 0, 1)
+    return torch.clamp(out[:,:12,:,:], 0, 1)
+
+class ZeroUpsampling(nn.Module):
+    def __init__(self, factor, channels):
+        super(ZeroUpsampling, self).__init__()
+        self.factor = factor
+        self.channels = channels
+        self.w = torch.zeros(size=(self.factor, self.factor))
+        self.w[0, 0] = 1
+        self.w = self.w.expand(channels, 1, self.factor, self.factor).cuda()
+
+    def forward(self, x):
+        return F.conv_transpose2d(x, self.w, stride=self.factor, groups=self.channels)
+
+    def forward_with_jitter(self, x, jitter):
+        jitter_index = torch.floor(jitter*self.factor).int()
+        w = torch.zeros(size=(self.factor, self.factor))
+        w[jitter_index[0,0], jitter_index[0,1]] = 1
+        w = w.expand(self.channels, 1, self.factor, self.factor).cuda()
+        return F.conv_transpose2d(x, w, stride=self.factor, groups=self.channels)
+
+
+class TUS(nn.Module):
+    def __init__(self, factor, alpha):
+        super(TUS, self).__init__()
+        self.factor = factor
+        self.alpha = alpha
+        self.history = None
+        self.zero_up = ZeroUpsampling(self.factor, 3)
+
+    def forward(self, x):
+        out = self.zero_up.forward_with_jitter(x.input_images[0], x.jitters[0])
+        
+        if(self.history != None):
+            upsampled_mv = torch.movedim(x.motion_vectors[0], 3, 1)
+            upsampled_mv = F.interpolate(upsampled_mv, scale_factor=self.factor, mode='bilinear', align_corners=False)
+            upsampled_mv = torch.movedim(upsampled_mv, 1, 3)
+
+            reprojected_history = F.grid_sample(self.history, upsampled_mv, mode='bilinear', align_corners=False)
+            out = self.alpha * out + (1-self.alpha) * reprojected_history
+
+        self.history = out
+        return out
+
+    def reset_history(self):
+        self.history = None
+
+    def name(self):
+        name = "TAA_" + str(self.alpha)
+        if(self.use_history_camp):
+            name += "_clamp"
+        if(self.use_bic):
+            name += "_cube"
+        return name
 
 class TAA(nn.Module):
 
@@ -184,18 +237,6 @@ class FBUNet(nn.Module):
         del x2, x3
         return self.end(torch.cat((x1, x4), dim=1))
 
-class ZeroUpsampling(nn.Module):
-    def __init__(self, factor, channels):
-        super(ZeroUpsampling, self).__init__()
-        self.factor = factor
-        self.channels = channels
-        self.w = torch.zeros(size=(self.factor, self.factor))
-        self.w[0, 0] = 1
-        self.w = self.w.expand(channels, 1, self.factor, self.factor).cuda()
-
-    def forward(self, x):
-        return F.conv_transpose2d(x, self.w, stride=self.factor, groups=self.channels)
-
 class FBNet(nn.Module):
     def __init__(self, factor):
         super(FBNet, self).__init__()
@@ -223,6 +264,7 @@ class FBNet(nn.Module):
         for i in range(1, num_frames):
             frames[i] = self.other_feature_extractor(frames[i])
         
+
         mvs = [x.motion_vectors[i] for i in range(num_frames - 1)]
 
         for i in range(len(mvs)):
@@ -261,5 +303,130 @@ class FBNet(nn.Module):
 
         return self.reconstruct(reconstruction_input)
 
+class MasterFeatureExtractor(nn.Module):
+    def __init__(self, factor):
+        super(MasterFeatureExtractor, self).__init__()
+        self.net = nn.Sequential(
+            nn.Conv2d(4, 32, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 8, 3, stride=1, padding=1),
+            nn.ReLU()
+            )
 
+    def forward(self, x):
+        return torch.cat((x, 
+                       self.net(x)
+                       ), dim=1)
+            
+
+
+class MasterUNet(nn.Module):
+    def __init__(self):
+        super(MasterUNet, self).__init__()
+        self.down = nn.MaxPool2d(2)
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear')
+
+        self.start = nn.Sequential(
+            nn.Conv2d(24, 64, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 32, 3, stride=1, padding=1),
+            nn.ReLU()
+            )
+        self.down = nn.Sequential(
+            nn.MaxPool2d(2),
+            nn.Conv2d(32, 64, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, stride=1, padding=1),
+            nn.ReLU()
+            )
+        self.bottom = nn.Sequential(
+            nn.MaxPool2d(2),
+            nn.Conv2d(64, 128, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
+            )
+        self.up = nn.Sequential(
+            nn.Conv2d(192, 64, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
+            )
+        self.end = nn.Sequential(
+            nn.Conv2d(96, 32, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 12, 3, stride=1, padding=1),
+            nn.ReLU()
+            )
+    def forward(self, x):
+        x1 = self.start(x)
+        x2 = self.down(x1)
+        x3 = self.bottom(x2)
+        x4 = self.up(torch.cat((x2, x3), dim=1))
+        del x2, x3
+        return self.end(torch.cat((x1, x4), dim=1))
+
+class MasterNet(nn.Module):
+    def __init__(self, factor):
+        super(MasterNet, self).__init__()
+        self.factor = factor
+        self.feature_extractor = MasterFeatureExtractor(factor)
+        self.zero_up = ZeroUpsampling(factor, 12)
+        self.reweighting = nn.Sequential(
+            nn.Conv2d(24, 32, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 1, 3, stride=1, padding=1),
+            nn.Tanh(),
+            )
+        self.reconstruct = MasterUNet()
+
+    def sub_forward(self, frame, depth, mv, jitter, history):
+        # Getting frame info
+        frame = torch.cat((frame, depth), dim=1)
+
+        # Upscaling motion vector
+        mv = torch.movedim(mv, 3, 1)
+        mv = F.interpolate(mv, scale_factor=self.factor, mode='bilinear', align_corners=False)
+        mv = torch.movedim(mv, 1, 3)
+
+        # Feature extraction
+        frame = self.feature_extractor(frame)
+
+        # Frame upsampling
+        frame = self.zero_up.forward_with_jitter(frame, jitter)
+
+        # History reprojection
+        #history = F.grid_sample(history, mv, mode='bilinear', align_corners=False)
+        history = BiCubicGridSample(history, mv)
+
+        # History reweighting
+        history_reweight_input = torch.cat((frame[:4], history), dim=1)
+        history_weights = self.reweighting(history_reweight_input)
+        history = history * history_weights
+
+        # Reconstruction
+        reconstruction_input = torch.cat((frame, history), dim=1)
+        return self.reconstruct(reconstruction_input)
+
+    def forward(self, x):
+        num_frames = 5
+        mini_batch, channels, height, width = x.input_images[0].shape
+        history = torch.zeros(size=(mini_batch, 12, height*self.factor, width*self.factor), device='cuda')
+        out = []
+        for i in range(num_frames - 1, -1, -1):
+            history = self.sub_forward(
+                x.input_images[i], 
+                x.depth_buffers[i].unsqueeze(1), 
+                x.motion_vectors[i], 
+                x.jitters[i], 
+                history)
+            out.append(history[:,:3,:,:])
+        out.reverse()
+        return out
 

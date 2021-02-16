@@ -1,5 +1,7 @@
 import torch
 import metrics
+import dataset
+import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -17,7 +19,6 @@ class Evaluator():
             self.lines[plot_name][i].append(metric.forward(i1, i2).item())
     
     def Plot(self):
-        print(self.lines)
         for i, metric in enumerate(self.metrics):
             plt.figure()
             for k, v in self.lines.items():
@@ -31,7 +32,7 @@ class Evaluator():
             plt.legend(loc="upper left")
         plt.show()
 
-def DefaultEvaulator():
+def DefaultEvaluator():
     return Evaluator([metrics.PSNR(), metrics.SSIM()])
 
 iteration_str = 'Current iteration: {0} \t Loss: {1:.6f} \t ETA: {2:.2f}s   '
@@ -50,7 +51,7 @@ def TrainEpoch(model, dataloader, optimizer, loss_function):
 
         # Forward
         res = model.forward(item)
-        target = item.target_images[0]
+        target = item.target_images
         loss = loss_function(target, res)
 
         # Backward
@@ -87,7 +88,7 @@ def ValidateModel(model, dataloader, loss_function):
 
             # Forward
             res = model.forward(item)
-            target = item.target_images[0]
+            target = item.target_images
             loss = loss_function(target, res)
             current_loss = loss.item()
             losses[i] = current_loss
@@ -104,3 +105,70 @@ def ValidateModel(model, dataloader, loss_function):
         max_loss = np.max(losses)
         print('Validation finished \t ' + finish_str.format(avg_loss, min_loss, max_loss, time.time()-start_time))
     return avg_loss
+
+def TestModel(model, dataloader):
+    print("Testing model")
+    model.eval()
+    with torch.no_grad():
+        dli = iter(dataloader)
+        evaluator = DefaultEvaluator()
+        evaluator.AddPlot("Model")
+        for i, item in enumerate(dli):
+            print(i, "/", len(dli), "  ", end="\r")
+            item.ToCuda()
+            res = model.forward(item)
+            evaluator.Evaluate(res, item.target_images[0], "Model")
+        evaluator.Plot()
+
+
+def VisualizeModel(model, dataloader):
+    model.eval()
+    with torch.no_grad():
+        dli = iter(dataloader)
+        for item in dli:
+            item.ToCuda()
+            res = model.forward(item)
+            res = res.squeeze().cpu().detach()
+            res = dataset.ImageTorchToNumpy(res)
+            window_name = "Image"
+            cv2.imshow(window_name, res)
+            cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+def VisualizeMasterModel(model, dataloader):
+    model.eval()
+    with torch.no_grad():
+        dli = iter(dataloader)
+        history = torch.zeros(size=(1, 12, 1080, 1920), device='cuda')
+        for item in dli:
+            item.ToCuda()
+            res = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
+            history = res
+            res = res[:,6:9,:,:]
+            res = res.squeeze().cpu().detach()
+            res = dataset.ImageTorchToNumpy(res)
+            window_name = "Image"
+            cv2.imshow(window_name, res[:,:,0])
+            cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+def VisualizeDifference(model, dataloader):
+    model.eval()
+    with torch.no_grad():
+        dli = iter(dataloader)
+        for item in dli:
+            item.ToCuda()
+            res = model.forward(item)
+            res = torch.abs(res - item.target_images[0])
+            res = res.squeeze().cpu().detach()
+            res = dataset.ImageTorchToNumpy(res)
+            window_name = "Image"
+            cv2.imshow(window_name, res)
+            cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+def PlotLosses(train_loss, val_loss):
+    plt.figure()
+    plt.plot(range(len(train_loss)), train_loss)
+    plt.plot(range(len(val_loss)), val_loss)
+    plt.show()

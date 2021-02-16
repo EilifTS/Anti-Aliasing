@@ -12,24 +12,28 @@ if(__name__ == '__main__'):
     videos = torch.randperm(100)
     torch.seed()
     sequence_length = 5
+    target_count = 5
     upsample_factor = 4
-    data_train = dataset.SSDataset(64, upsample_factor, videos[:80], sequence_length, transform=dataset.RandomCrop(256))
-    data_val = dataset.SSDataset(64, upsample_factor, videos[80:90], sequence_length, transform=dataset.RandomCrop(256))
-    data_test = dataset.SSDataset(64, upsample_factor, videos[90:], sequence_length, transform=None)
-    loader_train = torch.utils.data.DataLoader(data_train, batch_size=8, shuffle=True, num_workers=0, collate_fn=dataset.SSDatasetCollate)
-    loader_val = torch.utils.data.DataLoader(data_val, batch_size=1, shuffle=True, num_workers=0, collate_fn=dataset.SSDatasetCollate)
+    data_train = dataset.SSDataset(64, upsample_factor, videos[:10], sequence_length, target_count, transform=dataset.RandomCrop(256))
+    data_val = dataset.SSDataset(64, upsample_factor, videos[80:90], sequence_length, target_count, transform=dataset.RandomCrop(256))
+    data_test = dataset.SSDataset(64, upsample_factor, videos[90:], sequence_length, target_count, transform=None)
+    loader_train = torch.utils.data.DataLoader(data_train, batch_size=1, shuffle=True, num_workers=4, collate_fn=dataset.SSDatasetCollate)
+    loader_val = torch.utils.data.DataLoader(data_val, batch_size=1, shuffle=True, num_workers=4, collate_fn=dataset.SSDatasetCollate)
     loader_test = torch.utils.data.DataLoader(data_test, batch_size=1, shuffle=False, num_workers=0, collate_fn=dataset.SSDatasetCollate)
 
 
-    evaluator = utils.DefaultEvaulator()
+    evaluator = utils.DefaultEvaluator()
 
     # Create model
-    model_name = 'modelFB4'
-    load_model = True
+    #model_name = 'modelMaster1'
+    model_name = 'modelMaster2'
+    #model_name = 'modelFB1'
+    load_model = False
     start_epoch = 0
     train_losses = []
     val_losses = []
-    model = models.FBNet(upsample_factor)
+    model = models.MasterNet(upsample_factor)
+    loss_function = metrics.MasterLoss()
 
     # Create optimizer
     params = [p for p in model.parameters() if p.requires_grad]
@@ -61,22 +65,15 @@ if(__name__ == '__main__'):
     except OSError as error:
         print("Directory", model_name, "allready exist")
 
-    loss_function = metrics.FBLoss()
 
     epochs = 100
 
     # Testing
-    #with torch.no_grad():
-    #    dli = iter(loader_test)
-    #    for item in dli:
-    #        item.ToCuda()
-    #        res = model.forward(item)
-    #        res = res.squeeze().cpu().detach()
-    #        res = dataset.ImageTorchToNumpy(res)
-    #        window_name = "Image"
-    #        cv2.imshow(window_name, res)
-    #        cv2.waitKey(0)
-    #    cv2.destroyAllWindows()
+    #utils.VisualizeModel(tus, loader_test)
+    #utils.VisualizeMasterModel(model, loader_test)
+    #utils.TestModel(model, loader_test)
+    #utils.VisualizeDifference(model, loader_test)
+    #utils.PlotLosses(train_losses, val_losses)
 
     for epoch in range(start_epoch, epochs):
         print('Epoch {}'.format(epoch))
@@ -100,7 +97,7 @@ if(__name__ == '__main__'):
             dli = iter(loader_test)
             item = next(dli)
             item.ToCuda()
-            res = model.forward(item)
+            res = model.forward(item)[0]
             res = res.squeeze().cpu().detach()
             res = dataset.ImageTorchToNumpy(res)
             cv2.imwrite(model_name + "/temp_img" + str(epoch) + ".png", res)

@@ -36,7 +36,7 @@ def DefaultEvaluator():
     return Evaluator([metrics.PSNR(), metrics.SSIM()])
 
 iteration_str = 'Current iteration: {0} \t Loss: {1:.6f} \t ETA: {2:.2f}s   '
-finish_str = 'avg_loss: {0:.4f} \t min_loss {1:.4f} \t max_loss {2:.4f} \t total_time {3:.2f}s   '
+finish_str = 'avg_loss: {0:.6f} \t min_loss {1:.6f} \t max_loss {2:.6f} \t total_time {3:.2f}s   '
 
 def TrainEpoch(model, dataloader, optimizer, loss_function):
     torch.seed() # To randomize
@@ -57,6 +57,10 @@ def TrainEpoch(model, dataloader, optimizer, loss_function):
         # Backward
         optimizer.zero_grad()
         loss.backward()
+
+        #for name, param in model.named_parameters():
+        #    print(name, param.grad.norm())
+
         optimizer.step()
         current_loss = loss.item()
         losses[i] = current_loss
@@ -120,6 +124,42 @@ def TestModel(model, dataloader):
             evaluator.Evaluate(res, item.target_images[0], "Model")
         evaluator.Plot()
 
+def TestMasterModel(model, dataloader):
+    print("Testing model")
+    model.eval()
+    with torch.no_grad():
+        dli = iter(dataloader)
+        evaluator = DefaultEvaluator()
+        evaluator.AddPlot("Model")
+        history = None
+        for i, item in enumerate(dli):
+            print(i, "/", len(dli), "  ", end="\r")
+            if(i % 60 == 0):
+                history = None
+            item.ToCuda()
+            res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
+            res = res[:,0:3,:,:]
+            evaluator.Evaluate(res, item.target_images[0], "Model")
+            res = res.squeeze().cpu().detach()
+            res = dataset.ImageTorchToNumpy(res)
+            window_name = "Image"
+            cv2.imshow(window_name, res[:,:,:])
+            cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        evaluator.Plot()
+
+def CheckMasterModelSampleEff(model, dataloader, loss_function):
+    max_frames = 16
+    model.eval()
+    losses = np.zeros(max_frames)
+    for num_frames in range(1, max_frames + 1):
+        print("Validating using", num_frames, "frames")
+        model.num_frames = num_frames
+        losses[num_frames - 1] = ValidateModel(model, dataloader, loss_function)
+        print("")
+    plt.figure()
+    plt.plot(range(1, max_frames + 1), losses)
+    plt.show()
 
 def VisualizeModel(model, dataloader):
     model.eval()
@@ -139,16 +179,15 @@ def VisualizeMasterModel(model, dataloader):
     model.eval()
     with torch.no_grad():
         dli = iter(dataloader)
-        history = torch.zeros(size=(1, 12, 1080, 1920), device='cuda')
+        history = None
         for item in dli:
             item.ToCuda()
-            res = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
-            history = res
-            res = res[:,6:9,:,:]
+            res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
+            res = res[:,0:3,:,:]
             res = res.squeeze().cpu().detach()
             res = dataset.ImageTorchToNumpy(res)
             window_name = "Image"
-            cv2.imshow(window_name, res[:,:,0])
+            cv2.imshow(window_name, res[:,:,:])
             cv2.waitKey(0)
         cv2.destroyAllWindows()
 
@@ -171,4 +210,37 @@ def PlotLosses(train_loss, val_loss):
     plt.figure()
     plt.plot(range(len(train_loss)), train_loss)
     plt.plot(range(len(val_loss)), val_loss)
+    plt.grid()
+    min_val = min(min(train_loss), min(val_loss))
+    max_val = max(max(train_loss), max(val_loss))
+    plt.yticks(np.arange(min_val,max_val, (max_val - min_val) * 0.05))
     plt.show()
+
+def IllustrateJitterPattern(dataloader, num_jitters, factor):
+    dli = iter(dataloader)
+    jitters = np.zeros(shape=(num_jitters, 2))
+    for i in range(num_jitters):
+        item = next(dli)
+        jitter = item.jitters[0]
+        jitters[i,0] = jitter[0,0] * factor
+        jitters[i,1] = jitter[0,1] * factor
+    
+    plt.figure()
+    axes = plt.gca()
+    axes.set_xlim([0, 4])
+    axes.set_ylim([0, 4])
+    axes.set_aspect('equal', adjustable='box')
+    plt.xticks(np.arange(0,factor + 1, 1))
+    plt.yticks(np.arange(0,factor + 1, 1))
+    plt.grid()
+    plt.scatter(jitters[:,0], jitters[:,1])
+    plt.show()
+
+def AddGradientHooks(model):
+    for name, layer in model.named_children():
+        layer.__name__ = name
+        def func(m, g1, g2):
+            for g in list(g1):
+                print(m.__name__, g.norm())
+        layer.register_backward_hook(func)
+            

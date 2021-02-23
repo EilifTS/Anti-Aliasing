@@ -11,14 +11,14 @@ if(__name__ == '__main__'):
     torch.manual_seed(17) # Split the dataset up the same way every time
     videos = torch.randperm(100)
     torch.seed()
-    sequence_length = 5
-    target_count = 5
+    sequence_length = 18 # Number inputs used in the model
+    target_indices = [0]#, 1, 2]#, 15, 31] # The targets the model will calculate loss against, [0] means the last image, [0, 1] the two last etc.
     upsample_factor = 4
-    data_train = dataset.SSDataset(64, upsample_factor, videos[:10], sequence_length, target_count, transform=dataset.RandomCrop(256))
-    data_val = dataset.SSDataset(64, upsample_factor, videos[80:90], sequence_length, target_count, transform=dataset.RandomCrop(256))
-    data_test = dataset.SSDataset(64, upsample_factor, videos[90:], sequence_length, target_count, transform=None)
+    data_train = dataset.SSDataset(64, upsample_factor, videos[:10], sequence_length, target_indices, transform=dataset.RandomCrop(256))
+    data_val = dataset.SSDataset(64, upsample_factor, videos[80:81], sequence_length, target_indices, transform=dataset.RandomCrop(256))
+    data_test = dataset.SSDataset(64, upsample_factor, videos[90:], 1, target_indices, transform=None)
     loader_train = torch.utils.data.DataLoader(data_train, batch_size=1, shuffle=True, num_workers=4, collate_fn=dataset.SSDatasetCollate)
-    loader_val = torch.utils.data.DataLoader(data_val, batch_size=1, shuffle=True, num_workers=4, collate_fn=dataset.SSDatasetCollate)
+    loader_val = torch.utils.data.DataLoader(data_val, batch_size=1, shuffle=False, num_workers=4, collate_fn=dataset.SSDatasetCollate)
     loader_test = torch.utils.data.DataLoader(data_test, batch_size=1, shuffle=False, num_workers=0, collate_fn=dataset.SSDatasetCollate)
 
 
@@ -26,14 +26,14 @@ if(__name__ == '__main__'):
 
     # Create model
     #model_name = 'modelMaster1'
-    model_name = 'modelMaster2'
+    model_name = 'modelMaster5'
     #model_name = 'modelFB1'
-    load_model = False
+    load_model = True
     start_epoch = 0
     train_losses = []
     val_losses = []
-    model = models.MasterNet(upsample_factor)
-    loss_function = metrics.MasterLoss()
+    model = models.MasterNet2(upsample_factor, sequence_length)
+    loss_function = metrics.MasterLoss2(sequence_length, target_indices)
 
     # Create optimizer
     params = [p for p in model.parameters() if p.requires_grad]
@@ -69,11 +69,15 @@ if(__name__ == '__main__'):
     epochs = 100
 
     # Testing
+    #utils.AddGradientHooks(model)
+    #utils.CheckMasterModelSampleEff(model, loader_val, loss_function)
     #utils.VisualizeModel(tus, loader_test)
     #utils.VisualizeMasterModel(model, loader_test)
     #utils.TestModel(model, loader_test)
+    utils.TestMasterModel(model, loader_test)
     #utils.VisualizeDifference(model, loader_test)
     #utils.PlotLosses(train_losses, val_losses)
+    #utils.IllustrateJitterPattern(loader_test, 16, 4)
 
     for epoch in range(start_epoch, epochs):
         print('Epoch {}'.format(epoch))
@@ -101,6 +105,7 @@ if(__name__ == '__main__'):
             res = res.squeeze().cpu().detach()
             res = dataset.ImageTorchToNumpy(res)
             cv2.imwrite(model_name + "/temp_img" + str(epoch) + ".png", res)
+            
         #window_name = "Image"
         #cv2.imshow(window_name, res)
         #cv2.waitKey(0)

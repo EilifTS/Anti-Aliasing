@@ -28,7 +28,7 @@ namespace
 
 	static const bool disable_super_sampling = false;
 	static const int super_sample_options[] = { 64 };
-	static const int upsample_factor_options[] = { 2, 3, 4 };
+	static const int upsample_factor_options[] = { 4 };
 	static const int jitter_count = 16;
 
 }

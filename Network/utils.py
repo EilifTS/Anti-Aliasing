@@ -30,6 +30,7 @@ class Evaluator():
                 ylabel += '({})'.format(metric.unit())
             plt.ylabel(ylabel)
             plt.legend(loc="upper left")
+            #print("Average", metric.name(), )
         plt.show()
 
 def DefaultEvaluator():
@@ -113,6 +114,7 @@ def ValidateModel(model, dataloader, loss_function):
 def TestModel(model, dataloader):
     print("Testing model")
     model.eval()
+
     with torch.no_grad():
         dli = iter(dataloader)
         evaluator = DefaultEvaluator()
@@ -129,24 +131,58 @@ def TestMasterModel(model, dataloader):
     model.eval()
     with torch.no_grad():
         dli = iter(dataloader)
-        evaluator = DefaultEvaluator()
-        evaluator.AddPlot("Model")
+
+        psnr = metrics.PSNR()
+        ssim = metrics.SSIM()
+        psnr_list = np.zeros(len(dli))
+        ssim_list = np.zeros(len(dli))
+        time_list = np.zeros(len(dli))
         history = None
         for i, item in enumerate(dli):
-            print(i, "/", len(dli), "  ", end="\r")
-            if(i % 60 == 0):
+
+            if(i % 60 == 0): # Clear history at the start of each video
                 history = None
+
+            # Prepare and time forward pass
             item.ToCuda()
-            res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
-            res = res[:,0:3,:,:]
-            evaluator.Evaluate(res, item.target_images[0], "Model")
-            res = res.squeeze().cpu().detach()
-            res = dataset.ImageTorchToNumpy(res)
-            window_name = "Image"
-            cv2.imshow(window_name, res[:,:,:])
-            cv2.waitKey(0)
-        cv2.destroyAllWindows()
-        evaluator.Plot()
+            starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+            with torch.cuda.amp.autocast():
+                starter.record()
+                res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
+                ender.record()
+
+            #Get timing info
+            torch.cuda.synchronize()
+            time_list[i] = starter.elapsed_time(ender)
+
+            # Get performance measures
+            psnr_list[i] = psnr(res, item.target_images[0])
+            ssim_list[i] = ssim(res, item.target_images[0])
+
+            # Print info
+            test_str = '{0} / {1} \t PSNR: {2:.2f} \t SSIM: {3:.4f} \t Time: {4:.4}ms   '
+            print(test_str.format(i, len(dli), psnr_list[i], ssim_list[i], time_list[i]), end="\r")
+
+        # Print averages
+        print("")
+        print("PSNR average:", np.average(psnr_list))
+        print("SSIM average:", np.average(ssim_list))
+        print("Time average:", np.average(time_list))
+        # Plot results
+        plt.figure()
+        plt.xlabel("Frame")
+        plt.ylabel("PSNR")
+        plt.plot(range(1, len(dli) + 1), psnr_list)
+        plt.figure()
+        plt.xlabel("Frame")
+        plt.ylabel("SSIM")
+        plt.plot(range(1, len(dli) + 1), ssim_list)
+        plt.figure()
+        plt.xlabel("Frame")
+        plt.ylabel("Time")
+        plt.plot(range(1, len(dli) + 1), time_list)
+        plt.show()
+
 
 def CheckMasterModelSampleEff(model, dataloader, loss_function):
     max_frames = 16
@@ -180,10 +216,11 @@ def VisualizeMasterModel(model, dataloader):
     with torch.no_grad():
         dli = iter(dataloader)
         history = None
+        i = 0
         for item in dli:
             item.ToCuda()
             res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
-            res = res[:,0:3,:,:]
+            res = history[:,9:12,:,:]
             res = res.squeeze().cpu().detach()
             res = dataset.ImageTorchToNumpy(res)
             window_name = "Image"

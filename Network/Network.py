@@ -28,7 +28,7 @@ if(__name__ == '__main__'):
     #model_name = 'modelMaster1'
     model_name = 'modelMaster5'
     #model_name = 'modelFB1'
-    load_model = True
+    load_model = False
     start_epoch = 0
     train_losses = []
     val_losses = []
@@ -58,6 +58,9 @@ if(__name__ == '__main__'):
                 state[k] = v.cuda()
     #optimizer.to('cuda')
 
+    print("Model parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
+    #model.half()
+
     # Create folder to save model related files in
     try:
         os.mkdir(model_name)
@@ -74,7 +77,7 @@ if(__name__ == '__main__'):
     #utils.VisualizeModel(tus, loader_test)
     #utils.VisualizeMasterModel(model, loader_test)
     #utils.TestModel(model, loader_test)
-    utils.TestMasterModel(model, loader_test)
+    #utils.TestMasterModel(model, loader_test)
     #utils.VisualizeDifference(model, loader_test)
     #utils.PlotLosses(train_losses, val_losses)
     #utils.IllustrateJitterPattern(loader_test, 16, 4)

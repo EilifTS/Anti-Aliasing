@@ -152,6 +152,18 @@ class SSDatasetItem():
         for i in range(len(self.jitters)):
             self.jitters[i] = self.jitters[i].cuda()
 
+    def ToHalf(self):
+        for i in range(len(self.target_images)):
+            self.target_images[i] = self.target_images[i].half()
+        for i in range(len(self.input_images)):
+            self.input_images[i] = self.input_images[i].half()
+        for i in range(len(self.motion_vectors)):
+            self.motion_vectors[i] = self.motion_vectors[i].half()
+        for i in range(len(self.depth_buffers)):
+            self.depth_buffers[i] = self.depth_buffers[i].half()
+        for i in range(len(self.jitters)):
+            self.jitters[i] = self.jitters[i].half()
+
 class RandomCrop():
     def __init__(self, size):
         self.size = size

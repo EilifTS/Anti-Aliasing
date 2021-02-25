@@ -13,7 +13,7 @@ def UVToGrid(uv):
 def catmullSample(texture, uv):
     bs, _, width, height = texture.shape
     alpha = torch.ones(size=(bs, 1, width, height)).cuda()
-    color = F.grid_sample(texture, UVToGrid(uv), mode='bilinear')
+    color = F.grid_sample(texture, UVToGrid(uv), mode='bilinear', align_corners=False)
 
     return torch.cat((color, alpha), dim=1)
 
@@ -430,13 +430,13 @@ class MasterNet(nn.Module):
 
   
 class Master2UNet(nn.Module):
-    def __init__(self):
+    def __init__(self, history_channels):
         super(Master2UNet, self).__init__()
         self.down = nn.MaxPool2d(2)
         self.up = nn.Upsample(scale_factor=2, mode='bilinear')
 
         self.start = nn.Sequential(
-            nn.Conv2d(15, 64, 3, stride=1, padding=1),
+            nn.Conv2d(12 + history_channels, 64, 3, stride=1, padding=1),
             nn.ReLU(),
             nn.Conv2d(64, 32, 3, stride=1, padding=1),
             nn.ReLU()
@@ -466,7 +466,7 @@ class Master2UNet(nn.Module):
         self.end = nn.Sequential(
             nn.Conv2d(96, 32, 3, stride=1, padding=1),
             nn.ReLU(),
-            nn.Conv2d(32, 3, 3, stride=1, padding=1),
+            nn.Conv2d(32, history_channels, 3, stride=1, padding=1),
             )
     def forward(self, x):
         x1 = self.start(x)
@@ -477,15 +477,27 @@ class Master2UNet(nn.Module):
         return self.end(torch.cat((x1, x4), dim=1))
 
 
+class DWSC(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(DWSC, self).__init__()
+        self.net = nn.Sequential(
+            nn.Conv2d(in_channels, in_channels, 3, stride=1, padding=1, groups=in_channels),
+            nn.ReLU(),
+            nn.Conv2d(in_channels, out_channels, 1, stride=1),
+            )
+    def forward(self, x):
+        return self.net(x)
+
 class MasterNet2(nn.Module):
     def __init__(self, factor, num_frames):
         super(MasterNet2, self).__init__()
         self.factor = factor
         self.num_frames = num_frames
+        self.history_channels = 3
 
         self.feature_extractor = MasterFeatureExtractor(factor)
         self.zero_up = ZeroUpsampling(factor, 12)
-        self.reweighting = Master2UNet()
+        self.reweighting = Master2UNet(self.history_channels)
 
     def sub_forward(self, frame, depth, mv, jitter, history):
         # Getting frame info
@@ -499,13 +511,14 @@ class MasterNet2(nn.Module):
 
         if(history == None): # First frame is handled by its own
             mini_batch, channels, height, width = frame.shape
-            history = torch.zeros(size=(mini_batch, 3, height*self.factor, width*self.factor), device='cuda')
-
+            history = torch.zeros(size=(mini_batch, self.history_channels, height, width), device='cuda')
+        
         # Upscaling motion vector
         mv = torch.movedim(mv, 3, 1)
         mv = F.interpolate(mv, scale_factor=self.factor, mode='bilinear', align_corners=False)
+        frame = torch.cat((frame, torch.clamp(mv, -1, 1)), dim=1)
         mv = torch.movedim(mv, 1, 3)
-
+        
 
         # History reprojection
         history = F.grid_sample(history, mv, mode='bilinear', align_corners=False)
@@ -516,7 +529,7 @@ class MasterNet2(nn.Module):
         #window_name = "Image"
         #cv2.imshow(window_name, res[:,:])
         #cv2.waitKey(0)
-
+        
         # History reweighting
         history_reweight_input = torch.cat((frame, history), dim=1)
         history_residual = self.reweighting(history_reweight_input)
@@ -524,7 +537,7 @@ class MasterNet2(nn.Module):
         history = F.relu(history + history_residual)
 
         # Reconstruction
-        return history, history
+        return history[:,:3,:,:], history
 
     def forward(self, x):
         history = None

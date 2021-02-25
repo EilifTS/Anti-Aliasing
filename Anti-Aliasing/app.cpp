@@ -33,7 +33,8 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	aa_mode(AAMode::TAA),
 	render_mode(RenderMode::Rasterizer),
 	scene_update_mode(SceneUpdateMode::Realtime),
-	scene(dev, context, mat_manager)
+	scene(dev, context, mat_manager),
+	master_net(dev, context)
 {
 	initializeInternals(dev);
 	initializeAssets(dev, context);
@@ -318,4 +319,6 @@ void App::renderRayTracer(egx::Device& dev, egx::CommandContext& context)
 	context.SetTransitionBuffer(trace_result, egx::GPUBufferState::CopySource);
 	context.SetTransitionBuffer(renderer_target, egx::GPUBufferState::CopyDest);
 	context.CopyBuffer(trace_result, renderer_target);
+
+	master_net.Execute(dev, context);
 }

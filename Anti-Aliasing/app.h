@@ -17,6 +17,8 @@
 
 #include "network/dataset_video_recorder.h"
 
+#include "deep_learning/master_net.h"
+
 enum class AAMode
 {
 	None, FXAA, TAA, SSAA
@@ -74,6 +76,9 @@ private:
 	// Temp
 	bool do_screen_shot = false;
 	int ss_nr = 0;
+
+	// MasterNet
+	egx::MasterNet master_net;
 
 private:
 	void initializeInternals(egx::Device& dev);

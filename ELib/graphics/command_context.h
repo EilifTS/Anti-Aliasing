@@ -66,6 +66,7 @@ namespace egx
 		friend Device;
 		friend Mesh;
 		friend TLAS;
+		friend MasterNet;
 	};
 }
 

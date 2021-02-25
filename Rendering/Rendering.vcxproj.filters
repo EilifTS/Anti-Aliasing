@@ -42,6 +42,9 @@
     <ClCompile Include="scenes\scene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="deep_learning\master_net.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="deferred_rendering\deferred_renderer.h">
@@ -72,6 +75,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="scenes\scene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="deep_learning\master_net.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

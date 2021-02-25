@@ -436,7 +436,7 @@ class Master2UNet(nn.Module):
         self.up = nn.Upsample(scale_factor=2, mode='bilinear')
 
         self.start = nn.Sequential(
-            nn.Conv2d(12 + history_channels, 64, 3, stride=1, padding=1),
+            nn.Conv2d(14 + history_channels, 64, 3, stride=1, padding=1),
             nn.ReLU(),
             nn.Conv2d(64, 32, 3, stride=1, padding=1),
             nn.ReLU()
@@ -509,6 +509,8 @@ class MasterNet2(nn.Module):
         # Frame upsampling
         frame = self.zero_up.forward_with_jitter(frame, jitter)
 
+        
+
         if(history == None): # First frame is handled by its own
             mini_batch, channels, height, width = frame.shape
             history = torch.zeros(size=(mini_batch, self.history_channels, height, width), device='cuda')
@@ -516,9 +518,10 @@ class MasterNet2(nn.Module):
         # Upscaling motion vector
         mv = torch.movedim(mv, 3, 1)
         mv = F.interpolate(mv, scale_factor=self.factor, mode='bilinear', align_corners=False)
-        frame = torch.cat((frame, torch.clamp(mv, -1, 1)), dim=1)
         mv = torch.movedim(mv, 1, 3)
         
+        mv_t = dataset.MVToPixelOffset(mv)
+        frame = torch.cat((frame, torch.clamp(mv_t, -1, 1)), dim=1)
 
         # History reprojection
         history = F.grid_sample(history, mv, mode='bilinear', align_corners=False)

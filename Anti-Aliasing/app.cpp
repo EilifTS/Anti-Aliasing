@@ -118,6 +118,8 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 		eio::SaveTextureToFile(dev, context, back_buffer, "screen_shot" + emisc::ToString(ss_nr++) + ".png");
 		do_screen_shot = false;
 	}
+
+	master_net.Execute(dev, context);
 }
 
 void App::initializeInternals(egx::Device& dev)
@@ -320,5 +322,4 @@ void App::renderRayTracer(egx::Device& dev, egx::CommandContext& context)
 	context.SetTransitionBuffer(renderer_target, egx::GPUBufferState::CopyDest);
 	context.CopyBuffer(trace_result, renderer_target);
 
-	master_net.Execute(dev, context);
 }

@@ -1,9 +1,10 @@
 #pragma once
-#pragma comment(lib, "DirectML.lib")
-
-#include <DirectML.h>
+#include <memory>
+#include "dml_common.h"
 #include "graphics/device.h"
 #include "graphics/command_context.h"
+
+#include "conv_layer.h"
 
 namespace egx
 {
@@ -16,7 +17,6 @@ namespace egx
 		void Execute(egx::Device& dev, egx::CommandContext& context);
 	private:
 		ComPtr<IDMLDevice> dml_device;
-		ComPtr<IDMLCompiledOperator> compiled_op;
 		ComPtr<ID3D12DescriptorHeap> descriptor_heap;
 		ComPtr<IDMLBindingTable> binding_table;
 		ComPtr<ID3D12Resource> temp_buffer;
@@ -24,6 +24,8 @@ namespace egx
 		ComPtr<IDMLCommandRecorder> command_recorder;
 		ComPtr<ID3D12Resource> input_buffer;
 		ComPtr<ID3D12Resource> output_buffer;
+
+		std::unique_ptr<ConvLayer> conv_layer1;
 
 		UINT64 tensor_buffer_size;
 

@@ -12,11 +12,11 @@ if(__name__ == '__main__'):
     videos = torch.randperm(100)
     torch.seed()
     sequence_length = 18 # Number inputs used in the model
-    target_indices = [0]#, 1, 2]#, 15, 31] # The targets the model will calculate loss against, [0] means the last image, [0, 1] the two last etc.
+    target_indices = [0, 1, 2]#, 15, 31] # The targets the model will calculate loss against, [0] means the last image, [0, 1] the two last etc.
     upsample_factor = 4
     data_train = dataset.SSDataset(64, upsample_factor, videos[:10], sequence_length, target_indices, transform=dataset.RandomCrop(256))
     data_val = dataset.SSDataset(64, upsample_factor, videos[80:81], sequence_length, target_indices, transform=dataset.RandomCrop(256))
-    data_test = dataset.SSDataset(64, upsample_factor, videos[90:], 1, target_indices, transform=None)
+    data_test = dataset.SSDataset(64, upsample_factor, videos[90:], sequence_length, target_indices, transform=None)
     loader_train = torch.utils.data.DataLoader(data_train, batch_size=1, shuffle=True, num_workers=4, collate_fn=dataset.SSDatasetCollate)
     loader_val = torch.utils.data.DataLoader(data_val, batch_size=1, shuffle=False, num_workers=4, collate_fn=dataset.SSDatasetCollate)
     loader_test = torch.utils.data.DataLoader(data_test, batch_size=1, shuffle=False, num_workers=0, collate_fn=dataset.SSDatasetCollate)

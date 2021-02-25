@@ -86,6 +86,23 @@ def ImageTorchToNumpy(image):
     image = np.swapaxes(image, 2, 0)
     return image
 
+def MVToPixelOffset(mv):
+    mini_batch, height, width, channels = mv.shape
+    x_ten = ((torch.arange(width*height, dtype=torch.float, device='cuda') % width + 0.5) / width - 0.5) * 2.0
+    y_ten = ((torch.arange(width*height, dtype=torch.float, device='cuda') % height + 0.5) / height - 0.5) * 2.0
+    x_ten = torch.reshape(x_ten, (height, width))
+    y_ten = torch.reshape(y_ten, (width, height))
+    y_ten = torch.t(y_ten)
+    pixel_pos = torch.dstack((x_ten, y_ten))
+
+    mv_t = (mv - pixel_pos)*0.5
+    mv_t = mv_t * torch.tensor([height, width], device='cuda')
+
+    
+    mv_t = torch.movedim(mv_t, 3, 1)
+
+    return mv_t
+
 def MVNumpyToTorch(mv):
     mv = torch.from_numpy(mv)
     mv = mv.float() # Grid sample requires same format as image :(

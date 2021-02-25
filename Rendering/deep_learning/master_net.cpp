@@ -5,63 +5,7 @@
 
 namespace
 {
-    inline UINT64 DMLCalcBufferTensorSize(
-        DML_TENSOR_DATA_TYPE dataType,
-        UINT dimensionCount,
-        _In_reads_(dimensionCount) const UINT* sizes,
-        _In_reads_opt_(dimensionCount) const UINT* strides
-    )
-    {
-        UINT elementSizeInBytes = 0;
-        switch (dataType)
-        {
-        case DML_TENSOR_DATA_TYPE_FLOAT32:
-        case DML_TENSOR_DATA_TYPE_UINT32:
-        case DML_TENSOR_DATA_TYPE_INT32:
-            elementSizeInBytes = 4;
-            break;
-
-        case DML_TENSOR_DATA_TYPE_FLOAT16:
-        case DML_TENSOR_DATA_TYPE_UINT16:
-        case DML_TENSOR_DATA_TYPE_INT16:
-            elementSizeInBytes = 2;
-            break;
-
-        case DML_TENSOR_DATA_TYPE_UINT8:
-        case DML_TENSOR_DATA_TYPE_INT8:
-            elementSizeInBytes = 1;
-            break;
-
-        default:
-            return 0; // Invalid data type
-        }
-
-        UINT64 minimumImpliedSizeInBytes = 0;
-        if (!strides)
-        {
-            minimumImpliedSizeInBytes = sizes[0];
-            for (UINT i = 1; i < dimensionCount; ++i)
-            {
-                minimumImpliedSizeInBytes *= sizes[i];
-            }
-            minimumImpliedSizeInBytes *= elementSizeInBytes;
-        }
-        else
-        {
-            UINT indexOfLastElement = 0;
-            for (UINT i = 0; i < dimensionCount; ++i)
-            {
-                indexOfLastElement += (sizes[i] - 1) * strides[i];
-            }
-
-            minimumImpliedSizeInBytes = (indexOfLastElement + 1) * elementSizeInBytes;
-        }
-
-        // Round up to the nearest 4 bytes.
-        minimumImpliedSizeInBytes = (minimumImpliedSizeInBytes + 3) & ~3ui64;
-
-        return minimumImpliedSizeInBytes;
-    }
+    
 }
 
 egx::MasterNet::MasterNet(egx::Device& dev, egx::CommandContext& context)
@@ -83,57 +27,17 @@ egx::MasterNet::MasterNet(egx::Device& dev, egx::CommandContext& context)
 		"Failed to create DML device"
 	);
 
-	// Create input tensor desc
-	constexpr UINT tensor_sizes[4] = { 1, 2, 3, 4 };
-	constexpr UINT tensor_element_count = tensor_sizes[0] * tensor_sizes[1] * tensor_sizes[2] * tensor_sizes[3];
-	DML_BUFFER_TENSOR_DESC buffer_tensor_desc = {};
-    buffer_tensor_desc.DataType = DML_TENSOR_DATA_TYPE_FLOAT32;
-    buffer_tensor_desc.Flags = DML_TENSOR_FLAG_NONE;
-    buffer_tensor_desc.DimensionCount = ARRAYSIZE(tensor_sizes);
-    buffer_tensor_desc.Sizes = tensor_sizes;
-    buffer_tensor_desc.Strides = nullptr;
-    buffer_tensor_desc.TotalTensorSizeInBytes =
-        DMLCalcBufferTensorSize(
-            buffer_tensor_desc.DataType,
-            buffer_tensor_desc.DimensionCount,
-            buffer_tensor_desc.Sizes,
-            buffer_tensor_desc.Strides
-        );
+    // Create layers
+    DMLDims input_buffer_size = { 1, 3, 1080, 1920 };
+    UINT output_channels = 3;
 
-    // Create identity operator
-    ComPtr<IDMLOperator> dml_operator;
-    {
-        DML_TENSOR_DESC tensor_desc = {};
-        tensor_desc.Type = DML_TENSOR_TYPE_BUFFER;
-        tensor_desc.Desc = &buffer_tensor_desc;
+    conv_layer1 = std::make_unique<ConvLayer>(dev, dml_device.Get(), input_buffer_size, output_channels);
 
-        DML_ELEMENT_WISE_IDENTITY_OPERATOR_DESC identity_op_desc = {};
-        identity_op_desc.InputTensor = &tensor_desc;
-        identity_op_desc.OutputTensor = &tensor_desc; // Same input and output
-
-        DML_OPERATOR_DESC op_desc = {};
-        op_desc.Type = DML_OPERATOR_ELEMENT_WISE_IDENTITY;
-        op_desc.Desc = &identity_op_desc;
-
-        THROWIFFAILED(dml_device->CreateOperator(
-            &op_desc,
-            IID_PPV_ARGS(&dml_operator)
-        ), "Failed to create DML operator");
-    }
-
-    // Compile operator into GPU object
-    THROWIFFAILED(
-        dml_device->CompileOperator(
-            dml_operator.Get(),
-            DML_EXECUTION_FLAG_NONE,
-            IID_PPV_ARGS(&compiled_op)
-        ), "Failed to compile DML operator");
-
-    tensor_buffer_size = buffer_tensor_desc.TotalTensorSizeInBytes;
+    tensor_buffer_size = conv_layer1->GetInputBufferSize();
 
     // Create operator initializer
     ComPtr<IDMLOperatorInitializer> op_initializer;
-    IDMLCompiledOperator* compiled_ops[] = { compiled_op.Get() };
+    IDMLCompiledOperator* compiled_ops[] = { conv_layer1->GetCompiledOperator() };
     THROWIFFAILED(
         dml_device->CreateOperatorInitializer(
             ARRAYSIZE(compiled_ops),
@@ -143,7 +47,7 @@ egx::MasterNet::MasterNet(egx::Device& dev, egx::CommandContext& context)
 
     // Find size of descriptor heap
     DML_BINDING_PROPERTIES init_bind_props = op_initializer->GetBindingProperties();
-    DML_BINDING_PROPERTIES exec_bind_props = compiled_op->GetBindingProperties();
+    DML_BINDING_PROPERTIES exec_bind_props = conv_layer1->GetCompiledOperator()->GetBindingProperties();
     UINT descriptor_count = std::max(init_bind_props.RequiredDescriptorCount, exec_bind_props.RequiredDescriptorCount);
 
 
@@ -204,7 +108,7 @@ egx::MasterNet::MasterNet(egx::Device& dev, egx::CommandContext& context)
 
     if (pers_res_size != 0)
     {
-        D3D12_RESOURCE_DESC pers_buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(pers_res_size);
+        D3D12_RESOURCE_DESC pers_buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(pers_res_size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
         THROWIFFAILED(
             dev.device->CreateCommittedResource(
                 &default_heap_prop,
@@ -226,6 +130,22 @@ egx::MasterNet::MasterNet(egx::Device& dev, egx::CommandContext& context)
         dml_device->CreateCommandRecorder(IID_PPV_ARGS(&command_recorder)),
         "Failed to create command recorder");
 
+    // Bind conv input (weight and bias)
+    DML_BUFFER_BINDING empty_buffer_binding = { nullptr, 0, 0 };
+    DML_BUFFER_BINDING conv_buffer_bindings[][3] =
+    {
+        {
+            empty_buffer_binding,
+            {conv_layer1->GetWeightTensor().buffer.Get(), 0, conv_layer1->GetWeightTensor().buffer->GetDesc().Width},
+            {conv_layer1->GetBiasTensor().buffer.Get(), 0, conv_layer1->GetBiasTensor().buffer->GetDesc().Width},
+        }
+    };
+    DML_BUFFER_ARRAY_BINDING conv_buffer_array_bindings[] = { {3, conv_buffer_bindings[0]} };
+
+    DML_BINDING_DESC conv_bindings[] = { {DML_BINDING_TYPE_BUFFER_ARRAY, &conv_buffer_array_bindings[0]} };
+
+    binding_table->BindInputs(1, conv_bindings);
+
     // Record init command
     command_recorder->RecordDispatch(context.command_list.Get(), op_initializer.Get(), binding_table.Get());
 
@@ -234,8 +154,8 @@ egx::MasterNet::MasterNet(egx::Device& dev, egx::CommandContext& context)
     // Execute
     //context.command_list->SetDescriptorHeaps(ARRAYSIZE(descriptor_heaps), descriptor_heaps);
 
-    // Set binding table form init to execute
-    binding_table_desc.Dispatchable = compiled_op.Get();
+    // Set binding table from init to execute
+    binding_table_desc.Dispatchable = conv_layer1->GetCompiledOperator();
 
     THROWIFFAILED(binding_table->Reset(&binding_table_desc), "Failed to reset DML binding table");
 
@@ -265,9 +185,10 @@ egx::MasterNet::MasterNet(egx::Device& dev, egx::CommandContext& context)
         ), "Failed to create DML input buffer");
 
     // Bind input
+    DML_BINDING_DESC empty_binding_desc = { DML_BINDING_TYPE_NONE, nullptr };
     DML_BUFFER_BINDING input_buffer_binding{ input_buffer.Get(), 0, tensor_buffer_size };
-    DML_BINDING_DESC input_binding_desc{ DML_BINDING_TYPE_BUFFER, &input_buffer_binding };
-    binding_table->BindInputs(1, &input_binding_desc);
+    DML_BINDING_DESC input_binding_desc[] = { { DML_BINDING_TYPE_BUFFER, &input_buffer_binding }, empty_binding_desc, empty_binding_desc };
+    binding_table->BindInputs(3, input_binding_desc);
 
     // Create output buffer
     D3D12_RESOURCE_DESC output_buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(tensor_buffer_size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
@@ -297,7 +218,7 @@ void egx::MasterNet::Execute(egx::Device& dev, egx::CommandContext& context)
     binding_table->BindOutputs(1, &output_binding_desc);
 
     // Record and execute
-    command_recorder->RecordDispatch(context.command_list.Get(), compiled_op.Get(), binding_table.Get());
+    command_recorder->RecordDispatch(context.command_list.Get(), conv_layer1->GetCompiledOperator(), binding_table.Get());
 
     //dev.QueueListAndWaitForFinish(context);
 

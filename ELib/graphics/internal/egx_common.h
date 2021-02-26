@@ -36,6 +36,7 @@ namespace egx
 	class ShaderTable;
 	class UnorderedAccessBuffer;
 	class MasterNet;
+	class ConvLayer;
 
 	enum class GPUBufferState
 	{

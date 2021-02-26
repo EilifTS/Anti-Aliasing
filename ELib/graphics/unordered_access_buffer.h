@@ -9,7 +9,7 @@ namespace egx
 	{
 	public:
 		UnorderedAccessBuffer(Device& dev, TextureFormat format, const ema::point2D& size);
-		UnorderedAccessBuffer(Device& dev, UINT size);
+		UnorderedAccessBuffer(Device& dev, UINT64 size);
 		void CreateUnorderedAccessView(Device& dev);
 		inline TextureFormat Format() const { return format; };
 	private:
@@ -20,6 +20,7 @@ namespace egx
 	private:
 		friend ShaderTable;
 		friend MasterNet;
+		friend ConvLayer;
 	};
 
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 #include <memory>
 #include "dml_common.h"
 #include "graphics/device.h"
@@ -17,17 +18,16 @@ namespace egx
 		void Execute(egx::Device& dev, egx::CommandContext& context);
 	private:
 		ComPtr<IDMLDevice> dml_device;
-		ComPtr<ID3D12DescriptorHeap> descriptor_heap;
-		ComPtr<IDMLBindingTable> binding_table;
-		ComPtr<ID3D12Resource> temp_buffer;
-		ComPtr<ID3D12Resource> pers_buffer;
+		std::unique_ptr<DescriptorHeap> descriptor_heap;
 		ComPtr<IDMLCommandRecorder> command_recorder;
 		ComPtr<ID3D12Resource> input_buffer;
 		ComPtr<ID3D12Resource> output_buffer;
 
-		std::unique_ptr<ConvLayer> conv_layer1;
+		std::vector<ConvLayer> conv_layers;
 
 		UINT64 tensor_buffer_size;
+
+
 
 	};
 }

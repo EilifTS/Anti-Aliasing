@@ -1,5 +1,12 @@
+#define NOMINMAX
 #include "conv_layer.h"
 #include "graphics/internal/egx_internal.h"
+
+ComPtr<IDMLOperatorInitializer> egx::ConvLayer::conv_initializer = nullptr;
+UINT64 egx::ConvLayer::initializer_temp_res_size = 0;
+UINT egx::ConvLayer::descriptor_start = 0;
+UINT egx::ConvLayer::descriptor_count = 0;
+std::unique_ptr<egx::UnorderedAccessBuffer> egx::ConvLayer::initializer_temp_res = nullptr;
 
 namespace
 {
@@ -124,4 +131,126 @@ egx::ConvLayer::ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input
 
 	weight_tensor_buffer = std::make_unique<UnorderedAccessBuffer>(dev, filter_buffer_size);
 	bias_tensor_buffer = std::make_unique<UnorderedAccessBuffer>(dev, bias_buffer_size);
+
+	// Create persistant resource
+	auto binding_props = compiled_op->GetBindingProperties();
+	persistant_resource_size = binding_props.PersistentResourceSize;
+	if(persistant_resource_size > 0)
+		persistent_resource = std::make_unique<UnorderedAccessBuffer>(dev, persistant_resource_size);
+
+	temporary_resource_size = binding_props.TemporaryResourceSize;
+	if (temporary_resource_size > 0)
+		temporary_resource = std::make_unique<UnorderedAccessBuffer>(dev, temporary_resource_size);
+}
+
+
+void egx::ConvLayer::CreateBindingTable(IDMLDevice* dml_dev, DescriptorHeap& desc_heap)
+{
+	DML_BINDING_TABLE_DESC binding_table_desc = {};
+	binding_table_desc.Dispatchable = compiled_op.Get();
+	binding_table_desc.CPUDescriptorHandle = desc_heap.GetCPUHandleByIndex(descriptor_start);
+	binding_table_desc.GPUDescriptorHandle = desc_heap.GetGPUHandleByIndex(descriptor_start);
+	binding_table_desc.SizeInDescriptors = descriptor_count;
+
+
+	THROWIFFAILED(
+		dml_dev->CreateBindingTable(
+			&binding_table_desc,
+			IID_PPV_ARGS(&binding_table)
+		), "Failed to create DML binding table");
+}
+
+void egx::ConvLayer::CreateConvInitializer(Device& dev, IDMLDevice* dml_dev, std::vector<ConvLayer>& layers)
+{
+	std::vector<IDMLCompiledOperator*> comp_ops(layers.size());
+	for (int i = 0; i < layers.size(); i++)
+		comp_ops[i] = layers[i].GetCompiledOperator();
+
+	THROWIFFAILED(
+		dml_dev->CreateOperatorInitializer(
+			comp_ops.size(),
+			comp_ops.data(),
+			IID_PPV_ARGS(&conv_initializer)
+		), "Failed to create DML operator initializer");
+
+
+	auto binding_props = conv_initializer->GetBindingProperties();
+	initializer_temp_res_size = binding_props.TemporaryResourceSize;
+	if (initializer_temp_res_size > 0)
+		initializer_temp_res = std::make_unique<UnorderedAccessBuffer>(dev, initializer_temp_res_size);
+}
+int egx::ConvLayer::GetDescriptorCount(std::vector<ConvLayer>& layers)
+{
+	UINT max_desc_count = conv_initializer->GetBindingProperties().RequiredDescriptorCount;
+
+	for (auto& layer : layers)
+		max_desc_count = std::max(max_desc_count, layer.GetCompiledOperator()->GetBindingProperties().RequiredDescriptorCount);
+	return max_desc_count;
+}
+
+void egx::ConvLayer::InitializeConvLayers(IDMLDevice* dml_dev, IDMLCommandRecorder* command_recorder, ID3D12CommandList* command_list, DescriptorHeap& desc_heap, std::vector<ConvLayer>& layers)
+{
+	// Create binding table
+	ComPtr<IDMLBindingTable> temp_binding_table;
+	DML_BINDING_TABLE_DESC binding_table_desc = {};
+	binding_table_desc.Dispatchable = ConvLayer::conv_initializer.Get();
+	binding_table_desc.CPUDescriptorHandle = desc_heap.GetCPUHandleByIndex(descriptor_start);
+	binding_table_desc.GPUDescriptorHandle = desc_heap.GetGPUHandleByIndex(descriptor_start);
+	binding_table_desc.SizeInDescriptors = descriptor_count;
+
+
+	THROWIFFAILED(
+		dml_dev->CreateBindingTable(
+			&binding_table_desc,
+			IID_PPV_ARGS(&temp_binding_table)
+		), "Failed to create DML binding table");
+
+	// Bind resources
+	if (ConvLayer::initializer_temp_res_size != 0)
+	{
+		DML_BUFFER_BINDING buffer_binding{ ConvLayer::initializer_temp_res->buffer.Get(), 0, ConvLayer::initializer_temp_res_size };
+		DML_BINDING_DESC binding_desc{ DML_BINDING_TYPE_BUFFER, &buffer_binding };
+		temp_binding_table->BindTemporaryResource(&binding_desc);
+	}
+
+	std::vector<DML_BUFFER_BINDING> buffer_bindings(layers.size());
+	std::vector<DML_BINDING_DESC> binding_descs(layers.size());
+
+	for (int i = 0; i < layers.size(); i++)
+	{
+		if (layers[i].GetPersistantResource() != nullptr)
+		{
+			// Bind as output of the initializer
+			buffer_bindings[i] = { layers[i].GetPersistantResource()->buffer.Get(), 0, layers[i].GetPersistantResourceSize() };
+			binding_descs[i] = { DML_BINDING_TYPE_BUFFER, &buffer_bindings[i] };
+			
+		}
+	}
+	temp_binding_table->BindOutputs(layers.size(), binding_descs.data());
+	
+	// Bind conv input (weight and bias)
+	DML_BUFFER_BINDING empty_buffer_binding = { nullptr, 0, 0 };
+	std::vector<std::array<DML_BUFFER_BINDING, 3>> conv_buffer_bindings(layers.size());
+	for (int i = 0; i < layers.size(); i++)
+		conv_buffer_bindings[i] = {
+			empty_buffer_binding,
+			{layers[i].GetWeightTensor().buffer.Get(), 0, layers[i].GetWeightTensor().buffer->GetDesc().Width},
+			{layers[i].GetBiasTensor().buffer.Get(), 0, layers[i].GetBiasTensor().buffer->GetDesc().Width}};
+
+	std::vector<DML_BUFFER_ARRAY_BINDING> conv_buffer_array_bindings(layers.size());
+	for(int i = 0; i < layers.size(); i++)
+		conv_buffer_array_bindings[i] = {3, conv_buffer_bindings[i].data()};
+
+	std::vector<DML_BINDING_DESC> conv_bindings(layers.size());
+	for (int i = 0; i < layers.size(); i++)
+		conv_bindings[i] = { DML_BINDING_TYPE_BUFFER_ARRAY, &conv_buffer_array_bindings[i] };
+
+	temp_binding_table->BindInputs(layers.size(), conv_bindings.data());
+
+
+	command_recorder->RecordDispatch(command_list, ConvLayer::conv_initializer.Get(), temp_binding_table.Get());
+
+	conv_initializer.Reset();
+	initializer_temp_res.release();
+	initializer_temp_res_size = 0;
 }

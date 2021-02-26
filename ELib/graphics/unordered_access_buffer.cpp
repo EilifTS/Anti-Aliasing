@@ -16,13 +16,13 @@ egx::UnorderedAccessBuffer::UnorderedAccessBuffer(Device& dev, TextureFormat for
 {
 
 }
-egx::UnorderedAccessBuffer::UnorderedAccessBuffer(Device& dev, UINT size)
+egx::UnorderedAccessBuffer::UnorderedAccessBuffer(Device& dev, UINT64 size)
 	: uav_cpu(), uav_gpu(), format(format),
 	GPUBuffer(
 		dev,
 		D3D12_RESOURCE_DIMENSION_BUFFER,
 		DXGI_FORMAT_UNKNOWN,
-		size, 1, 1,
+		(int)size, 1, 1,
 		1,
 		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,

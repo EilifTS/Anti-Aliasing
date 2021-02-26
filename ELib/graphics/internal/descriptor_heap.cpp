@@ -58,3 +58,17 @@ D3D12_GPU_DESCRIPTOR_HANDLE egx::DescriptorHeap::GetGPUHandle(D3D12_CPU_DESCRIPT
 
 	return desc_gpu;
 }
+
+
+D3D12_CPU_DESCRIPTOR_HANDLE egx::DescriptorHeap::GetCPUHandleByIndex(UINT index)
+{
+	CD3DX12_CPU_DESCRIPTOR_HANDLE start(descriptor_heap->GetCPUDescriptorHandleForHeapStart());
+	start.Offset(index, descriptor_size);
+	return start;
+}
+D3D12_GPU_DESCRIPTOR_HANDLE egx::DescriptorHeap::GetGPUHandleByIndex(UINT index)
+{
+	CD3DX12_GPU_DESCRIPTOR_HANDLE start(descriptor_heap->GetGPUDescriptorHandleForHeapStart());
+	start.Offset(index, descriptor_size);
+	return start;
+}

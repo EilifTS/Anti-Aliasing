@@ -28,20 +28,24 @@ egx::MasterNet::MasterNet(egx::Device& dev, egx::CommandContext& context)
 	);
 
     // Create layers
-    DMLDims input_buffer_size = { 1, 3, 1080, 1920 };
-    UINT output_channels = 3;
+    DMLDims input_buffer_size = { 1, 32, 1080 / 4, 1920 / 4};
+    //UINT output_channels = 128;
 
-    conv_layers.push_back(ConvLayer(dev, dml_device.Get(), input_buffer_size, output_channels));
-
-    tensor_buffer_size = conv_layers[0].GetInputBufferSize();
+    conv_layers.push_back(ConvLayer(dev, dml_device.Get(), input_buffer_size, 32, 1, true));
+    conv_layers.push_back(ConvLayer(dev, dml_device.Get(), conv_layers[0].GetOutputDims(), 32, 1, true));
+    conv_layers.push_back(ConvLayer(dev, dml_device.Get(), conv_layers[1].GetOutputDims(), 32, 1, true));
+    conv_layers.push_back(ConvLayer(dev, dml_device.Get(), conv_layers[2].GetOutputDims(), 256, 1, true));
+    conv_layers.push_back(ConvLayer(dev, dml_device.Get(), conv_layers[3].GetOutputDims(), 256, 1, true));
+    conv_layers.push_back(ConvLayer(dev, dml_device.Get(), conv_layers[4].GetOutputDims(), 32, 1, true));
+    conv_layers.push_back(ConvLayer(dev, dml_device.Get(), conv_layers[5].GetOutputDims(), 32, 1, true));
 
     // Create operator initializer
     ConvLayer::CreateConvInitializer(dev, dml_device.Get(), conv_layers);
 
     // Find size of descriptor heap
-    UINT descriptor_count = ConvLayer::GetDescriptorCount(conv_layers);
     ConvLayer::descriptor_start = 0;
-    ConvLayer::descriptor_count = descriptor_count;
+    ConvLayer::descriptor_count = ConvLayer::GetDescriptorCount(conv_layers);
+    UINT descriptor_count = ConvLayer::descriptor_count * conv_layers.size();
 
     // Create descriptor heap for DML
     descriptor_heap = std::make_unique<DescriptorHeap>(dev.device, DescriptorType::Buffer, descriptor_count);
@@ -49,12 +53,6 @@ egx::MasterNet::MasterNet(egx::Device& dev, egx::CommandContext& context)
     // Set descriptor heap
     context.SetDescriptorHeap(*descriptor_heap);
 
-    // Create binding table over the descriptor heap
-    
-
-
-    // Create temp and persistent resources
-    
 
     // Create command recorder
     THROWIFFAILED(
@@ -63,65 +61,33 @@ egx::MasterNet::MasterNet(egx::Device& dev, egx::CommandContext& context)
 
     
     ConvLayer::InitializeConvLayers(dml_device.Get(), command_recorder.Get(), context.command_list.Get(), *descriptor_heap, conv_layers);
-    // Record init command
 
-    //dev.QueueListAndWaitForFinish(context);
-
-    // Execute
-    //context.command_list->SetDescriptorHeaps(ARRAYSIZE(descriptor_heaps), descriptor_heaps);
 
     // Set binding table from init to execute
-    conv_layers[0].CreateBindingTable(dml_device.Get(), *descriptor_heap);
-
-    if (conv_layers[0].GetTemporaryResourceSize() != 0)
-    {
-        DML_BUFFER_BINDING buffer_binding{ conv_layers[0].GetTemporaryResource()->buffer.Get(), 0, conv_layers[0].GetTemporaryResourceSize() };
-        DML_BINDING_DESC binding_desc{ DML_BINDING_TYPE_BUFFER, &buffer_binding };
-        conv_layers[0].GetBindingTable()->BindTemporaryResource(&binding_desc);
-    }
-    if (conv_layers[0].GetPersistantResourceSize() != 0)
-    {
-        DML_BUFFER_BINDING buffer_binding{ conv_layers[0].GetPersistantResource()->buffer.Get(), 0, conv_layers[0].GetPersistantResourceSize() };
-        DML_BINDING_DESC binding_desc{ DML_BINDING_TYPE_BUFFER, &buffer_binding };
-        conv_layers[0].GetBindingTable()->BindPersistentResource(&binding_desc);
-    }
-
-    // Create input buffer
-    D3D12_HEAP_PROPERTIES default_heap_prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-    D3D12_RESOURCE_DESC input_buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(tensor_buffer_size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-    THROWIFFAILED(
-        dev.device->CreateCommittedResource(
-            &default_heap_prop,
-            D3D12_HEAP_FLAG_NONE,
-            &input_buffer_desc,
-            D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-            nullptr,
-            IID_PPV_ARGS(&input_buffer)
-        ), "Failed to create DML input buffer");
-
-    // Bind input
-    DML_BINDING_DESC empty_binding_desc = { DML_BINDING_TYPE_NONE, nullptr };
-    DML_BUFFER_BINDING input_buffer_binding{ input_buffer.Get(), 0, tensor_buffer_size };
-    DML_BINDING_DESC input_binding_desc[] = { { DML_BINDING_TYPE_BUFFER, &input_buffer_binding }, empty_binding_desc, empty_binding_desc };
-    conv_layers[0].GetBindingTable()->BindInputs(3, input_binding_desc);
-
-    // Create output buffer
-    D3D12_RESOURCE_DESC output_buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(tensor_buffer_size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-    THROWIFFAILED(
-        dev.device->CreateCommittedResource(
-            &default_heap_prop,
-            D3D12_HEAP_FLAG_NONE,
-            &output_buffer_desc,
-            D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-            nullptr,
-            IID_PPV_ARGS(&output_buffer)
-        ), "Failed to create DML output buffer");
+    conv_layers[0].CreateBindingTable(dml_device.Get(), *descriptor_heap, 0);
+    conv_layers[1].CreateBindingTable(dml_device.Get(), *descriptor_heap, 1);
+    conv_layers[2].CreateBindingTable(dml_device.Get(), *descriptor_heap, 2);
+    conv_layers[3].CreateBindingTable(dml_device.Get(), *descriptor_heap, 3);
+    conv_layers[4].CreateBindingTable(dml_device.Get(), *descriptor_heap, 4);
+    conv_layers[5].CreateBindingTable(dml_device.Get(), *descriptor_heap, 5);
+    conv_layers[6].CreateBindingTable(dml_device.Get(), *descriptor_heap, 6);
 
 
-    // Bind output
-    DML_BUFFER_BINDING output_buffer_binding{ output_buffer.Get(), 0, tensor_buffer_size };
-    DML_BINDING_DESC output_binding_desc{ DML_BINDING_TYPE_BUFFER, &output_buffer_binding };
-    conv_layers[0].GetBindingTable()->BindOutputs(1, &output_binding_desc);
+    // Create input and output buffer
+    UINT64 max_int1_size = std::max(conv_layers[0].GetOutputBufferSize(), std::max(conv_layers[2].GetOutputBufferSize(), conv_layers[4].GetOutputBufferSize()));
+    UINT64 max_int2_size = std::max(conv_layers[1].GetOutputBufferSize(), std::max(conv_layers[3].GetOutputBufferSize(), conv_layers[6].GetOutputBufferSize()));
+    input_buffer = std::make_unique<UnorderedAccessBuffer>(dev, conv_layers[0].GetInputBufferSize());
+    intermediate_buffer1 = std::make_unique<UnorderedAccessBuffer>(dev, max_int1_size);
+    intermediate_buffer2 = std::make_unique<UnorderedAccessBuffer>(dev, max_int2_size);
+    output_buffer = std::make_unique<UnorderedAccessBuffer>(dev, conv_layers[5].GetOutputBufferSize());
+
+    conv_layers[0].BindResources(input_buffer->buffer.Get(), intermediate_buffer1->buffer.Get());
+    conv_layers[1].BindResources(intermediate_buffer1->buffer.Get(), intermediate_buffer2->buffer.Get());
+    conv_layers[2].BindResources(intermediate_buffer2->buffer.Get(), intermediate_buffer1->buffer.Get());
+    conv_layers[3].BindResources(intermediate_buffer1->buffer.Get(), intermediate_buffer2->buffer.Get());
+    conv_layers[4].BindResources(intermediate_buffer2->buffer.Get(), intermediate_buffer1->buffer.Get());
+    conv_layers[5].BindResources(intermediate_buffer1->buffer.Get(), intermediate_buffer2->buffer.Get());
+    conv_layers[6].BindResources(intermediate_buffer2->buffer.Get(), output_buffer->buffer.Get());
 
 }
 
@@ -133,6 +99,24 @@ void egx::MasterNet::Execute(egx::Device& dev, egx::CommandContext& context)
 
     // Record and execute
     command_recorder->RecordDispatch(context.command_list.Get(), conv_layers[0].GetCompiledOperator(), conv_layers[0].GetBindingTable());
+    context.SetUABarrier();
+    //context.SetUABarrier(*intermediate_buffer1);
+    command_recorder->RecordDispatch(context.command_list.Get(), conv_layers[1].GetCompiledOperator(), conv_layers[1].GetBindingTable());
+    context.SetUABarrier();
+    //context.SetUABarrier(*intermediate_buffer2);
+    command_recorder->RecordDispatch(context.command_list.Get(), conv_layers[2].GetCompiledOperator(), conv_layers[2].GetBindingTable());
+    context.SetUABarrier();
+    //context.SetUABarrier(*intermediate_buffer1);
+    command_recorder->RecordDispatch(context.command_list.Get(), conv_layers[3].GetCompiledOperator(), conv_layers[3].GetBindingTable());
+    context.SetUABarrier();
+    //context.SetUABarrier(*intermediate_buffer2);
+    command_recorder->RecordDispatch(context.command_list.Get(), conv_layers[4].GetCompiledOperator(), conv_layers[4].GetBindingTable());
+    context.SetUABarrier();
+    //context.SetUABarrier(*intermediate_buffer1);
+    command_recorder->RecordDispatch(context.command_list.Get(), conv_layers[5].GetCompiledOperator(), conv_layers[5].GetBindingTable());
+    context.SetUABarrier();
+    //context.SetUABarrier(*intermediate_buffer2);
+    command_recorder->RecordDispatch(context.command_list.Get(), conv_layers[6].GetCompiledOperator(), conv_layers[6].GetBindingTable());
 
     //dev.QueueListAndWaitForFinish(context);
 

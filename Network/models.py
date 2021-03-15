@@ -11,14 +11,19 @@ def UVToGrid(uv):
     return (uv - 0.5) * 2.0
 
 def catmullSample(texture, uv):
-    bs, _, width, height = texture.shape
+    bs, channels, width, height = texture.shape
     alpha = torch.ones(size=(bs, 1, width, height)).cuda()
-    color = F.grid_sample(texture, UVToGrid(uv), mode='bilinear', align_corners=False)
+    
+    mv = UVToGrid(uv)
+
+    color = F.grid_sample(texture, mv, mode='bilinear', align_corners=False, padding_mode='border')
+
+    #color[mask] = 0.0
 
     return torch.cat((color, alpha), dim=1)
 
 def BiCubicGridSample(texture, grid):
-    _, channels, height, width = texture.shape
+    N, channels, height, width = texture.shape
     window_size = torch.tensor([width, height]).cuda()
     rec_window_size = torch.tensor([1.0 / width, 1.0 / height]).cuda()
     uv = GridToUV(grid)
@@ -38,18 +43,29 @@ def BiCubicGridSample(texture, grid):
     center_color = catmullSample(texture, tc12)
     tc0 = rec_window_size * (center_position - 1.0)
     tc3 = rec_window_size * (center_position + 2.0)
-    
     sp1 = torch.stack((tc12[:,:,:,0], tc0[:,:,:,1]),dim=3)
     sp2 = torch.stack((tc0[:,:,:,0], tc12[:,:,:,1]),dim=3)
     sp3 = torch.stack((tc3[:,:,:,0], tc12[:,:,:,1]),dim=3)
     sp4 = torch.stack((tc12[:,:,:,0], tc3[:,:,:,1]),dim=3)
-    c1 = catmullSample(texture, sp1) * (w12[:,:,:,0] * w0[:,:,:,1])
-    c2 = catmullSample(texture, sp2) * (w0[:,:,:,0] * w12[:,:,:,1])
-    c3 = catmullSample(texture, sp3) * (w3[:,:,:,0] * w12[:,:,:,1])
-    c4 = catmullSample(texture, sp4) * (w12[:,:,:,0] * w3[:,:,:,1])
-    c5 = center_color * (w12[:,:,:,0] * w12[:,:,:,1])
+
+    # Reshape for multiplication
+    w0 = w0.unsqueeze(1)
+    w12 = w12.unsqueeze(1)
+    w3 = w3.unsqueeze(1)
+    w0 = w0.expand((N, channels + 1, height, width, 2))
+    w12 = w12.expand((N, channels + 1, height, width, 2))
+    w3 = w3.expand((N, channels + 1, height, width, 2))
+
+
+    c1 = catmullSample(texture, sp1) * (w12[:,:,:,:,0] *  w0[:,:,:,:,1])
+    c2 = catmullSample(texture, sp2) * ( w0[:,:,:,:,0] * w12[:,:,:,:,1])
+    c3 = catmullSample(texture, sp3) * ( w3[:,:,:,:,0] * w12[:,:,:,:,1])
+    c4 = catmullSample(texture, sp4) * (w12[:,:,:,:,0] *  w3[:,:,:,:,1])
+    c5 = center_color * (w12[:,:,:,:,0] * w12[:,:,:,:,1])
     out = c1 + c2 + c3 + c4 + c5
-    out = out[:,:channels,:,:] / out[:,-1,:,:]
+    rec = out[:,-1:,:,:]
+    rec = rec.expand((N,channels,height,width))
+    out = out[:,:channels,:,:] / rec
 
     # More accurate version that uses more samples
     #sp1 = torch.stack((tc0[:,:,:,0], tc0[:,:,:,1]),dim=3)
@@ -86,12 +102,27 @@ class ZeroUpsampling(nn.Module):
     def forward(self, x):
         return F.conv_transpose2d(x, self.w, stride=self.factor, groups=self.channels)
 
-    def forward_with_jitter(self, x, jitter):
-        jitter_index = torch.floor(jitter*self.factor).int()
-        w = torch.zeros(size=(self.factor, self.factor))
-        w[jitter_index[0,1], jitter_index[0,0]] = 1
-        w = w.expand(self.channels, 1, self.factor, self.factor).cuda()
-        return F.conv_transpose2d(x, w, stride=self.factor, groups=self.channels)
+def JitterAlign(img, jitter, factor, mode='constant'):
+    N, C, H, W = img.shape
+    jitter_index = torch.floor(jitter*factor).int()
+    img = F.pad(img, (factor,factor,factor,factor), mode=mode)
+    out = []
+    for b in range(N):
+        i, j = jitter_index[b,1], jitter_index[b,0]
+        out.append(img[b,:,factor-i:-factor-i,factor-j:-factor-j])
+    img = torch.stack(out)
+    return img
+
+def JitterAlignedBilinearInterpolation(img, jitter, factor):
+    N, C, H, W = img.shape
+    theta = []
+    for i in range(N):
+        theta.append(torch.tensor(
+            [   [1,0,2.0*(0.5-jitter[i,0]) / W],
+                [0,1,2.0*(0.5-jitter[i,1]) / H]], device='cuda'))
+    theta = torch.stack(theta)
+    grid = F.affine_grid(theta, (N,C,H*factor,W*factor), align_corners=False).float()
+    return F.grid_sample(img, grid, mode='bilinear', align_corners=False, padding_mode='border')
 
 
 class TUS(nn.Module):
@@ -488,72 +519,183 @@ class DWSC(nn.Module):
     def forward(self, x):
         return self.net(x)
 
+
+def pixel_unshuffle(input, downscale_factor):
+    '''
+    input: batchSize * c * k*w * k*h
+    kdownscale_factor: k
+    batchSize * c * k*w * k*h -> batchSize * k*k*c * w * h
+    '''
+    c = input.shape[1]
+
+    kernel = torch.zeros(size=[downscale_factor * downscale_factor * c,
+                               1, downscale_factor, downscale_factor],
+                         device=input.device)
+    for y in range(downscale_factor):
+        for x in range(downscale_factor):
+            kernel[x + y * downscale_factor::downscale_factor*downscale_factor, 0, y, x] = 1
+    return F.conv2d(input, kernel, stride=downscale_factor, groups=c)
+
+class PixelUnshuffle(nn.Module):
+    def __init__(self, downscale_factor):
+        super(PixelUnshuffle, self).__init__()
+        self.downscale_factor = downscale_factor
+    def forward(self, input):
+        '''
+        input: batchSize * c * k*w * k*h
+        kdownscale_factor: k
+        batchSize * c * k*w * k*h -> batchSize * k*k*c * w * h
+        '''
+
+        return pixel_unshuffle(input, self.downscale_factor)
+
+counter = 0
+
 class MasterNet2(nn.Module):
-    def __init__(self, factor, num_frames):
+    def __init__(self, factor):
         super(MasterNet2, self).__init__()
         self.factor = factor
-        self.num_frames = num_frames
-        self.history_channels = 3
+        self.history_channels = 4
 
-        self.feature_extractor = MasterFeatureExtractor(factor)
-        self.zero_up = ZeroUpsampling(factor, 12)
-        self.reweighting = Master2UNet(self.history_channels)
+        self.shuffle_down = PixelUnshuffle(self.factor)
+        self.shuffle_up = nn.PixelShuffle(self.factor)
+
+        #self.padding_color = nn.Parameter(torch.zeros(size=(1, self.history_channels, 1, 1), device='cuda'), requires_grad=True)
+
+        #self.feature_extractor = 
+        self.zero_up = ZeroUpsampling(factor, 4)
+        #self.reweighting = Master2UNet(self.history_channels)
+        self.reweighting1 = nn.Sequential(
+            PixelUnshuffle(self.factor),
+            nn.Conv2d(128, 64, 1, stride=1, padding=0),
+            nn.ReLU(),
+            nn.ReplicationPad2d(1),
+            nn.Conv2d(64, 64, 3, stride=1, padding=0),
+            nn.ReLU(),
+            nn.ReplicationPad2d(1),
+            nn.Conv2d(64, 64, 3, stride=1, padding=0),
+            nn.PixelShuffle(self.factor),
+            )
 
     def sub_forward(self, frame, depth, mv, jitter, history):
+        mini_batch, channels, height, width = frame.shape
+
         # Getting frame info
+        #frame_padding = torch.zeros(size=(mini_batch, 32 - 4, height, width), device='cuda')
         frame = torch.cat((frame, depth), dim=1)
         
-        # Feature extraction
-        frame = self.feature_extractor(frame)
-
-        # Frame upsampling
-        frame = self.zero_up.forward_with_jitter(frame, jitter)
-
-        
-
         if(history == None): # First frame is handled by its own
-            mini_batch, channels, height, width = frame.shape
-            history = torch.zeros(size=(mini_batch, self.history_channels, height, width), device='cuda')
+            #history = torch.zeros(size=(mini_batch, self.history_channels, height*self.factor, width*self.factor), device='cuda')
+            history = JitterAlignedBilinearInterpolation(frame, jitter, self.factor)
+            history[:,3,:,:] = 0
+            #history = torch.rand(size=(mini_batch, self.history_channels, height*self.factor, width*self.factor), device='cuda')
+        else:
+            # Upscaling motion vector
+            mv = torch.movedim(mv, 3, 1)
+            mv = F.interpolate(mv, scale_factor=self.factor, mode='bilinear', align_corners=False)
+            mv = torch.movedim(mv, 1, 3)
         
-        # Upscaling motion vector
-        mv = torch.movedim(mv, 3, 1)
-        mv = F.interpolate(mv, scale_factor=self.factor, mode='bilinear', align_corners=False)
-        mv = torch.movedim(mv, 1, 3)
-        
-        mv_t = dataset.MVToPixelOffset(mv)
-        frame = torch.cat((frame, torch.clamp(mv_t, -1, 1)), dim=1)
+            # History reprojection
+            #history = F.grid_sample(history, mv, mode='bilinear', align_corners=False)
+            history = BiCubicGridSample(history, mv)
+            
+            ## Special case for padding
+            mask = torch.logical_or(torch.greater(mv, 1.0), torch.less(mv, -1.0))
+            mask = torch.logical_or(mask[:,:,:,0], mask[:,:,:,1])
+            mask = mask.unsqueeze(1)
+            mask = mask.expand(mini_batch, self.history_channels, height*self.factor, width*self.factor)
 
-        # History reprojection
-        history = F.grid_sample(history, mv, mode='bilinear', align_corners=False)
-        #history = BiCubicGridSample(history, mv)
-        #res = history[:,:3,:,:]
-        #res = res.squeeze().cpu().detach()
-        #res = dataset.ImageTorchToNumpy(res)
-        #window_name = "Image"
-        #cv2.imshow(window_name, res[:,:])
-        #cv2.waitKey(0)
+            padding = JitterAlignedBilinearInterpolation(frame, jitter, self.factor)
+            padding[:,3,:,:] = 0
+            history[mask] = padding[mask]
+
         
+        # Frame upsampling
+        frame = self.zero_up(frame)
+        frame = JitterAlign(frame, jitter, self.factor)
+        small_input = torch.cat((frame, history), dim=1)
+
         # History reweighting
-        history_reweight_input = torch.cat((frame, history), dim=1)
-        history_residual = self.reweighting(history_reweight_input)
+        residual = self.reweighting1(small_input)
+        alpha = torch.clamp(residual[:,3:4,:,:], 0, 1)
+        history = torch.clamp(history*alpha + residual, 0.0, 1.0)
+        history[:,3,:,:] = 0
 
-        history = F.relu(history + history_residual)
+        global counter
+        counter += 1
+        if(counter % (30 * 50) == 0):
+            counter = 0
+            print("")
+            print("Mean alpha", torch.mean(alpha).item(), "Min alpha",torch.min(alpha).item(),"Max alpha", torch.max(alpha).item())
 
         # Reconstruction
         return history[:,:3,:,:], history
 
-    def forward(self, x):
+    def forward(self, x, loader_corruption = None):
         history = None
         out = []
-        for i in range(self.num_frames - 1, -1, -1):
+
+        # History corruption
+        prob = 2 # Probability of corruption is 1 / prob
+        corrupt_index = [] # Hold 1 index for each batch element that will be corrupted
+        corrupted_history = None # Holds the image that will be used as corruption
+        corrupted = 0 # Holds batch index of next element to be corrupted
+        if(loader_corruption != None):
+            corruption_iter = iter(loader_corruption)
+            corrupted_history = next(corruption_iter).cuda()
+            N, C, H, W = corrupted_history.shape
+            corrupted_history = torch.cat((corrupted_history, torch.zeros(size=(N,1,H,W), device='cuda')), dim=1)
+            for i in range(N):
+                if(torch.randint(0, prob, (1,)) == 0):
+                    corrupt_index.append(torch.randint(1, x.seq_length - len(x.target_indices), (1,)).item())
+
+        for i in range(x.seq_length - 1, -1, -1):
+            if(i in corrupt_index):
+                for j in range(corrupt_index.count(i)):
+                    history[corrupted,:,:,:] = corrupted_history[corrupted,:,:,:]
+                    corrupted += 1
+
             reconstructed, history = self.sub_forward(
-                x.input_images[i], 
-                x.depth_buffers[i].unsqueeze(1), 
-                x.motion_vectors[i], 
-                x.jitters[i], 
+                x.input_images[i].cuda(), 
+                x.depth_buffers[i].unsqueeze(1).cuda(), 
+                x.motion_vectors[i].cuda(), 
+                x.jitters[i].cuda(), 
                 history)
             if(i in x.target_indices):
                 out.append(reconstructed[:,:,:,:])
+            
+            # Memory optimization
+            x.input_images[i] = None 
+            x.depth_buffers[i] = None 
+            x.motion_vectors[i] = None 
+            x.jitters[i] = None
+            torch.cuda.empty_cache()
         out.reverse()
         return out
 
+    
+class BicubicModel(nn.Module):
+    def __init__(self, factor):
+        super(BicubicModel, self).__init__()
+        self.factor = factor
+        self.up = nn.Upsample(scale_factor=factor, mode='bilinear', align_corners=False)
+
+    def sub_forward(self, frame, depth, mv, jitter, history):
+        # Reconstruction
+        #out = torch.clamp(self.up(frame), 0, 1)
+        #out = BilinearWithJitter(frame, jitter, self.factor)
+        out = JitterAlignedBilinearInterpolation(frame, jitter, self.factor)
+        return out, history
+
+    def forward(self, x):
+        history = None
+        out = []
+        reconstructed, history = self.sub_forward(
+            x.input_images[0], 
+            x.depth_buffers[0].unsqueeze(1), 
+            x.motion_vectors[0], 
+            x.jitters[0], 
+            history)
+        out.append(reconstructed[:,:,:,:])
+        out.reverse()
+        return out

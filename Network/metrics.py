@@ -152,18 +152,15 @@ class MasterLoss(torch.nn.Module):
         return loss / len(img1)
 
 class MasterLoss2(torch.nn.Module):
-    def __init__(self, sequence_length, target_indices):
+    def __init__(self, target_indices):
         super(MasterLoss2, self).__init__()
-        self.sequence_length = sequence_length
         self.target_indices = target_indices
 
     def forward(self, img1, img2):
         loss = torch.tensor([0.0], device="cuda")
         weight = torch.tensor([0.0], device="cuda")
         for i in range(len(img1)):
-            image_index = self.sequence_length - self.target_indices[i]
-            if(image_index > 16):
-                image_index = 16
-            loss += F.l1_loss(img1[i], img2[i]) * np.sqrt(image_index)
-            weight += np.sqrt(image_index)
+            loss += F.l1_loss(img1[i].cuda(), img2[i].cuda())
+            weight += 1.0
+            torch.cuda.empty_cache()
         return loss / weight

@@ -24,6 +24,7 @@ namespace egx
 		void SetDepthStencilBuffer(DepthBuffer& buffer);
 
 		void SetTransitionBuffer(GPUBuffer& buffer, GPUBufferState new_state);
+		void SetUABarrier();
 		void SetUABarrier(GPUBuffer& ua_buffer);
 
 		void SetViewport(const ema::point2D& size);

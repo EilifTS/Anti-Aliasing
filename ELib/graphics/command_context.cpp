@@ -112,6 +112,13 @@ void egx::CommandContext::SetTransitionBuffer(GPUBuffer& buffer, GPUBufferState 
 		buffer.state = new_state_x;
 	}
 }
+void egx::CommandContext::SetUABarrier()
+{
+	D3D12_RESOURCE_BARRIER desc = {};
+	desc.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+	desc.UAV.pResource = nullptr;
+	command_list->ResourceBarrier(1, &desc);
+}
 void egx::CommandContext::SetUABarrier(GPUBuffer& ua_buffer)
 {
 	D3D12_RESOURCE_BARRIER desc = {};

@@ -116,7 +116,8 @@ def MVNumpyToTorch(mv):
     y_ten = torch.t(y_ten)
     pixel_pos = torch.dstack((x_ten, y_ten))
 
-    return pixel_pos + mv * 2.0
+    mv = pixel_pos + mv * 2.0
+    return mv.contiguous()
 
 def MVTorchToNumpy(mv):
     mv = mv.numpy()
@@ -240,7 +241,7 @@ class SSDataset(Dataset):
         return d
 
 def SSDatasetCollate(batch):
-    out = SSDatasetItem(batch[0].ss_factor, batch[0].us_factor, -1, -1, batch[0].seq_length, batch[0].target_indices)
+    out = SSDatasetItem(batch[0].ss_factor, batch[0].us_factor, batch[0].video, batch[0].frame, batch[0].seq_length, batch[0].target_indices)
     for i in range(len(out.target_indices)):
         out.target_images.append(batch[0].target_images[i].unsqueeze(0))
     for i in range(out.seq_length):
@@ -258,3 +259,28 @@ def SSDatasetCollate(batch):
             out.jitters[j] =        torch.cat((out.jitters[j],          batch[i].jitters[j].unsqueeze(0)),          dim=0)
     return out
 
+class TargetImageDataset(Dataset):
+
+    def __init__(self, ss_factor, videos, transform=None):
+        self.ss_factor = ss_factor
+        self.videos = videos
+        self.transform = transform
+
+    def max_allowed_frames(self):
+        return num_frames_per_video
+
+    def __len__(self):
+        return len(self.videos) * self.max_allowed_frames()
+
+    def __getitem__(self, idx):
+        if (torch.is_tensor(idx)):
+            idx = idx.tolist()
+        
+        video_index = idx // self.max_allowed_frames()
+        frame_index = idx % self.max_allowed_frames()
+        target_image = LoadTargetImage(self.ss_factor, video_index, frame_index)
+        target_image = ImageNumpyToTorch(target_image)
+        if(self.transform):
+            target_image = self.transform(target_image)
+        
+        return target_image

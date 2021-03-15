@@ -10,9 +10,10 @@ namespace egx
 	class ConvLayer
 	{
 	public:
-		ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input_dims, UINT output_channels);
+		ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input_dims, UINT output_channels, UINT filter_size, bool fuse_activation);
 
-		void CreateBindingTable(IDMLDevice* dml_dev, DescriptorHeap& desc_heap);
+		void CreateBindingTable(IDMLDevice* dml_dev, DescriptorHeap& desc_heap, UINT index);
+		void BindResources(ID3D12Resource* input, ID3D12Resource* output);
 
 		const DMLDims& GetInputDims()const { return input_dims; };
 		const DMLDims& GetOutputDims()const { return output_dims; };
@@ -32,6 +33,7 @@ namespace egx
 	public:
 		// Shared variables for initialization
 		static ComPtr<IDMLOperatorInitializer> conv_initializer;
+		static ComPtr<IDMLBindingTable> temp_binding_table;
 		static UINT64 initializer_temp_res_size;
 		static UINT descriptor_start;
 		static UINT descriptor_count;

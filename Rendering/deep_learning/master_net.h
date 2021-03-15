@@ -4,6 +4,7 @@
 #include "dml_common.h"
 #include "graphics/device.h"
 #include "graphics/command_context.h"
+#include "graphics/unordered_access_buffer.h"
 
 #include "conv_layer.h"
 
@@ -20,8 +21,11 @@ namespace egx
 		ComPtr<IDMLDevice> dml_device;
 		std::unique_ptr<DescriptorHeap> descriptor_heap;
 		ComPtr<IDMLCommandRecorder> command_recorder;
-		ComPtr<ID3D12Resource> input_buffer;
-		ComPtr<ID3D12Resource> output_buffer;
+
+		std::unique_ptr<UnorderedAccessBuffer> input_buffer;
+		std::unique_ptr<UnorderedAccessBuffer> output_buffer;
+		std::unique_ptr<UnorderedAccessBuffer> intermediate_buffer1;
+		std::unique_ptr<UnorderedAccessBuffer> intermediate_buffer2;
 
 		std::vector<ConvLayer> conv_layers;
 

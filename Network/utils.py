@@ -1,6 +1,8 @@
 import torch
+import torch.nn.functional as F
 import metrics
 import dataset
+import math
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -39,7 +41,7 @@ def DefaultEvaluator():
 iteration_str = 'Current iteration: {0} \t Loss: {1:.6f} \t ETA: {2:.2f}s   '
 finish_str = 'avg_loss: {0:.6f} \t min_loss {1:.6f} \t max_loss {2:.6f} \t total_time {3:.2f}s   '
 
-def TrainEpoch(model, dataloader, optimizer, loss_function):
+def TrainEpoch(model, dataloader, loader_corruption, optimizer, loss_function):
     torch.seed() # To randomize
     model.train()
     dataloader_iter = iter(dataloader)
@@ -48,10 +50,10 @@ def TrainEpoch(model, dataloader, optimizer, loss_function):
     start_time = time.time()
 
     for i, item in enumerate(dataloader_iter):
-        item.ToCuda()
+        #item.ToCuda()
 
         # Forward
-        res = model.forward(item)
+        res = model.forward(item, loader_corruption=loader_corruption)
         target = item.target_images
         loss = loss_function(target, res)
 
@@ -66,11 +68,25 @@ def TrainEpoch(model, dataloader, optimizer, loss_function):
         current_loss = loss.item()
         losses[i] = current_loss
 
+        if(math.isnan(current_loss)):
+            print(losses)
+            print(item.video)
+            print(item.frame)
+            res = res[0][:,0:3,:,:]
+            res = res.squeeze().cpu().detach()
+            res = dataset.ImageTorchToNumpy(res)
+            window_name = "Image"
+            cv2.imshow(window_name, res[:,:,:])
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+            return
+
         # Print info
         current_time = time.time()
         avg_time = (current_time - start_time) / (i + 1)
         remaining_time = avg_time * (num_iterations - (i + 1))
         print(iteration_str.format(i, current_loss, remaining_time), end='\r')
+        
 
     # Print epoch summary
     avg_loss = np.average(losses)
@@ -146,10 +162,10 @@ def TestMasterModel(model, dataloader):
             # Prepare and time forward pass
             item.ToCuda()
             starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
-            with torch.cuda.amp.autocast():
-                starter.record()
-                res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
-                ender.record()
+            #with torch.cuda.amp.autocast():
+            starter.record()
+            res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
+            ender.record()
 
             #Get timing info
             torch.cuda.synchronize()
@@ -185,7 +201,7 @@ def TestMasterModel(model, dataloader):
 
 
 def CheckMasterModelSampleEff(model, dataloader, loss_function):
-    max_frames = 16
+    max_frames = 32
     model.eval()
     losses = np.zeros(max_frames)
     for num_frames in range(1, max_frames + 1):
@@ -217,10 +233,13 @@ def VisualizeMasterModel(model, dataloader):
         dli = iter(dataloader)
         history = None
         i = 0
-        for item in dli:
+        for i, item in enumerate(dli):
+
+            #if(i % 60 == 0): # Clear history at the start of each video
+            #    history = None
             item.ToCuda()
             res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
-            res = history[:,9:12,:,:]
+            res = res[:,0:3,:,:]
             res = res.squeeze().cpu().detach()
             res = dataset.ImageTorchToNumpy(res)
             window_name = "Image"

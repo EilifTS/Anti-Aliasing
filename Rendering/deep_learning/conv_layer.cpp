@@ -3,6 +3,7 @@
 #include "graphics/internal/egx_internal.h"
 
 ComPtr<IDMLOperatorInitializer> egx::ConvLayer::conv_initializer = nullptr;
+ComPtr<IDMLBindingTable> egx::ConvLayer::temp_binding_table = nullptr;
 UINT64 egx::ConvLayer::initializer_temp_res_size = 0;
 UINT egx::ConvLayer::descriptor_start = 0;
 UINT egx::ConvLayer::descriptor_count = 0;
@@ -14,9 +15,9 @@ namespace
 	const DML_TENSOR_DATA_TYPE tensor_type = DML_TENSOR_DATA_TYPE_FLOAT16;
 }
 
-egx::ConvLayer::ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input_dims, UINT output_channels)
+egx::ConvLayer::ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input_dims, UINT output_channels, UINT filter_size, bool fuse_activation)
 {
-	filter_dims = { output_channels, input_dims.dims[1], 3, 3 };
+	filter_dims = { output_channels, input_dims.dims[1], filter_size, filter_size };
 	this->input_dims = { input_dims.dims[0], input_dims.dims[1], input_dims.dims[2], input_dims.dims[3] };
 	output_dims = { input_dims.dims[0], output_channels, input_dims.dims[2], input_dims.dims[3] };
 
@@ -97,10 +98,11 @@ egx::ConvLayer::ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input
 	bias_desc.Desc = &bias_buffer_desc;
 
 	// Describe, create and compile conv operator
+	UINT padding_size = static_cast<UINT>(ceil((filter_size - 1) / 2.0f));
 	UINT strides[] = { 1, 1 };
 	UINT dilations[] = { 1, 1 };
-	UINT start_padding[] = { 1, 1 };
-	UINT end_padding[] = { 1, 1 };
+	UINT start_padding[] = { padding_size, padding_size };
+	UINT end_padding[] = { padding_size, padding_size };
 	UINT output_padding[] = { 0, 0 };
 
 	DML_ACTIVATION_RELU_OPERATOR_DESC fused_relu_desc = { 0 };
@@ -120,7 +122,7 @@ egx::ConvLayer::ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input
 	conv_desc.EndPadding = end_padding;
 	conv_desc.OutputPadding = output_padding;
 	conv_desc.GroupCount = 1;
-	conv_desc.FusedActivation = &activation_desc;
+	conv_desc.FusedActivation = fuse_activation ? &activation_desc : nullptr;
 
 	DML_OPERATOR_DESC op_desc = { DML_OPERATOR_CONVOLUTION, &conv_desc };
 
@@ -144,12 +146,12 @@ egx::ConvLayer::ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input
 }
 
 
-void egx::ConvLayer::CreateBindingTable(IDMLDevice* dml_dev, DescriptorHeap& desc_heap)
+void egx::ConvLayer::CreateBindingTable(IDMLDevice* dml_dev, DescriptorHeap& desc_heap, UINT index)
 {
 	DML_BINDING_TABLE_DESC binding_table_desc = {};
 	binding_table_desc.Dispatchable = compiled_op.Get();
-	binding_table_desc.CPUDescriptorHandle = desc_heap.GetCPUHandleByIndex(descriptor_start);
-	binding_table_desc.GPUDescriptorHandle = desc_heap.GetGPUHandleByIndex(descriptor_start);
+	binding_table_desc.CPUDescriptorHandle = desc_heap.GetCPUHandleByIndex(descriptor_start + descriptor_count * index);
+	binding_table_desc.GPUDescriptorHandle = desc_heap.GetGPUHandleByIndex(descriptor_start + descriptor_count * index);
 	binding_table_desc.SizeInDescriptors = descriptor_count;
 
 
@@ -158,6 +160,35 @@ void egx::ConvLayer::CreateBindingTable(IDMLDevice* dml_dev, DescriptorHeap& des
 			&binding_table_desc,
 			IID_PPV_ARGS(&binding_table)
 		), "Failed to create DML binding table");
+}
+
+
+void egx::ConvLayer::BindResources(ID3D12Resource* input, ID3D12Resource* output)
+{
+	if (GetTemporaryResourceSize() != 0)
+	{
+		DML_BUFFER_BINDING buffer_binding{ GetTemporaryResource()->buffer.Get(), 0, GetTemporaryResourceSize() };
+		DML_BINDING_DESC binding_desc{ DML_BINDING_TYPE_BUFFER, &buffer_binding };
+		GetBindingTable()->BindTemporaryResource(&binding_desc);
+	}
+	if (GetPersistantResourceSize() != 0)
+	{
+		DML_BUFFER_BINDING buffer_binding{ GetPersistantResource()->buffer.Get(), 0, GetPersistantResourceSize() };
+		DML_BINDING_DESC binding_desc{ DML_BINDING_TYPE_BUFFER, &buffer_binding };
+		GetBindingTable()->BindPersistentResource(&binding_desc);
+	}
+
+
+	// Bind input
+	DML_BINDING_DESC empty_binding_desc = { DML_BINDING_TYPE_NONE, nullptr };
+	DML_BUFFER_BINDING input_buffer_binding{ input, 0, GetInputBufferSize() };
+	DML_BINDING_DESC input_binding_desc[] = { { DML_BINDING_TYPE_BUFFER, &input_buffer_binding }, empty_binding_desc, empty_binding_desc };
+	GetBindingTable()->BindInputs(3, input_binding_desc);
+
+	// Bind output
+	DML_BUFFER_BINDING output_buffer_binding{ output, 0, GetOutputBufferSize() };
+	DML_BINDING_DESC output_binding_desc{ DML_BINDING_TYPE_BUFFER, &output_buffer_binding };
+	GetBindingTable()->BindOutputs(1, &output_binding_desc);
 }
 
 void egx::ConvLayer::CreateConvInitializer(Device& dev, IDMLDevice* dml_dev, std::vector<ConvLayer>& layers)
@@ -250,7 +281,7 @@ void egx::ConvLayer::InitializeConvLayers(IDMLDevice* dml_dev, IDMLCommandRecord
 
 	command_recorder->RecordDispatch(command_list, ConvLayer::conv_initializer.Get(), temp_binding_table.Get());
 
-	conv_initializer.Reset();
-	initializer_temp_res.release();
-	initializer_temp_res_size = 0;
+	//conv_initializer.Reset();
+	//initializer_temp_res.release();
+	//initializer_temp_res_size = 0;
 }

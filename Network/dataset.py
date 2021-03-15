@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
-import torch.autograd.profiler as profiler
 
 ss_path =               '../DatasetGenerator/data/spp{0}/video{1}/spp{0}_v{1}_f{2}.png'
 image_path =            '../DatasetGenerator/data/us{0}/images/video{1}/image_us{0}_v{1}_f{2}.png'
@@ -144,12 +143,29 @@ class SSDatasetItem():
         self.depth_buffers = []
         self.jitters = []
 
-    def Load(self):
-        self.target_images =    [LoadTargetImage(self.ss_factor, self.video, self.frame - i)    for i in self.target_indices]
-        self.input_images =     [LoadInputImage(self.us_factor, self.video, self.frame - i)     for i in range(self.seq_length)]
-        self.motion_vectors =   [LoadMotionVector(self.us_factor, self.video, self.frame - i)   for i in range(self.seq_length)]
-        self.depth_buffers =    [LoadDepthBuffer(self.us_factor, self.video, self.frame - i)    for i in range(self.seq_length)]
-        self.jitters =          [LoadJitter(self.us_factor, self.video, self.frame - i)         for i in range(self.seq_length)]
+    def Load(self, transform):
+        x1, x2, y1, y2 = transform.create_crop()
+
+        for i in self.target_indices:
+            self.target_images.append(LoadTargetImage(self.ss_factor, self.video, self.frame - i))
+            self.target_images[i] = ImageNumpyToTorch(self.target_images[i])
+            self.target_images[i] = transform.tf_target_image(self.target_images[i], x1, x2, y1, y2)
+
+        for i in range(self.seq_length):
+            self.input_images.append(LoadInputImage(self.us_factor, self.video, self.frame - i))
+            self.input_images[i] = ImageNumpyToTorch(self.input_images[i])
+            self.input_images[i] = transform.tf_input_image(self.input_images[i], x1, x2, y1, y2)
+
+            self.motion_vectors.append(LoadMotionVector(self.us_factor, self.video, self.frame - i))
+            self.motion_vectors[i] = MVNumpyToTorch(self.motion_vectors[i])
+            self.motion_vectors[i] = transform.tf_motion_vector(self.motion_vectors[i], x1, x2, y1, y2)
+
+            self.depth_buffers.append(LoadDepthBuffer(self.us_factor, self.video, self.frame - i))
+            self.depth_buffers[i] = DepthNumpyToTorch(self.depth_buffers[i])
+            self.depth_buffers[i] = transform.tf_depth_buffer(self.depth_buffers[i], x1, x2, y1, y2)
+
+            self.jitters.append(LoadJitter(self.us_factor, self.video, self.frame - i))
+            self.jitters[i] = torch.from_numpy(self.jitters[i])
 
     def ToTorch(self):
         self.target_images =     [ImageNumpyToTorch(self.target_images[i])   for i in range(len(self.target_images))]
@@ -183,29 +199,34 @@ class SSDatasetItem():
             self.jitters[i] = self.jitters[i].half()
 
 class RandomCrop():
-    def __init__(self, size):
+    def __init__(self, size, image_width, image_height, us_factor):
         self.size = size
+        self.width = image_width // us_factor
+        self.height = image_height // us_factor
+        self.us = us_factor
 
-    def __call__(self, item : SSDatasetItem):
-        _, height, width = item.input_images[0].shape
-        us = item.us_factor
-        x1 = torch.randint(width - self.size // us, (1,))
-        x2 = x1 + self.size // us
-        y1 = torch.randint(height - self.size // us, (1,))
-        y2 = y1 + self.size // us
-        for i in range(len(item.target_images)):
-            item.target_images[i] = item.target_images[i][:,y1*us:y2*us,x1*us:x2*us]
-        for i in range(item.seq_length):
-            item.input_images[i] = item.input_images[i][:,y1:y2,x1:x2]
-            item.depth_buffers[i] = item.depth_buffers[i][y1:y2,x1:x2]
+    def create_crop(self):
+        x1 = torch.randint(self.width - self.size // self.us, (1,))
+        x2 = x1 + self.size // self.us
+        y1 = torch.randint(self.height - self.size // self.us, (1,))
+        y2 = y1 + self.size // self.us
+        return x1, x2, y1, y2
 
-            item.motion_vectors[i] = item.motion_vectors[i][y1:y2,x1:x2,:]
-            item.motion_vectors[i] = (item.motion_vectors[i] + 1.0) * 0.5
-            item.motion_vectors[i] = item.motion_vectors[i] * torch.tensor([width, height])
-            item.motion_vectors[i] = item.motion_vectors[i] - torch.tensor([x1, y1])
-            item.motion_vectors[i] = item.motion_vectors[i] / (self.size // us)
-            item.motion_vectors[i] = (item.motion_vectors[i] - 0.5) * 2.0
-        return item
+    def tf_target_image(self, target_image, x1, x2, y1, y2):
+        return target_image[:,y1*self.us:y2*self.us,x1*self.us:x2*self.us].contiguous()
+    def tf_input_image(self, input_image, x1, x2, y1, y2):
+        return input_image[:,y1:y2,x1:x2].contiguous()
+    def tf_depth_buffer(self, depth_buffer, x1, x2, y1, y2):
+        return depth_buffer[y1:y2,x1:x2].contiguous()
+    def tf_motion_vector(self, mv, x1, x2, y1, y2):
+        mv = mv[y1:y2,x1:x2,:]
+        mv = (mv + 1.0) * 0.5
+        mv = mv * torch.tensor([self.width, self.height])
+        mv = mv - torch.tensor([x1, y1])
+        mv = mv / (self.size // self.us)
+        mv = (mv - 0.5) * 2.0
+        return mv.contiguous()
+
         
 num_videos = 2
 num_frames_per_video = 60
@@ -233,10 +254,7 @@ class SSDataset(Dataset):
         video_index = idx // self.max_allowed_frames()
         frame_index = self.seq_length - 1 + idx % self.max_allowed_frames()
         d = SSDatasetItem(self.ss_factor, self.us_factor, self.videos[video_index], frame_index, self.seq_length, self.target_indices)
-        d.Load()
-        d.ToTorch()
-        if(self.transform):
-            d = self.transform(d)
+        d.Load(self.transform)
         
         return d
 

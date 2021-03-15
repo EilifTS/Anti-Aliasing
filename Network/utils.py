@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import torch.autograd.profiler as profiler
 
 class Evaluator():
     def __init__(self, metrics):
@@ -41,6 +42,8 @@ def DefaultEvaluator():
 iteration_str = 'Current iteration: {0} \t Loss: {1:.6f} \t ETA: {2:.2f}s   '
 finish_str = 'avg_loss: {0:.6f} \t min_loss {1:.6f} \t max_loss {2:.6f} \t total_time {3:.2f}s   '
 
+
+
 def TrainEpoch(model, dataloader, loader_corruption, optimizer, loss_function):
     torch.seed() # To randomize
     model.train()
@@ -48,7 +51,6 @@ def TrainEpoch(model, dataloader, loader_corruption, optimizer, loss_function):
     num_iterations = len(dataloader)
     losses = np.zeros(num_iterations)
     start_time = time.time()
-
     for i, item in enumerate(dataloader_iter):
         #item.ToCuda()
 
@@ -86,8 +88,7 @@ def TrainEpoch(model, dataloader, loader_corruption, optimizer, loss_function):
         avg_time = (current_time - start_time) / (i + 1)
         remaining_time = avg_time * (num_iterations - (i + 1))
         print(iteration_str.format(i, current_loss, remaining_time), end='\r')
-        
-
+    
     # Print epoch summary
     avg_loss = np.average(losses)
     min_loss = np.min(losses)

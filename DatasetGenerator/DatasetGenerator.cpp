@@ -54,9 +54,12 @@ void saveJitter(const std::string& file_name, const ema::vec2& jitter)
 	file << jitter.x << " " << jitter.y;
 }
 
+#include <iostream>
 int main()
 {
 	// Initialize windows runtime
+	std::cout << std::endl;
+
 	// Needed for texture saving and loading to work
 	Microsoft::WRL::Wrappers::RoInitializeWrapper initialize(RO_INIT_MULTITHREADED);
 	if (FAILED(initialize))

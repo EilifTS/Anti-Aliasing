@@ -7,7 +7,6 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-import torch.autograd.profiler as profiler
 
 class Evaluator():
     def __init__(self, metrics):

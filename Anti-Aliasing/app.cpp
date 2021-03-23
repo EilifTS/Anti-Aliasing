@@ -12,7 +12,7 @@
 namespace
 {
 	const static float near_plane = 0.1f;
-	const static float far_plane = 1000.0f;
+	const static float far_plane = 100.0f;
 
 	// Upsampling
 	static const int upsample_numerator = 1;

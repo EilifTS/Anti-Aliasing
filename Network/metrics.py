@@ -155,12 +155,15 @@ class MasterLoss2(torch.nn.Module):
     def __init__(self, target_indices):
         super(MasterLoss2, self).__init__()
         self.target_indices = target_indices
+        self.ssim = SSIM()
 
     def forward(self, img1, img2):
         loss = torch.tensor([0.0], device="cuda")
         weight = torch.tensor([0.0], device="cuda")
         for i in range(len(img1)):
+            #loss += F.mse_loss(img1[i].cuda(), img2[i].cuda())
             loss += F.l1_loss(img1[i].cuda(), img2[i].cuda())
+            #loss += 1.0 - self.ssim(img1[i].cuda(), img2[i].cuda())
             weight += 1.0
             torch.cuda.empty_cache()
         return loss / weight

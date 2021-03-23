@@ -24,7 +24,7 @@ namespace
 	static const ema::point2D output_size = ema::point2D(1920, 1080);
 
 	static const float near_plane = 0.1f;
-	static const float far_plane = 1000.0f;
+	static const float far_plane = 100.0f;
 
 	static const bool disable_super_sampling = false;
 	static const int super_sample_options[] = { 64 };

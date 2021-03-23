@@ -10,37 +10,41 @@ import os
 
 if(__name__ == '__main__'):
     torch.backends.cudnn.benchmark = True
-    #dataset.ConvertPNGDatasetToBMP(64, 4, 100, 60, 100)
+    #dataset.ConvertPNGDatasetToBMP(64, 4, 100, 60)
     torch.manual_seed(17) # Split the dataset up the same way every time
     videos = torch.randperm(100)
     torch.seed()
-    sequence_length = 30 # Number inputs used in the model
-    target_indices = [0, 1, 2]#, 15, 31] # The targets the model will calculate loss against, [0] means the last image, [0, 1] the two last etc.
+    sequence_length = 5 # Number inputs used in the model
+    target_indices = [0]#, 1, 2]#, 15, 31] # The targets the model will calculate loss against, [0] means the last image, [0, 1] the two last etc.
     upsample_factor = 4
     width, height = 1920, 1080
-    data_train = dataset.SSDataset(64, upsample_factor, videos[:80], sequence_length, target_indices, transform=None, pre_cropped=True)
-    data_val = dataset.SSDataset(64, upsample_factor, videos[80:90], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
-    data_test = dataset.SSDataset(64, upsample_factor, videos[90:], sequence_length, target_indices, transform=None)
-    loader_train = torch.utils.data.DataLoader(data_train, batch_size=4, shuffle=True, num_workers=0, collate_fn=dataset.SSDatasetCollate, drop_last=True)
-    loader_val = torch.utils.data.DataLoader(data_val, batch_size=4, shuffle=False, num_workers=0, collate_fn=dataset.SSDatasetCollate)
+    batch_size = 8
+    data_train = dataset.SSDataset(64, upsample_factor, videos[:80], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
+    data_val1 = dataset.SSDataset(64, upsample_factor, videos[80:90], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
+    data_val2 = dataset.SSDataset(64, upsample_factor, videos[80:90], 1, [0], transform=None)
+    data_test = dataset.SSDataset(64, upsample_factor, videos[90:], 1, [0], transform=None)
+    loader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, num_workers=4, collate_fn=dataset.SSDatasetCollate)
+    loader_val1 = torch.utils.data.DataLoader(data_val1, batch_size=batch_size, shuffle=False, num_workers=4, collate_fn=dataset.SSDatasetCollate)
+    loader_val2 = torch.utils.data.DataLoader(data_val2, batch_size=1, shuffle=False, num_workers=0, collate_fn=dataset.SSDatasetCollate)
     loader_test = torch.utils.data.DataLoader(data_test, batch_size=1, shuffle=False, num_workers=0, collate_fn=dataset.SSDatasetCollate)
-
-    # History corruption
-    #data_corruption = dataset.TargetImageDataset(64, videos[:10], transform=torchvision.transforms.RandomCrop(256))
-    #loader_corruption = torch.utils.data.DataLoader(data_corruption, batch_size=4, shuffle=True, num_workers=0)
-    loader_corruption = None
 
     evaluator = utils.DefaultEvaluator()
 
     # Create model
-    model_name = 'modelMaster'
-    load_model = True
+    model_name = 'X-Net4x4'
+    load_model = False
     start_epoch = 0
     train_losses = []
+    val_epochs = []
     val_losses = []
-    model = models.MasterNet2(upsample_factor)
+    val_psnrs = []
+    val_ssims = []
+    model = models.FBNet(upsample_factor)
+    #model = models.MasterNet(upsample_factor, sequence_length)
+    #model = models.MasterNet2(upsample_factor)
     #model = models.BicubicModel(upsample_factor)
-    loss_function = metrics.MasterLoss2(target_indices)
+    loss_function = metrics.FBLoss()
+    #loss_function = metrics.MasterLoss2(target_indices)
     
     # Create optimizer
     params = [p for p in model.parameters() if p.requires_grad]
@@ -51,11 +55,14 @@ if(__name__ == '__main__'):
         checkpoint = torch.load(model_name + "/" + model_name + ".pt")
         model.load_state_dict(checkpoint['model_state_dict'])
         params = [p for p in model.parameters() if p.requires_grad]
-        optimizer = torch.optim.Adam(params, lr=1e-4)
+        optimizer = torch.optim.Adam(params, lr=1e-4*batch_size)
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         start_epoch = checkpoint['epoch'] + 1
         train_losses = checkpoint['loss']['train']
+        val_epochs = checkpoint['loss']['val_epochs']
         val_losses = checkpoint['loss']['val']
+        val_psnrs = checkpoint['loss']['psnr']
+        val_ssims = checkpoint['loss']['ssim']
         print("Model loaded")
 
     model.to('cuda')
@@ -64,9 +71,8 @@ if(__name__ == '__main__'):
             if torch.is_tensor(v):
                 state[k] = v.cuda()
 
-    for g in optimizer.param_groups:
-        g['lr'] = 1e-5
-
+    #for g in optimizer.param_groups:
+    #    g['lr'] = 1e-5*batch_size
 
     print("Model parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
     #model.half()
@@ -79,26 +85,31 @@ if(__name__ == '__main__'):
         print("Directory", model_name, "allready exist")
 
 
-    epochs = 160
+    epochs = 100
 
     # Testing
     #utils.AddGradientHooks(model)
-    #utils.CheckMasterModelSampleEff(model, loader_val, loss_function)
+    #utils.CheckMasterModelSampleEff(model, loader_val1, loss_function)
     #utils.VisualizeModel(tus, loader_test)
     #utils.VisualizeMasterModel(model, loader_test)
-    #utils.TestModel(model, loader_test)
+    #utils.TestFBModel(model, loader_test)
     #utils.TestMasterModel(model, loader_test)
     #utils.VisualizeDifference(model, loader_test)
-    #utils.PlotLosses(train_losses, val_losses)
+    #utils.PlotLosses(train_losses, val_epochs, val_losses, val_psnrs, val_ssims)
     #utils.IllustrateJitterPattern(loader_test, 16, 4)
 
     for epoch in range(start_epoch, epochs):
         print('Epoch {}'.format(epoch))
-        train_loss = utils.TrainEpoch(model, loader_train, loader_corruption, optimizer, loss_function)
-        val_loss = utils.ValidateModel(model, loader_val, loss_function)
+        train_loss = utils.TrainEpoch(model, loader_train, optimizer, loss_function)
         train_losses.append(train_loss)
-        val_losses.append(val_loss)
-        print('')
+        if(epoch % 1 == 0):
+            #val_loss, val_psnr, val_ssim = utils.ValidateModel(model, loader_val1, loader_val2, loss_function)
+            val_loss, val_psnr, val_ssim = utils.ValidateFBModel(model, loader_val1, loader_val2, loss_function)
+            val_epochs.append(epoch)
+            val_losses.append(val_loss)
+            val_psnrs.append(val_psnr)
+            val_ssims.append(val_ssim)
+        
 
         # Save checkpoint
         print("Saving model")
@@ -113,19 +124,13 @@ if(__name__ == '__main__'):
             'epoch' : epoch,
             'model_state_dict' : model.state_dict(),
             'optimizer_state_dict' : optimizer.state_dict(),
-            'loss' : {'train' : train_losses, 'val' : val_losses}
+            'loss' : {'train' : train_losses, 'val' : val_losses, 'psnr' : val_psnrs, 'ssim' : val_ssims, 'val_epochs' : val_epochs},
             }, model_name + "/" + model_name + ".pt")
 
         # Saving test image
-        with torch.no_grad():
-            dli = iter(loader_test)
-            item = next(dli)
-            item.ToCuda()
-            res = model.forward(item)[0]
-            res = res.squeeze().cpu().detach()
-            res = dataset.ImageTorchToNumpy(res)
-            cv2.imwrite(model_name + "/temp_img" + str(epoch) + ".png", res)
-            
+        utils.SaveTestImageFB(model, loader_test, 30, model_name, epoch)
+        print('')
+
         #window_name = "Image"
         #cv2.imshow(window_name, res)
         #cv2.waitKey(0)

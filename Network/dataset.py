@@ -12,61 +12,48 @@ motion_vector_path_png =    '../DatasetGenerator/data/us{0}/motion_vectors/video
 depth_path_png =            '../DatasetGenerator/data/us{0}/depth/video{1}/depth_us{0}_v{1}_f{2}.png'
 jitter_path_png =           '../DatasetGenerator/data/us{0}/jitter/video{1}/jitter_us{0}_v{1}_f{2}.txt'
 
-ss_path =               'data/spp{0}/video{1}/crop{3}/spp{0}_v{1}_f{2}.bmp'
-image_path =            'data/us{0}/images/video{1}/crop{3}/image_us{0}_v{1}_f{2}.bmp'
-motion_vector_path =    'data/us{0}/motion_vectors/video{1}/crop{3}/motion_vectors_us{0}_v{1}_f{2}.bmp'
-depth_path =            'data/us{0}/depth/video{1}/crop{3}/depth_us{0}_v{1}_f{2}.bmp'
+ss_path =               'data/spp{0}/video{1}/spp{0}_v{1}_f{2}.bmp'
+image_path =            'data/us{0}/images/video{1}/image_us{0}_v{1}_f{2}.bmp'
+motion_vector_path =    'data/us{0}/motion_vectors/video{1}/motion_vectors_us{0}_v{1}_f{2}.bmp'
+depth_path =            'data/us{0}/depth/video{1}/depth_us{0}_v{1}_f{2}.bmp'
 jitter_path =           'data/us{0}/jitter/video{1}/jitter_us{0}_v{1}_f{2}.txt'
 
-def LoadTargetImage(ss_factor, video_index, frame_index, crop_index = None):
-    if(crop_index == None):
-        return cv2.imread(ss_path_png.format(ss_factor, video_index, frame_index))
-    else:
-        path = ss_path.format(ss_factor, video_index, frame_index, crop_index)
-        return cv2.imread(ss_path.format(ss_factor, video_index, frame_index, crop_index))
+def LoadTargetImage(ss_factor, video_index, frame_index):
+    return cv2.imread(ss_path.format(ss_factor, video_index, frame_index))
 
-def LoadInputImage(ds_factor, video_index, frame_index, crop_index = None):
-    if(crop_index == None):
-        return cv2.imread(image_path_png.format(ds_factor, video_index, frame_index))
-    else:
-        return cv2.imread(image_path.format(ds_factor, video_index, frame_index, crop_index))
-
+def LoadInputImage(ds_factor, video_index, frame_index):
+    return cv2.imread(image_path.format(ds_factor, video_index, frame_index))
 
 # Motion vectors are stored as 4 8bit ints representing two 16bit floats
-def LoadMotionVector(ds_factor, video_index, frame_index, crop_index = None):
-    with profiler.record_function("mv_load"):
-        if(crop_index == None):
-            im = cv2.imread(motion_vector_path_png.format(ds_factor, video_index, frame_index), 0)
-        else:
-            im = cv2.imread(motion_vector_path.format(ds_factor, video_index, frame_index, crop_index), 0)
+def LoadMotionVector(ds_factor, video_index, frame_index):
+   # with profiler.record_function("mv_load"):
+    im = cv2.imread(motion_vector_path.format(ds_factor, video_index, frame_index), 0)
+        
     height, width = im.shape
-    with profiler.record_function("mv_process"):
-        # Change from 8-bit ints to 16-bit ints and split into the 4 components of the floats
-        i1 = np.array(im[:,0::4], dtype=np.int16)
-        i2 = np.array(im[:,1::4], dtype=np.int16)
-        i3 = np.array(im[:,2::4], dtype=np.int16)
-        i4 = np.array(im[:,3::4], dtype=np.int16)
-        i1 = np.left_shift(i1, 8*0)
-        i2 = np.left_shift(i2, 8*1)
-        i3 = np.left_shift(i3, 8*0)
-        i4 = np.left_shift(i4, 8*1)
+    #with profiler.record_function("mv_process"):
+    # Change from 8-bit ints to 16-bit ints and split into the 4 components of the floats
+    i1 = np.array(im[:,0::4], dtype=np.int16)
+    i2 = np.array(im[:,1::4], dtype=np.int16)
+    i3 = np.array(im[:,2::4], dtype=np.int16)
+    i4 = np.array(im[:,3::4], dtype=np.int16)
+    i1 = np.left_shift(i1, 8*0)
+    i2 = np.left_shift(i2, 8*1)
+    i3 = np.left_shift(i3, 8*0)
+    i4 = np.left_shift(i4, 8*1)
 
-        # Combine into two image
-        im2 = np.bitwise_or(i1, i2)
-        im3 = np.bitwise_or(i3, i4)
+    # Combine into two image
+    im2 = np.bitwise_or(i1, i2)
+    im3 = np.bitwise_or(i3, i4)
 
-        # Combine the two images into a single 2 component image
-        im4 = np.dstack((im2, im3))
-        im4 = im4.view(np.float16) # Return as float
+    # Combine the two images into a single 2 component image
+    im4 = np.dstack((im2, im3))
+    im4 = im4.view(np.float16) # Return as float
 
     return im4 
 
 # Depth is stored as 4 8bit ints representing a 32bit float
-def LoadDepthBuffer(ds_factor, video_index, frame_index, crop_index = None):
-    if(crop_index == None):
-        im = cv2.imread(depth_path_png.format(ds_factor, video_index, frame_index), 0)
-    else:
-        im = cv2.imread(depth_path.format(ds_factor, video_index, frame_index, crop_index), 0)
+def LoadDepthBuffer(ds_factor, video_index, frame_index):
+    im = cv2.imread(depth_path.format(ds_factor, video_index, frame_index), 0)
     height, width = im.shape
 
     # Change from 8-bit ints to 32-bit ints and split into the 4 components of the float
@@ -108,16 +95,7 @@ def ConvertJitter(us_factor, video_index, frame_index):
     f1.close()
     f2.close()
 
-def ConvertPNGDatasetToBMP(ss_factor, us_factor, video_count, frame_count, crop_count):
-    # Preprocessing using crops
-    crop_gen = RandomCrop(256, 1920, 1080, us_factor)
-    crops = []
-    print("Creating crop positions")
-    for i in range(video_count):
-        crops.append([])
-        for j in range(crop_count):
-            crops[i].append(crop_gen.create_crop())
-
+def ConvertPNGDatasetToBMP(ss_factor, us_factor, video_count, frame_count):
     CreateDir('data')
     if(ss_factor != None):
         CreateDir('data/spp{}'.format(ss_factor))
@@ -126,10 +104,8 @@ def ConvertPNGDatasetToBMP(ss_factor, us_factor, video_count, frame_count, crop_
             for j in range(frame_count):
                 print('Converting target image {0}/{1}     '.format(frame_count*i+j + 1, frame_count*video_count), end="\r")
                 im = cv2.imread(ss_path_png.format(ss_factor, i, j))
-                for k in range(crop_count):
-                    CreateDir('data/spp{0}/video{1}/crop{2}'.format(ss_factor, i, k))
-                    x1, x2, y1, y2 = crops[i][k]
-                    cv2.imwrite(ss_path.format(ss_factor, i, j, k), im[y1*us_factor:y2*us_factor,x1*us_factor:x2*us_factor,:])
+                cv2.imwrite(ss_path.format(ss_factor, i, j), im)
+                
     print('')
     if(us_factor != None):
         CreateDir('data/us{}'.format(us_factor))
@@ -145,16 +121,11 @@ def ConvertPNGDatasetToBMP(ss_factor, us_factor, video_count, frame_count, crop_
             for j in range(frame_count):
                 print('Converting input image image {0}/{1}     '.format(frame_count*i+j + 1, frame_count*video_count), end="\r")
                 input_im = cv2.imread(image_path_png.format(us_factor, i, j))
-                depth_im = cv2.imread(depth_path_png.format(us_factor, i, j))
-                mv_im = cv2.imread(motion_vector_path_png.format(us_factor, i, j))
-                for k in range(crop_count):
-                    CreateDir('data/us{0}/images/video{1}/crop{2}'.format(us_factor, i, k))
-                    CreateDir('data/us{0}/depth/video{1}/crop{2}'.format(us_factor, i, k))
-                    CreateDir('data/us{0}/motion_vectors/video{1}/crop{2}'.format(us_factor, i, k))
-                    x1, x2, y1, y2 = crops[i][k]
-                    cv2.imwrite(image_path.format(us_factor, i, j, k), input_im[y1:y2,x1:x2,:])
-                    cv2.imwrite(depth_path.format(us_factor, i, j, k), depth_im[y1:y2,x1*4:x2*4])
-                    cv2.imwrite(motion_vector_path.format(us_factor, i, j, k), mv_im[y1:y2,x1*4:x2*4])
+                depth_im = cv2.imread(depth_path_png.format(us_factor, i, j), 0)
+                mv_im = cv2.imread(motion_vector_path_png.format(us_factor, i, j), 0)
+                cv2.imwrite(image_path.format(us_factor, i, j), input_im)
+                cv2.imwrite(depth_path.format(us_factor, i, j), depth_im)
+                cv2.imwrite(motion_vector_path.format(us_factor, i, j), mv_im)
                 ConvertJitter(us_factor, i, j)
 
 def ImageNumpyToTorch(image):
@@ -231,36 +202,32 @@ class SSDatasetItem():
         self.depth_buffers = []
         self.jitters = []
 
-    def Load(self, transform, pre_cropped):
-        crop_index = None
-        if(pre_cropped):
-            crop_index = torch.randint(0, 100, (1,)).item()
-        x1, x2, y1, y2 = 0, 0, 0, 0
+    def Load(self, transform):
         if(transform != None):
             x1, x2, y1, y2 = transform.create_crop()
         #with profiler.profile(record_shapes=True) as prof:
             
         for i in self.target_indices:
             #with profiler.record_function("target"):
-            self.target_images.append(LoadTargetImage(self.ss_factor, self.video, self.frame - i, crop_index))
+            self.target_images.append(LoadTargetImage(self.ss_factor, self.video, self.frame - i))
             self.target_images[i] = ImageNumpyToTorch(self.target_images[i])
             if(transform != None):
                 self.target_images[i] = transform.tf_target_image(self.target_images[i], x1, x2, y1, y2)
 
         for i in range(self.seq_length):
             #with profiler.record_function("input"):
-            self.input_images.append(LoadInputImage(self.us_factor, self.video, self.frame - i, crop_index))
+            self.input_images.append(LoadInputImage(self.us_factor, self.video, self.frame - i))
             self.input_images[i] = ImageNumpyToTorch(self.input_images[i])
             if(transform != None):
                 self.input_images[i] = transform.tf_input_image(self.input_images[i], x1, x2, y1, y2)
 
             #with profiler.record_function("mv"):
-            self.motion_vectors.append(LoadMotionVector(self.us_factor, self.video, self.frame - i, crop_index))
+            self.motion_vectors.append(LoadMotionVector(self.us_factor, self.video, self.frame - i))
             self.motion_vectors[i] = MVNumpyToTorch(self.motion_vectors[i])
             if(transform != None):
                 self.motion_vectors[i] = transform.tf_motion_vector(self.motion_vectors[i], x1, x2, y1, y2)
             #with profiler.record_function("depth"):
-            self.depth_buffers.append(LoadDepthBuffer(self.us_factor, self.video, self.frame - i, crop_index))
+            self.depth_buffers.append(LoadDepthBuffer(self.us_factor, self.video, self.frame - i))
             self.depth_buffers[i] = DepthNumpyToTorch(self.depth_buffers[i])
             if(transform != None):
                 self.depth_buffers[i] = transform.tf_depth_buffer(self.depth_buffers[i], x1, x2, y1, y2)
@@ -335,14 +302,13 @@ num_frames_per_video = 60
 
 class SSDataset(Dataset):
 
-    def __init__(self, ss_factor, us_factor, videos, seq_length, target_indices, transform=None, pre_cropped=False):
+    def __init__(self, ss_factor, us_factor, videos, seq_length, target_indices, transform=None):
         self.ss_factor = ss_factor
         self.us_factor = us_factor
         self.videos = videos
         self.seq_length = seq_length
         self.target_indices = target_indices
         self.transform = transform
-        self.pre_cropped = pre_cropped
 
     def max_allowed_frames(self):
         return num_frames_per_video - (self.seq_length - 1)
@@ -357,7 +323,7 @@ class SSDataset(Dataset):
         video_index = idx // self.max_allowed_frames()
         frame_index = self.seq_length - 1 + idx % self.max_allowed_frames()
         d = SSDatasetItem(self.ss_factor, self.us_factor, self.videos[video_index], frame_index, self.seq_length, self.target_indices)
-        d.Load(self.transform, self.pre_cropped)
+        d.Load(self.transform)
 
         return d
 

@@ -311,7 +311,7 @@ class FBNet(nn.Module):
         frames[0] = self.main_feature_extractor(frames[0])
         for i in range(1, num_frames):
             frames[i] = self.other_feature_extractor(frames[i])
-        
+        frames = [JitterAlign(frames[i], x.jitters[i], self.factor) for i in range(num_frames)]
 
         mvs = [x.motion_vectors[i] for i in range(num_frames - 1)]
 

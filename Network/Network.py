@@ -32,7 +32,7 @@ if(__name__ == '__main__'):
 
     # Create model
     model_name = 'X-Net4x4'
-    load_model = False
+    load_model = True
     start_epoch = 0
     train_losses = []
     val_epochs = []

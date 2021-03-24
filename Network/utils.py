@@ -153,9 +153,10 @@ def ValidateModel(model, dataloader1, dataloader2, loss_function):
 def GetZeroItem(num_frames, factor):
     W, H = 1920 // factor, 1080 // factor
     item = dataset.SSDatasetItem(-1, -1, -1, -1, -1, -1)
-    item.input_images = [torch.zeros(size=(1,3,H,W)) for i in range(5)]
-    item.motion_vectors = [torch.zeros(size=(1,H,W,2)) for i in range(5)]
-    item.depth_buffers = [torch.zeros(size=(1,H,W)) for i in range(5)]
+    item.input_images = [torch.zeros(size=(1,3,H,W)) for i in range(num_frames)]
+    item.motion_vectors = [torch.zeros(size=(1,H,W,2)) for i in range(num_frames)]
+    item.depth_buffers = [torch.zeros(size=(1,H,W)) for i in range(num_frames)]
+    item.jitters = [torch.zeros(size=(1,2)) for i in range(num_frames)]
     return item
 
 def ValidateFBModel(model, dataloader1, dataloader2, loss_function):
@@ -199,6 +200,7 @@ def ValidateFBModel(model, dataloader1, dataloader2, loss_function):
             item.input_images.insert(0,x.input_images[0])
             item.motion_vectors.insert(0,x.motion_vectors[0])
             item.depth_buffers.insert(0,x.depth_buffers[0])
+            item.jitters.insert(0,x.jitters[0])
             res = model.forward(item)
 
             cuda_target = x.target_images[0].cuda()
@@ -240,6 +242,7 @@ def TestFBModel(model, dataloader):
             item.input_images.insert(0,x.input_images[0])
             item.motion_vectors.insert(0,x.motion_vectors[0])
             item.depth_buffers.insert(0,x.depth_buffers[0])
+            item.jitters.insert(0,x.jitters[0])
             res = model.forward(item)
             
             cuda_target = x.target_images[0].cuda()
@@ -449,9 +452,11 @@ def SaveTestImageFB(model, loader, image_nr, model_name, epoch):
             item.input_images.pop()
             item.motion_vectors.pop()
             item.depth_buffers.pop()
+            item.jitters.pop()
             item.input_images.insert(0,x.input_images[0])
             item.motion_vectors.insert(0,x.motion_vectors[0])
             item.depth_buffers.insert(0,x.depth_buffers[0])
+            item.jitters.insert(0,x.jitters[0])
             if(i == image_nr - 1):
                 res = model.forward(item)
         res = res.squeeze().cpu().detach()

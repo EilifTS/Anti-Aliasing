@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 import metrics
+import models
 import dataset
 import math
 import cv2
@@ -197,6 +198,7 @@ def ValidateFBModel(model, dataloader1, dataloader2, loss_function):
             item.input_images.pop()
             item.motion_vectors.pop()
             item.depth_buffers.pop()
+            item.jitters.pop()
             item.input_images.insert(0,x.input_images[0])
             item.motion_vectors.insert(0,x.motion_vectors[0])
             item.depth_buffers.insert(0,x.depth_buffers[0])
@@ -338,13 +340,25 @@ def CheckMasterModelSampleEff(model, dataloader, loss_function):
     plt.plot(range(1, max_frames + 1), losses)
     plt.show()
 
-def VisualizeModel(model, dataloader):
+def VisualizeFBModel(model, dataloader):
     model.eval()
     with torch.no_grad():
         dli = iter(dataloader)
-        for item in dli:
-            item.ToCuda()
+        item = None
+        for i, x in enumerate(dli):
+            if(i % 60 == 0): # Clear history at the start of each video
+                item = GetZeroItem(5, 4)
+            # Forward
+            item.input_images.pop()
+            item.motion_vectors.pop()
+            item.depth_buffers.pop()
+            item.jitters.pop()
+            item.input_images.insert(0,x.input_images[0])
+            item.motion_vectors.insert(0,x.motion_vectors[0])
+            item.depth_buffers.insert(0,x.depth_buffers[0])
+            item.jitters.insert(0,x.jitters[0])
             res = model.forward(item)
+
             res = res.squeeze().cpu().detach()
             res = dataset.ImageTorchToNumpy(res)
             window_name = "Image"
@@ -364,7 +378,7 @@ def VisualizeMasterModel(model, dataloader):
                 history = None
             item.ToCuda()
             res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
-            res = history[:,0:3,:,:]
+            res = res[:,0:3,:,:]
             res = res.squeeze().cpu().detach()
             res = dataset.ImageTorchToNumpy(res)
             window_name = "Image"
@@ -376,10 +390,33 @@ def VisualizeDifference(model, dataloader):
     model.eval()
     with torch.no_grad():
         dli = iter(dataloader)
-        for item in dli:
+        history1 = None
+        history2 = None
+        i = 0
+        for i, item in enumerate(dli):
+            if(i % 60 == 0): # Clear history at the start of each video
+                history1 = None
+                history2 = None
             item.ToCuda()
-            res = model.forward(item)
-            res = torch.abs(res - item.target_images[0])
+            res1, history1 = model.sub_forward(item.input_images[0].clone(), item.depth_buffers[0].unsqueeze(1).clone(), item.motion_vectors[0].clone(), item.jitters[0].clone(), history1, False)
+            res2, history2 = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history2, True)
+            diff1 = torch.mean(torch.abs(res1[:,0:3,:,:] - item.target_images[0]),dim=1)
+            diff2 = torch.mean(torch.abs(res2[:,0:3,:,:] - item.target_images[0]),dim=1)
+            mins = torch.argmin(torch.stack((diff1, diff2)), dim=0).float()
+            
+            res = torch.abs(res1)
+            res = res.squeeze().cpu().detach()
+            res = dataset.ImageTorchToNumpy(res)
+            window_name = "Image"
+            cv2.imshow(window_name, res)
+            cv2.waitKey(0)
+            res = torch.abs(res2)
+            res = res.squeeze().cpu().detach()
+            res = dataset.ImageTorchToNumpy(res)
+            window_name = "Image"
+            cv2.imshow(window_name, res)
+            cv2.waitKey(0)
+            res = item.target_images[0]
             res = res.squeeze().cpu().detach()
             res = dataset.ImageTorchToNumpy(res)
             window_name = "Image"

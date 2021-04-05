@@ -141,6 +141,18 @@ def DepthToLinear(depth):
     depth = near * far / (far - depth * (far - near))
     return (depth - near) / (far - near)
 
+def RGBToYCoCg(image):
+    Y = 0.25*image[:,0:1,:,:] + 0.5*image[:,1:2,:,:] + 0.25*image[:,2:3,:,:]
+    Co = 0.5*image[:,0:1,:,:] + 0.0*image[:,1:2,:,:] - 0.5*image[:,2:3,:,:]
+    Cg = -0.25*image[:,0:1,:,:] + 0.5*image[:,1:2,:,:] - 0.25*image[:,2:3,:,:]
+    return torch.cat((Y,Co,Cg), dim=1)
+
+def YCoCgToRGB(image):
+    R = image[:,0:1,:,:] + image[:,1:2,:,:] - image[:,2:3,:,:]
+    G = image[:,0:1,:,:] + 0.0*image[:,1:2,:,:] + image[:,2:3,:,:]
+    B = image[:,0:1,:,:] - image[:,1:2,:,:] - image[:,2:3,:,:]
+    return torch.cat((R,G,B), dim=1)
+
 class TUS(nn.Module):
     def __init__(self, factor, alpha):
         super(TUS, self).__init__()
@@ -351,6 +363,37 @@ class FBNet(nn.Module):
 
         return self.reconstruct(reconstruction_input)
 
+    
+def pixel_unshuffle(input, downscale_factor):
+    '''
+    input: batchSize * c * k*w * k*h
+    kdownscale_factor: k
+    batchSize * c * k*w * k*h -> batchSize * k*k*c * w * h
+    '''
+    c = input.shape[1]
+
+    kernel = torch.zeros(size=[downscale_factor * downscale_factor * c,
+                               1, downscale_factor, downscale_factor],
+                         device=input.device)
+    for y in range(downscale_factor):
+        for x in range(downscale_factor):
+            kernel[x + y * downscale_factor::downscale_factor*downscale_factor, 0, y, x] = 1
+    return F.conv2d(input, kernel, stride=downscale_factor, groups=c)
+
+class PixelUnshuffle(nn.Module):
+    def __init__(self, downscale_factor):
+        super(PixelUnshuffle, self).__init__()
+        self.downscale_factor = downscale_factor
+    def forward(self, input):
+        '''
+        input: batchSize * c * k*w * k*h
+        kdownscale_factor: k
+        batchSize * c * k*w * k*h -> batchSize * k*k*c * w * h
+        '''
+
+        return pixel_unshuffle(input, self.downscale_factor)
+
+
 class MasterFeatureExtractor(nn.Module):
     def __init__(self, factor):
         super(MasterFeatureExtractor, self).__init__()
@@ -421,17 +464,17 @@ class MasterNet(nn.Module):
         self.factor = factor
         self.num_frames = num_frames
         self.history_channels = 4
-        self.feature_extractor = MasterFeatureExtractor(factor)
-        self.zero_up = ZeroUpsampling(factor, 12)
-        self.reweighting = nn.Sequential(
-            nn.Conv2d(16, 32, 3, stride=1, padding=1),
+        self.zero_up = ZeroUpsampling(factor, 4)
+        self.cnn = nn.Sequential(
+            nn.ReplicationPad2d(1),
+            nn.Conv2d(8, 64, 3, stride=1, padding=0),
             nn.ReLU(),
-            nn.Conv2d(32, 32, 3, stride=1, padding=1),
+            nn.ReplicationPad2d(1),
+            nn.Conv2d(64, 64, 3, stride=1, padding=0),
             nn.ReLU(),
-            nn.Conv2d(32, 1, 3, stride=1, padding=1),
-            nn.Hardtanh(),
+            nn.ReplicationPad2d(1),
+            nn.Conv2d(64, 2, 3, stride=1, padding=0),
             )
-        self.reconstruct = MasterUNet()
 
     def sub_forward(self, frame, depth, mv, jitter, history):
         mini_batch, channels, height, width = frame.shape
@@ -446,7 +489,6 @@ class MasterNet(nn.Module):
         
         # Frame upsampling
         frame_bicubic = JitterAlignedInterpolation(frame, jitter, self.factor, mode='bicubic')
-        frame = self.feature_extractor(frame)
         frame = self.zero_up(frame)
         frame = JitterAlign(frame, jitter, self.factor)
 
@@ -469,14 +511,17 @@ class MasterNet(nn.Module):
 
             history[mask] = frame_bicubic[mask]
 
-        alpha = (self.reweighting(torch.cat((frame, history), dim=1)) + 1.0) * 0.5
-        history = history*(1.0 - alpha) + frame_bicubic * alpha
+        cnn_input = torch.cat((frame, history), dim=1)
+        residual = self.cnn(cnn_input)
+
 
         # History reweighting
-        residual = self.reconstruct(torch.cat((frame, history), dim=1))
-        history = history + residual
+        alpha = torch.clamp(residual[:,0:1,:,:], 0.0, 1.0)
+
+        history = history*(1.0 - alpha) + frame_bicubic * alpha
+        history[:,3,:,:] = history[:,3,:,:] + residual[:,1,:,:]
         history = torch.clamp(history, 0.0, 1.0)
-        
+ 
         # Reconstruction
         return history[:,:3,:,:], history
 
@@ -502,96 +547,6 @@ class MasterNet(nn.Module):
         out.reverse()
         return out
 
-  
-class Master2UNet(nn.Module):
-    def __init__(self, history_channels):
-        super(Master2UNet, self).__init__()
-        self.down = nn.MaxPool2d(2)
-        self.up = nn.Upsample(scale_factor=2, mode='bilinear')
-
-        self.start = nn.Sequential(
-            nn.Conv2d(14 + history_channels, 64, 3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(64, 32, 3, stride=1, padding=1),
-            nn.ReLU()
-            )
-        self.down = nn.Sequential(
-            nn.MaxPool2d(2),
-            nn.Conv2d(32, 64, 3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, 3, stride=1, padding=1),
-            nn.ReLU()
-            )
-        self.bottom = nn.Sequential(
-            nn.MaxPool2d(2),
-            nn.Conv2d(64, 128, 3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(128, 128, 3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
-            )
-        self.up = nn.Sequential(
-            nn.Conv2d(192, 64, 3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, 3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
-            )
-        self.end = nn.Sequential(
-            nn.Conv2d(96, 32, 3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(32, history_channels, 3, stride=1, padding=1),
-            )
-    def forward(self, x):
-        x1 = self.start(x)
-        x2 = self.down(x1)
-        x3 = self.bottom(x2)
-        x4 = self.up(torch.cat((x2, x3), dim=1))
-        del x2, x3
-        return self.end(torch.cat((x1, x4), dim=1))
-
-
-class DWSC(nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super(DWSC, self).__init__()
-        self.net = nn.Sequential(
-            nn.Conv2d(in_channels, in_channels, 3, stride=1, padding=1, groups=in_channels),
-            nn.ReLU(),
-            nn.Conv2d(in_channels, out_channels, 1, stride=1),
-            )
-    def forward(self, x):
-        return self.net(x)
-
-
-def pixel_unshuffle(input, downscale_factor):
-    '''
-    input: batchSize * c * k*w * k*h
-    kdownscale_factor: k
-    batchSize * c * k*w * k*h -> batchSize * k*k*c * w * h
-    '''
-    c = input.shape[1]
-
-    kernel = torch.zeros(size=[downscale_factor * downscale_factor * c,
-                               1, downscale_factor, downscale_factor],
-                         device=input.device)
-    for y in range(downscale_factor):
-        for x in range(downscale_factor):
-            kernel[x + y * downscale_factor::downscale_factor*downscale_factor, 0, y, x] = 1
-    return F.conv2d(input, kernel, stride=downscale_factor, groups=c)
-
-class PixelUnshuffle(nn.Module):
-    def __init__(self, downscale_factor):
-        super(PixelUnshuffle, self).__init__()
-        self.downscale_factor = downscale_factor
-    def forward(self, input):
-        '''
-        input: batchSize * c * k*w * k*h
-        kdownscale_factor: k
-        batchSize * c * k*w * k*h -> batchSize * k*k*c * w * h
-        '''
-
-        return pixel_unshuffle(input, self.downscale_factor)
-
 class MasterNet2(nn.Module):
     def __init__(self, factor):
         super(MasterNet2, self).__init__()
@@ -600,15 +555,60 @@ class MasterNet2(nn.Module):
 
         self.zero_up = ZeroUpsampling(factor, 4)
 
-        self.reweighting1 = nn.Sequential(
+        # Network for dilation motion vectors
+        #self.mv_net = nn.Sequential(
+        #    nn.ReplicationPad2d(1),
+        #    nn.Conv2d(3, 64, 3, stride=1, padding=0),
+        #    nn.ReLU(),
+        #    nn.ReplicationPad2d(1),
+        #    nn.Conv2d(64, 64, 3, stride=1, padding=0),
+        #    nn.ReLU(),
+        #    nn.ReplicationPad2d(1),
+        #    nn.Conv2d(64, 32, 3, stride=1, padding=0),
+        #    nn.PixelShuffle(self.factor),
+        #    )
+
+        self.down = nn.Sequential(
             PixelUnshuffle(self.factor),
-            nn.Conv2d(128, 64, 1, stride=1, padding=0),
+            nn.Conv2d(128, 32, 1, stride=1, padding=0),
+            )
+        self.cnn1 = nn.Sequential(
+            nn.ReplicationPad2d(1),
+            nn.Conv2d(32, 32, 3, stride=1, padding=0),
             nn.ReLU(),
             nn.ReplicationPad2d(1),
-            nn.Conv2d(64, 64, 3, stride=1, padding=0),
+            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            )
+        self.cnn1 = nn.Sequential(
+            nn.ReplicationPad2d(1),
+            nn.Conv2d(32, 32, 3, stride=1, padding=0),
             nn.ReLU(),
             nn.ReplicationPad2d(1),
-            nn.Conv2d(64, 32, 3, stride=1, padding=0),
+            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            )
+        self.cnn2 = nn.Sequential(
+            nn.ReplicationPad2d(1),
+            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            nn.ReLU(),
+            nn.ReplicationPad2d(1),
+            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            )
+        self.cnn3 = nn.Sequential(
+            nn.ReplicationPad2d(1),
+            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            nn.ReLU(),
+            nn.ReplicationPad2d(1),
+            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            )
+        self.cnn4 = nn.Sequential(
+            nn.ReplicationPad2d(1),
+            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            nn.ReLU(),
+            nn.ReplicationPad2d(1),
+            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            )
+
+        self.up = nn.Sequential(
             nn.PixelShuffle(self.factor),
             )
 
@@ -634,35 +634,68 @@ class MasterNet2(nn.Module):
             #history = torch.rand(size=(mini_batch, self.history_channels, height*self.factor, width*self.factor), device='cuda')
         else:
             # Upscaling motion vector
+            mv -= IdentityGrid(mv.shape)
             mv = torch.movedim(mv, 3, 1)
+            
+            
+            # MV-diation
+            #_, depth_fronts = F.max_pool2d(1.1-depth, 3, stride=1, padding=1, return_indices=True)
+            #f_depth_fronts = torch.flatten(depth_fronts, 2)
+            #f_mv = torch.flatten(mv, 2)
+            #f_mv1 = torch.gather(f_mv[:,0:1,:], 2, f_depth_fronts)
+            #f_mv2 = torch.gather(f_mv[:,1:2,:], 2, f_depth_fronts)
+            #mv = torch.cat((f_mv1, f_mv2), dim=1).view((mini_batch, 2, height, width))
+
             mv = F.interpolate(mv, scale_factor=self.factor, mode='bilinear', align_corners=False)
+            
+            # Use network to calc offsets
+            #window_size = torch.tensor([[[[width]], [[height]]]]).expand((mini_batch, 2, height, width)).cuda()
+            #mv *= window_size
+            #mv_offsets = self.mv_net(torch.cat((mv, depth), dim=1))
+            #window_size = torch.tensor([[[[width]], [[height]]]]).expand((mini_batch, 2, height*self.factor, width*self.factor)).cuda()
+            #mv_offsets = torch.clamp(mv_offsets, -1.0, 1.0)
+            #mv_offsets /= window_size
+            #mv_offsets *= 2
+            #mv_offsets = torch.movedim(mv_offsets, 1, 3)
+            #mv_offsets += IdentityGrid(mv_offsets.shape)
+            #mv = F.grid_sample(mv, mv_offsets, mode='bilinear', align_corners=False, padding_mode='border')
+            #mv /= window_size
+
+            
             mv = torch.movedim(mv, 1, 3)
+            mv += IdentityGrid(mv.shape)
         
             # History reprojection
             #history = F.grid_sample(history, mv, mode='bilinear', align_corners=False)
             history = F.grid_sample(history, mv, mode='bicubic', align_corners=False, padding_mode='border')
             #history = BiCubicGridSample(history, mv)
             
+
             ## Special case for padding
             mask = torch.logical_or(torch.greater(mv, 1.0), torch.less(mv, -1.0))
             mask = torch.logical_or(mask[:,:,:,0], mask[:,:,:,1])
             mask = mask.unsqueeze(1)
-            mask = mask.expand(mini_batch, self.history_channels, height*self.factor, width*self.factor)
+            mask = mask.expand(mini_batch, 4, height*self.factor, width*self.factor)
 
             history[mask] = frame_bilinear[mask]
 
 
         small_input = torch.cat((frame, history), dim=1)
+        small_input = self.down(small_input)
+        small_input = small_input + self.cnn1(small_input)
+        small_input = small_input + self.cnn2(small_input)
+        small_input = small_input + self.cnn3(small_input)
+        small_input = small_input + self.cnn4(small_input)
+        residual = self.up(small_input)
 
 
         # History reweighting
-        residual = self.reweighting1(small_input)
         alpha = torch.clamp(residual[:,0:1,:,:], 0.0, 1.0)
 
         history = history*(1.0 - alpha) + frame_bilinear * alpha
         history[:,3,:,:] = history[:,3,:,:] + residual[:,1,:,:]
         history = torch.clamp(history, 0.0, 1.0)
-        
+ 
 
         # Reconstruction
         return history[:,:3,:,:], history

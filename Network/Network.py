@@ -14,12 +14,12 @@ if(__name__ == '__main__'):
     torch.manual_seed(17) # Split the dataset up the same way every time
     videos = torch.randperm(100)
     torch.seed()
-    sequence_length = 5 # Number inputs used in the model
-    target_indices = [0]#, 1, 2]#, 15, 31] # The targets the model will calculate loss against, [0] means the last image, [0, 1] the two last etc.
+    sequence_length = 30 # Number inputs used in the model
+    target_indices = [0, 1, 2]#, 15, 31] # The targets the model will calculate loss against, [0] means the last image, [0, 1] the two last etc.
     upsample_factor = 4
     width, height = 1920, 1080
-    batch_size = 8
-    data_train = dataset.SSDataset(64, upsample_factor, videos[:80], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
+    batch_size = 4
+    data_train = dataset.SSDataset(64, upsample_factor, videos[:10], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
     data_val1 = dataset.SSDataset(64, upsample_factor, videos[80:90], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
     data_val2 = dataset.SSDataset(64, upsample_factor, videos[80:90], 1, [0], transform=None)
     data_test = dataset.SSDataset(64, upsample_factor, videos[90:], 1, [0], transform=None)
@@ -31,7 +31,7 @@ if(__name__ == '__main__'):
     evaluator = utils.DefaultEvaluator()
 
     # Create model
-    model_name = 'X-Net4x4'
+    model_name = 'modelMaster'
     load_model = True
     start_epoch = 0
     train_losses = []
@@ -39,16 +39,16 @@ if(__name__ == '__main__'):
     val_losses = []
     val_psnrs = []
     val_ssims = []
-    model = models.FBNet(upsample_factor)
+    #model = models.FBNet(upsample_factor)
     #model = models.MasterNet(upsample_factor, sequence_length)
-    #model = models.MasterNet2(upsample_factor)
+    model = models.MasterNet2(upsample_factor)
     #model = models.BicubicModel(upsample_factor)
-    loss_function = metrics.FBLoss()
-    #loss_function = metrics.MasterLoss2(target_indices)
+    #loss_function = metrics.FBLoss()
+    loss_function = metrics.MasterLoss2(target_indices)
     
     # Create optimizer
     params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.Adam(params, lr=1e-4)
+    optimizer = torch.optim.Adam(params, lr=4e-4)
 
     # Load model 
     if(load_model):
@@ -72,7 +72,8 @@ if(__name__ == '__main__'):
                 state[k] = v.cuda()
 
     #for g in optimizer.param_groups:
-    #    g['lr'] = 1e-5*batch_size
+    #    print(g['lr'])
+    #    g['lr'] = 4e-5
 
     print("Model parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
     #model.half()
@@ -85,12 +86,12 @@ if(__name__ == '__main__'):
         print("Directory", model_name, "allready exist")
 
 
-    epochs = 100
+    epochs = 200
 
     # Testing
     #utils.AddGradientHooks(model)
     #utils.CheckMasterModelSampleEff(model, loader_val1, loss_function)
-    #utils.VisualizeModel(tus, loader_test)
+    #utils.VisualizeFBModel(model, loader_test)
     #utils.VisualizeMasterModel(model, loader_test)
     #utils.TestFBModel(model, loader_test)
     #utils.TestMasterModel(model, loader_test)
@@ -102,9 +103,9 @@ if(__name__ == '__main__'):
         print('Epoch {}'.format(epoch))
         train_loss = utils.TrainEpoch(model, loader_train, optimizer, loss_function)
         train_losses.append(train_loss)
-        if(epoch % 1 == 0):
-            #val_loss, val_psnr, val_ssim = utils.ValidateModel(model, loader_val1, loader_val2, loss_function)
-            val_loss, val_psnr, val_ssim = utils.ValidateFBModel(model, loader_val1, loader_val2, loss_function)
+        if(epoch % 5 == 0):
+            val_loss, val_psnr, val_ssim = utils.ValidateModel(model, loader_val1, loader_val2, loss_function)
+            #val_loss, val_psnr, val_ssim = utils.ValidateFBModel(model, loader_val1, loader_val2, loss_function)
             val_epochs.append(epoch)
             val_losses.append(val_loss)
             val_psnrs.append(val_psnr)
@@ -128,7 +129,8 @@ if(__name__ == '__main__'):
             }, model_name + "/" + model_name + ".pt")
 
         # Saving test image
-        utils.SaveTestImageFB(model, loader_test, 30, model_name, epoch)
+        utils.SaveTestImage(model, loader_test, 30, model_name, epoch)
+        #utils.SaveTestImageFB(model, loader_test, 30, model_name, epoch)
         print('')
 
         #window_name = "Image"

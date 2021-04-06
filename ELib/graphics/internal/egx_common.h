@@ -37,6 +37,8 @@ namespace egx
 	class UnorderedAccessBuffer;
 	class MasterNet;
 	class ConvLayer;
+	class PixelShuffle;
+	class AddLayer;
 
 	enum class GPUBufferState
 	{

@@ -48,6 +48,12 @@
     <ClCompile Include="deep_learning\conv_layer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="deep_learning\pixel_shuffle.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="deep_learning\add_layer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="deferred_rendering\deferred_renderer.h">
@@ -87,6 +93,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="deep_learning\dml_common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="deep_learning\pixel_shuffle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="deep_learning\add_layer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

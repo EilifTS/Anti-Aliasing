@@ -21,6 +21,8 @@ namespace egx
 		friend ShaderTable;
 		friend MasterNet;
 		friend ConvLayer;
+		friend PixelShuffle;
+		friend AddLayer;
 	};
 
 }

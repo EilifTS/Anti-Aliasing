@@ -22,8 +22,10 @@
     <ClCompile Include="aa\fxaa\fxaa.cpp" />
     <ClCompile Include="aa\ssaa\ssaa.cpp" />
     <ClCompile Include="aa\taa\taa.cpp" />
+    <ClCompile Include="deep_learning\add_layer.cpp" />
     <ClCompile Include="deep_learning\conv_layer.cpp" />
     <ClCompile Include="deep_learning\master_net.cpp" />
+    <ClCompile Include="deep_learning\pixel_shuffle.cpp" />
     <ClCompile Include="deferred_rendering\deferred_renderer.cpp" />
     <ClCompile Include="deferred_rendering\g_buffer.cpp" />
     <ClCompile Include="deferred_rendering\light_manager.cpp" />
@@ -36,9 +38,11 @@
     <ClInclude Include="aa\ssaa\ssaa.h" />
     <ClInclude Include="aa\taa\jitter.h" />
     <ClInclude Include="aa\taa\taa.h" />
+    <ClInclude Include="deep_learning\add_layer.h" />
     <ClInclude Include="deep_learning\conv_layer.h" />
     <ClInclude Include="deep_learning\dml_common.h" />
     <ClInclude Include="deep_learning\master_net.h" />
+    <ClInclude Include="deep_learning\pixel_shuffle.h" />
     <ClInclude Include="deferred_rendering\deferred_renderer.h" />
     <ClInclude Include="deferred_rendering\g_buffer.h" />
     <ClInclude Include="deferred_rendering\light_manager.h" />

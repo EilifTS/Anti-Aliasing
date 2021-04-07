@@ -86,3 +86,8 @@ void egx::Shader::CompilePixelShader(const std::string& path, const ShaderMacroL
 {
 	shader_blob = compileShader(path, "PS", "ps_5_0", macro_list.getD3D());
 }
+
+void egx::Shader::CompileComputeShader(const std::string& path, const ShaderMacroList& macro_list)
+{
+	shader_blob = compileShader(path, "CS", "cs_5_0", macro_list.getD3D());
+}

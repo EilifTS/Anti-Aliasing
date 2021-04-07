@@ -17,11 +17,11 @@
 
 #include "network/dataset_video_recorder.h"
 
-#include "deep_learning/master_net.h"
+#include "deep_learning/dltus.h"
 
 enum class AAMode
 {
-	None, FXAA, TAA, SSAA
+	None, FXAA, TAA, SSAA, DL
 };
 
 enum class SceneUpdateMode
@@ -72,13 +72,11 @@ private:
 
 	// Network
 	enn::DatasetVideoRecorder dataset_recorder;
+	DLTUS dltus;
 
 	// Temp
 	bool do_screen_shot = false;
 	int ss_nr = 0;
-
-	// MasterNet
-	egx::MasterNet master_net;
 
 private:
 	void initializeInternals(egx::Device& dev);

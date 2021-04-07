@@ -8,7 +8,8 @@ namespace
     
 }
 
-egx::MasterNet::MasterNet(egx::Device& dev, egx::CommandContext& context)
+egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point2D& window_size, int upsample_factor)
+    : window_size(window_size), upsample_factor(upsample_factor)
 {
 	// Create DML device
 	DML_CREATE_DEVICE_FLAGS dml_device_flags = DML_CREATE_DEVICE_FLAG_NONE;
@@ -28,7 +29,7 @@ egx::MasterNet::MasterNet(egx::Device& dev, egx::CommandContext& context)
 	);
 
     // Create layers
-    DMLDims input_buffer_size = { 1, 8, 1080, 1920};
+    DMLDims input_buffer_size = { 1, 8, window_size.y, window_size.x};
     //UINT output_channels = 128;
 
     // Down
@@ -119,6 +120,11 @@ egx::MasterNet::MasterNet(egx::Device& dev, egx::CommandContext& context)
     intermediate_buffer3 = std::make_unique<UnorderedAccessBuffer>(dev, max_int3_size);
     output_buffer = std::make_unique<UnorderedAccessBuffer>(dev, shuffle_layers[1].GetOutputBufferSize());
 
+    input_buffer->CreateUnorderedAccessView(dev, true);
+    output_buffer->CreateUnorderedAccessView(dev, true);
+    input_buffer->CreateShaderResourceView(dev);
+    output_buffer->CreateShaderResourceView(dev);
+
     // Down
     shuffle_layers[0].BindResources(input_buffer->buffer.Get(), intermediate_buffer1->buffer.Get());
     conv_layers[0].BindResources(intermediate_buffer1->buffer.Get(), intermediate_buffer3->buffer.Get());
@@ -148,10 +154,13 @@ egx::MasterNet::MasterNet(egx::Device& dev, egx::CommandContext& context)
 }
 
 //void egx::MasterNet::Execute(egx::Texture2D& texture_in, egx::Texture2D& texture_out)
-void egx::MasterNet::Execute(egx::Device& dev, egx::CommandContext& context)
+void egx::MasterNet::Execute(egx::Device& dev, 
+    egx::CommandContext& context)
 {
     context.SetDescriptorHeap(*descriptor_heap);
 
+    context.SetTransitionBuffer(GetInputBuffer(), egx::GPUBufferState::UnorderedAccess);
+    context.SetTransitionBuffer(GetOutputBuffer(), egx::GPUBufferState::UnorderedAccess);
 
     // Record and execute
 

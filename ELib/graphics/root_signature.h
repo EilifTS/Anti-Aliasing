@@ -36,6 +36,7 @@ namespace egx
 
 		friend CommandContext;
 		friend PipelineState;
+		friend ComputePipelineState;
 		friend RTPipelineState;
 	};
 }

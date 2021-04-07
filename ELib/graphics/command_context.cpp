@@ -2,6 +2,7 @@
 #include "internal/egx_internal.h"
 #include "internal/gpu_buffer.h"
 #include "texture2d.h"
+#include "unordered_access_buffer.h"
 #include "render_target.h"
 #include "internal/upload_heap.h"
 #include "depth_buffer.h"
@@ -58,6 +59,12 @@ void egx::CommandContext::ClearDepthStencil(DepthBuffer& buffer)
 }
 
 void egx::CommandContext::SetPipelineState(PipelineState& pipeline_state)
+{
+	auto* pso = pipeline_state.pso.Get();
+	assert(pso != nullptr);
+	command_list->SetPipelineState(pso);
+}
+void egx::CommandContext::SetComputePipelineState(ComputePipelineState& pipeline_state)
 {
 	auto* pso = pipeline_state.pso.Get();
 	assert(pso != nullptr);
@@ -187,6 +194,23 @@ void egx::CommandContext::SetRootDescriptorTable(int root_index, const Texture2D
 {
 	command_list->SetGraphicsRootDescriptorTable(root_index, first_texture.getSRVGPU());
 }
+void egx::CommandContext::SetRootDescriptorTable(int root_index, const UnorderedAccessBuffer& first_buffer)
+{
+	command_list->SetGraphicsRootDescriptorTable(root_index, first_buffer.srv_gpu);
+}
+
+void egx::CommandContext::SetComputeRootConstant(int root_index, int num_constants, void* constant_data)
+{
+	command_list->SetComputeRoot32BitConstants(root_index, num_constants, constant_data, 0);
+}
+void egx::CommandContext::SetComputeRootDescriptorTable(int root_index, const Texture2D& first_texture)
+{
+	command_list->SetComputeRootDescriptorTable(root_index, first_texture.getSRVGPU());
+}
+void egx::CommandContext::SetComputeRootUAVDescriptorTable(int root_index, const UnorderedAccessBuffer& first_buffer)
+{
+	command_list->SetComputeRootDescriptorTable(root_index, first_buffer.uav_gpu);
+}
 
 void egx::CommandContext::SetVertexBuffer(const VertexBuffer& buffer)
 {
@@ -213,6 +237,11 @@ void egx::CommandContext::DrawIndexed(int index_count)
 	command_list->DrawIndexedInstanced(index_count, 1, 0, 0, 0);
 }
 
+
+void egx::CommandContext::Dispatch(int block_x, int block_y, int block_z)
+{
+	command_list->Dispatch((UINT)block_x, (UINT)block_y, (UINT)block_z);
+}
 void egx::CommandContext::DispatchRays(const ema::point2D& dims, ShaderTable& shader_table)
 {
 	D3D12_DISPATCH_RAYS_DESC dis_desc = {};

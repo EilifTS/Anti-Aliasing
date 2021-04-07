@@ -195,4 +195,21 @@ namespace egx
 
 		friend CommandContext;
 	};
+
+	class ComputePipelineState
+	{
+	public:
+		ComputePipelineState();
+
+		void SetRootSignature(RootSignature& root_signature);
+		void SetComputeShader(Shader& compute_shader);
+		void Finalize(Device& dev);
+
+
+	private:
+		D3D12_COMPUTE_PIPELINE_STATE_DESC desc;
+		ComPtr<ID3D12PipelineState> pso;
+
+		friend CommandContext;
+	};
 }

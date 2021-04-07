@@ -16,6 +16,7 @@ namespace egx
 		void ClearDepthStencil(DepthBuffer& buffer);
 
 		void SetPipelineState(PipelineState& pipeline_state);
+		void SetComputePipelineState(ComputePipelineState& pipeline_state);
 		void SetRTPipelineState(RTPipelineState& pipeline_state);
 
 		void SetRenderTarget(RenderTarget& target);
@@ -41,6 +42,11 @@ namespace egx
 		void SetRootConstant(int root_index, int num_constants, void* constant_data);
 		void SetRootConstantBuffer(int root_index, const ConstantBuffer& texture);
 		void SetRootDescriptorTable(int root_index, const Texture2D& first_texture);
+		void SetRootDescriptorTable(int root_index, const UnorderedAccessBuffer& first_buffer);
+
+		void SetComputeRootConstant(int root_index, int num_constants, void* constant_data);
+		void SetComputeRootDescriptorTable(int root_index, const Texture2D& first_texture);
+		void SetComputeRootUAVDescriptorTable(int root_index, const UnorderedAccessBuffer& first_buffer);
 
 		void SetVertexBuffer(const VertexBuffer& buffer);
 		void SetIndexBuffer(const IndexBuffer& buffer);
@@ -50,6 +56,7 @@ namespace egx
 		void Draw(int vertex_count);
 		void DrawIndexed(int index_count);
 
+		void Dispatch(int block_x, int block_y, int block_z);
 		void DispatchRays(const ema::point2D& dims, ShaderTable& shader_table);
 
 		inline RenderTarget& GetCurrentBackBuffer() { return *current_bb; };

@@ -22,6 +22,7 @@ namespace egx
 	class Sampler;
 	class Shader;
 	class PipelineState;
+	class ComputePipelineState;
 	class InputLayout;
 	class BlendState;
 	class VertexBuffer;

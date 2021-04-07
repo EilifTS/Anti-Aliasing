@@ -15,11 +15,18 @@ namespace egx
 	class MasterNet
 	{
 	public:
-		MasterNet(egx::Device& dev, egx::CommandContext& context);
+		MasterNet(Device& dev, CommandContext& context, const ema::point2D& window_size, int upsample_factor);
+
+		UnorderedAccessBuffer& GetInputBuffer() { return *input_buffer; };
+		UnorderedAccessBuffer& GetOutputBuffer() { return *output_buffer; };
 
 		//void Execute(egx::Texture2D& texture_in, egx::Texture2D& texture_out);
-		void Execute(egx::Device& dev, egx::CommandContext& context);
+		void Execute(Device& dev, 
+			CommandContext& context);
 	private:
+		ema::point2D window_size;
+		int upsample_factor;
+
 		ComPtr<IDMLDevice> dml_device;
 		std::unique_ptr<DescriptorHeap> descriptor_heap;
 		ComPtr<IDMLCommandRecorder> command_recorder;
@@ -35,8 +42,5 @@ namespace egx
 		std::vector<AddLayer> add_layers;
 
 		UINT64 tensor_buffer_size;
-
-
-
 	};
 }

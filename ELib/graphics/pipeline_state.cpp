@@ -96,3 +96,24 @@ void egx::PipelineState::Finalize(Device& dev)
 {
 	THROWIFFAILED(dev.device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso)), "Failed to create pipeline state object");
 }
+
+egx::ComputePipelineState::ComputePipelineState()
+	: desc({})
+{
+}
+
+void egx::ComputePipelineState::SetRootSignature(RootSignature& root_signature)
+{
+	desc.pRootSignature = root_signature.root_signature.Get();
+	assert(desc.pRootSignature != nullptr);
+}
+
+void egx::ComputePipelineState::SetComputeShader(Shader& compute_shader)
+{
+	desc.CS = CD3DX12_SHADER_BYTECODE(compute_shader.shader_blob.Get());
+}
+
+void egx::ComputePipelineState::Finalize(Device& dev)
+{
+	THROWIFFAILED(dev.device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&pso)), "Failed to create compute pipeline state object");
+}

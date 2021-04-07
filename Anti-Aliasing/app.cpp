@@ -15,7 +15,7 @@ namespace
 	const static float far_plane = 100.0f;
 
 	// Upsampling
-	static const int upsample_numerator = 1;
+	static const int upsample_numerator = 4;
 	static const int upsample_denominator = 1;
 	static const bool use_upsample = upsample_numerator != 1 || upsample_denominator != 1;
 }
@@ -34,7 +34,7 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	render_mode(RenderMode::Rasterizer),
 	scene_update_mode(SceneUpdateMode::Realtime),
 	scene(dev, context, mat_manager),
-	master_net(dev, context)
+	dltus(dev, context, im.Window().WindowSize(), 16, (int)((float)upsample_numerator / (float)upsample_denominator))
 {
 	initializeInternals(dev);
 	initializeAssets(dev, context);
@@ -67,7 +67,7 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 	camera.UpdateBuffer(dev, context);
 
 	// Use bigger render target if using temporal supersampling
-	auto& caa_target = (aa_mode == AAMode::TAA && use_upsample) ? aa_target_upsampled : aa_target;
+	auto& caa_target = (aa_mode == AAMode::TAA && use_upsample || aa_mode==AAMode::DL) ? aa_target_upsampled : aa_target;
 
 	// Only update target2 if in Realtime mode or if in demand mode and progress frame is true
 	if (scene_update_mode != SceneUpdateMode::OnDemand || progress_frame == true)
@@ -89,6 +89,8 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 				taa.Apply(dev, context, renderer.GetGBuffer().DepthBuffer(), renderer.GetMotionVectors(), renderer_target, caa_target, camera);
 			else if (aa_mode == AAMode::FXAA)
 				fxaa.Apply(dev, context, renderer_target, caa_target);
+			else if (aa_mode == AAMode::DL)
+				dltus.Execute(dev, context, renderer.GetGBuffer().DepthBuffer(), renderer.GetMotionVectors(), renderer_target, caa_target);
 		}
 		else
 		{
@@ -118,8 +120,6 @@ void App::Render(egx::Device& dev, egx::CommandContext& context, eio::InputManag
 		eio::SaveTextureToFile(dev, context, back_buffer, "screen_shot" + emisc::ToString(ss_nr++) + ".png");
 		do_screen_shot = false;
 	}
-
-	master_net.Execute(dev, context);
 }
 
 void App::initializeInternals(egx::Device& dev)
@@ -250,6 +250,11 @@ void App::handleInput(eio::InputManager& im)
 			taa.UseRasterizer(true);
 		}
 	}
+	if (im.Keyboard().IsKeyReleased('7'))
+	{
+		aa_mode = AAMode::DL;
+		renderer.SetSampler(DeferredRenderer::TextureSampler::TAABias);
+	}
 	//if (aa_mode == AAMode::FXAA)
 	//	fxaa.HandleInput(im);
 	if (aa_mode == AAMode::TAA)
@@ -271,8 +276,10 @@ void App::handleInput(eio::InputManager& im)
 void App::updateScene(float t)
 {
 	auto jitter = taa.GetNextJitter();
+	if (aa_mode == AAMode::DL)
+		jitter = dltus.GetJitter();
 
-	if (aa_mode == AAMode::TAA || aa_mode == AAMode::SSAA)
+	if (aa_mode == AAMode::TAA || aa_mode == AAMode::SSAA || aa_mode == AAMode::DL)
 		camera.SetJitter(jitter);
 	else
 		camera.SetJitter(ema::vec2(0.5f));

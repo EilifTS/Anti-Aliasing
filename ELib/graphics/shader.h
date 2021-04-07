@@ -30,9 +30,12 @@ namespace egx
 		void CompileVertexShader(const std::string& path, const ShaderMacroList& macro_list);
 		inline void CompilePixelShader(const std::string& path) { CompilePixelShader(path, ShaderMacroList()); };
 		void CompilePixelShader(const std::string& path, const ShaderMacroList& macro_list);
+		inline void CompileComputeShader(const std::string& path) { CompilePixelShader(path, ShaderMacroList()); };
+		void CompileComputeShader(const std::string& path, const ShaderMacroList& macro_list);
 	private:
 		ComPtr<ID3DBlob> shader_blob;
 
 		friend PipelineState;
+		friend ComputePipelineState;
 	};
 }

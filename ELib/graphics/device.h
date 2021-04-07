@@ -81,6 +81,7 @@ namespace egx
 		friend DepthBuffer;
 		friend RootSignature;
 		friend PipelineState;
+		friend ComputePipelineState;
 		friend CommandContext;
 		friend RenderTarget;
 		friend Mesh;

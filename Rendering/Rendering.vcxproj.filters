@@ -54,6 +54,9 @@
     <ClCompile Include="deep_learning\add_layer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="deep_learning\dltus.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="deferred_rendering\deferred_renderer.h">
@@ -101,6 +104,9 @@
     <ClInclude Include="deep_learning\add_layer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="deep_learning\dltus.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\deferred\deferred_light_ps.hlsl" />
@@ -125,6 +131,9 @@
     <FxCompile Include="shaders\taa\format_converter_vs.hlsl" />
     <FxCompile Include="shaders\taa\taa_ps.hlsl" />
     <FxCompile Include="shaders\taa\taa_vs.hlsl" />
+    <FxCompile Include="shaders\deep_learning\finalize_network_vs.hlsl" />
+    <FxCompile Include="shaders\deep_learning\finalize_network_ps.hlsl" />
+    <FxCompile Include="shaders\deep_learning\init_network_cs.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\deferred\g_buffer.hlsli" />

@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
+#include <unordered_map>
 #include <memory>
+#include <stdint.h>
 #include "dml_common.h"
 #include "graphics/device.h"
 #include "graphics/command_context.h"
@@ -23,6 +25,10 @@ namespace egx
 		//void Execute(egx::Texture2D& texture_in, egx::Texture2D& texture_out);
 		void Execute(Device& dev, 
 			CommandContext& context);
+
+	private:
+		std::unordered_map<std::string, std::vector<uint16_t>> loadWeights();
+			
 	private:
 		ema::point2D window_size;
 		int upsample_factor;

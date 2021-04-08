@@ -17,6 +17,14 @@ cbuffer constants : register(b0)
 
 RWBuffer<half> out_tensor   : register(u0);
 
+float linear_depth(float depth)
+{
+    float far = 100.0;
+    float near = 0.1;
+    depth = near * far / (far - depth * (far - near));
+    return (depth - near) / (far - near);
+}
+
 [numthreads(32, 16, 1)]
 void CS(uint3 block_id : SV_GroupID, uint3 thread_id : SV_GroupThreadID)
 {
@@ -34,16 +42,16 @@ void CS(uint3 block_id : SV_GroupID, uint3 thread_id : SV_GroupThreadID)
         float beta = 0.0;
         if (hr_jitter_pos_int.x == pixel_pos.x && hr_jitter_pos_int.y == pixel_pos.y) beta = 1.0;
         float4 zero_up_rgbd = float4(0.0, 0.0, 0.0, 0.0);
-        zero_up_rgbd.rgb = input_texture[lr_pixel_pos].rgb;
-        zero_up_rgbd.a = depth_buffer[lr_pixel_pos];
+        zero_up_rgbd.rgb = pow(input_texture[lr_pixel_pos].rgb, 1.0 / 2.2);
+        zero_up_rgbd.a = linear_depth(depth_buffer[lr_pixel_pos]);
         zero_up_rgbd = zero_up_rgbd * beta;
 
         // JAU rgbd
         float2 hr_jitter_pos = (float2(0.5, 0.5) + (float2)pixel_pos) + (float2(0.5, 0.5) - jitter_offset) * UPSAMPLE_FACTOR;
         float2 hr_jitter_uv = hr_jitter_pos * rec_window_size;
         float4 jau_rgbd = float4(0.0, 0.0, 0.0, 0.0);
-        jau_rgbd.rgb = input_texture.SampleLevel(linear_clamp, hr_jitter_uv, 0);
-        jau_rgbd.a = depth_buffer.SampleLevel(linear_clamp, hr_jitter_uv, 0);
+        jau_rgbd.rgb = pow(input_texture.SampleLevel(linear_clamp, hr_jitter_uv, 0), 1.0 / 2.2);
+        jau_rgbd.a = linear_depth(depth_buffer.SampleLevel(linear_clamp, hr_jitter_uv, 0));
 
         // reproject history
         float2 hr_pixel_uv = (float2(0.5, 0.5) + (float2)pixel_pos) * rec_window_size;
@@ -52,7 +60,10 @@ void CS(uint3 block_id : SV_GroupID, uint3 thread_id : SV_GroupThreadID)
 
         float4 history = float4(0.0, 0.0, 0.0, 0.0);
         if (prev_frame_uv.x > 0.0 && prev_frame_uv.x <= 1.0 && prev_frame_uv.y > 0.0 && prev_frame_uv.y <= 1.0) // Check if uv is inside history buffer
+        {
             history = history_buffer.SampleLevel(linear_clamp, prev_frame_uv, 0);
+            history.rgb = pow(history.rgb, 1.0 / 2.2);
+        }
         else
             history = jau_rgbd;
 

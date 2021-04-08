@@ -43,6 +43,7 @@
     <ClInclude Include="deep_learning\conv_layer.h" />
     <ClInclude Include="deep_learning\dltus.h" />
     <ClInclude Include="deep_learning\dml_common.h" />
+    <ClInclude Include="deep_learning\float16_compressor.h" />
     <ClInclude Include="deep_learning\master_net.h" />
     <ClInclude Include="deep_learning\pixel_shuffle.h" />
     <ClInclude Include="deferred_rendering\deferred_renderer.h" />

@@ -1,7 +1,9 @@
 #define NOMINMAX
+#include <fstream>
 #include "master_net.h"
 #include "graphics/internal/egx_internal.h"
 #include "graphics/internal/d3dx12.h"
+#include "float16_compressor.h"
 
 namespace
 {
@@ -27,6 +29,9 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
 		),
 		"Failed to create DML device"
 	);
+
+    // Load weights
+    auto weight_map = loadWeights();
 
     // Create layers
     DMLDims input_buffer_size = { 1, 8, window_size.y, window_size.x};
@@ -58,6 +63,38 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
 
     // Up
     shuffle_layers.push_back(PixelShuffle(dev, dml_device.Get(), add_layers[3].GetOutputDims(), 4));
+
+    // Upload weights as biases
+    // Down
+    conv_layers[0].UploadWeights(dev, context, weight_map["down.1.weight"]);
+    conv_layers[0].UploadBias(dev, context, weight_map["down.1.bias"]);
+
+    // Res block 1
+    conv_layers[1].UploadWeights(dev, context, weight_map["cnn1.1.weight"]);
+    conv_layers[1].UploadBias(dev, context, weight_map["cnn1.1.bias"]);
+    conv_layers[2].UploadWeights(dev, context, weight_map["cnn1.4.weight"]);
+    conv_layers[2].UploadBias(dev, context, weight_map["cnn1.4.bias"]);
+
+    // Res block 2
+    conv_layers[3].UploadWeights(dev, context, weight_map["cnn2.1.weight"]);
+    conv_layers[3].UploadBias(dev, context, weight_map["cnn2.1.bias"]);
+    conv_layers[4].UploadWeights(dev, context, weight_map["cnn2.4.weight"]);
+    conv_layers[4].UploadBias(dev, context, weight_map["cnn2.4.bias"]);
+
+    // Res block 3
+    conv_layers[5].UploadWeights(dev, context, weight_map["cnn3.1.weight"]);
+    conv_layers[5].UploadBias(dev, context, weight_map["cnn3.1.bias"]);
+    conv_layers[6].UploadWeights(dev, context, weight_map["cnn3.4.weight"]);
+    conv_layers[6].UploadBias(dev, context, weight_map["cnn3.4.bias"]);
+
+    // Res block 4
+    conv_layers[7].UploadWeights(dev, context, weight_map["cnn4.1.weight"]);
+    conv_layers[7].UploadBias(dev, context, weight_map["cnn4.1.bias"]);
+    conv_layers[8].UploadWeights(dev, context, weight_map["cnn4.4.weight"]);
+    conv_layers[8].UploadBias(dev, context, weight_map["cnn4.4.bias"]);
+
+    dev.QueueList(context);
+    dev.WaitForGPU();
 
     // Create operator initializer
     ConvLayer::CreateConvInitializer(dev, dml_device.Get(), conv_layers);
@@ -149,8 +186,10 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
     conv_layers[8].BindResources(intermediate_buffer1->buffer.Get(), intermediate_buffer2->buffer.Get());
     add_layers[3].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer2->buffer.Get());
 
-    shuffle_layers[1].BindResources(intermediate_buffer2->buffer.Get(), output_buffer->buffer.Get());
+    shuffle_layers[1].BindResources(intermediate_buffer3->buffer.Get(), output_buffer->buffer.Get());
 
+    dev.QueueList(context);
+    dev.WaitForGPU();
 }
 
 //void egx::MasterNet::Execute(egx::Texture2D& texture_in, egx::Texture2D& texture_out)
@@ -208,4 +247,38 @@ void egx::MasterNet::Execute(egx::Device& dev,
     //dev.QueueListAndWaitForFinish(context);
 
     context.SetDescriptorHeap(*dev.buffer_heap);
+}
+
+
+std::unordered_map<std::string, std::vector<uint16_t>> egx::MasterNet::loadWeights()
+{
+    std::string file_path = "../network/nn_weights.bin";
+    std::ifstream file(file_path, std::ios::binary);
+    if (file.fail())
+        throw std::runtime_error("Failed to load file " + file_path);
+
+    UINT num_weights = 0;
+    file.read(reinterpret_cast<char*>(&num_weights), 4);
+
+    std::unordered_map<std::string, std::vector<uint16_t>> output;
+    for (UINT i = 0; i < num_weights; i++)
+    {
+        UINT name_length = 0;
+        char name[255] = {};
+        file.read(reinterpret_cast<char*>(&name_length), 4);
+        file.read(name, name_length);
+
+        UINT float_count = 0;
+        file.read(reinterpret_cast<char*>(&float_count), 4);
+        std::vector<float> weights(float_count);
+        std::vector<uint16_t> weights16(float_count);
+        file.read(reinterpret_cast<char*>(weights.data()), float_count * sizeof(float));
+
+        // Compress floats
+        for (int j = 0; j < (int)weights.size(); j++)
+            weights16[j] = Float16Compressor::compress(weights[j]);
+
+        output[std::string(name)] = weights16;
+    }
+    return output;
 }

@@ -499,3 +499,27 @@ def SaveTestImageFB(model, loader, image_nr, model_name, epoch):
         res = res.squeeze().cpu().detach()
         res = dataset.ImageTorchToNumpy(res)
         cv2.imwrite(model_name + "/temp_img" + str(epoch) + ".png", res) 
+
+import struct
+def SaveModelWeights(model):
+    f = open("nn_weights.bin", "wb")
+    print("Saving model weights")
+    num_named = 0
+    for name, param in model.named_parameters():
+        num_named += 1
+    print("Number of named parameters:", num_named)
+    f.write(num_named.to_bytes(4, byteorder='little', signed=False))
+    for name, param in model.named_parameters():
+        # Write name
+        name_len = len(name)
+        print(name_len, name)
+        f.write(name_len.to_bytes(4, byteorder='little', signed=False))
+        f.write(name.encode('ascii'))
+
+        # Write parameters
+        print(param.data)
+        param_list = param.data.flatten().tolist()
+        param_float_count = len(param_list)
+        f.write(param_float_count.to_bytes(4, byteorder='little', signed=False))
+        f.write(struct.pack('f'*len(param_list), *param_list))
+    f.close()

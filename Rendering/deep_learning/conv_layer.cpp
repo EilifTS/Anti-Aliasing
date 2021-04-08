@@ -1,6 +1,9 @@
 #define NOMINMAX
 #include "conv_layer.h"
 #include "graphics/internal/egx_internal.h"
+#include "graphics/cpu_buffer.h"
+#include "graphics/device.h"
+#include "graphics/command_context.h"
 
 ComPtr<IDMLOperatorInitializer> egx::ConvLayer::conv_initializer = nullptr;
 ComPtr<IDMLBindingTable> egx::ConvLayer::temp_binding_table = nullptr;
@@ -145,7 +148,6 @@ egx::ConvLayer::ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input
 		temporary_resource = std::make_unique<UnorderedAccessBuffer>(dev, temporary_resource_size);
 }
 
-
 void egx::ConvLayer::CreateBindingTable(IDMLDevice* dml_dev, DescriptorHeap& desc_heap, UINT index)
 {
 	DML_BINDING_TABLE_DESC binding_table_desc = {};
@@ -161,7 +163,6 @@ void egx::ConvLayer::CreateBindingTable(IDMLDevice* dml_dev, DescriptorHeap& des
 			IID_PPV_ARGS(&binding_table)
 		), "Failed to create DML binding table");
 }
-
 
 void egx::ConvLayer::BindResources(ID3D12Resource* input, ID3D12Resource* output)
 {
@@ -189,6 +190,49 @@ void egx::ConvLayer::BindResources(ID3D12Resource* input, ID3D12Resource* output
 	DML_BUFFER_BINDING output_buffer_binding{ output, 0, GetOutputBufferSize() };
 	DML_BINDING_DESC output_binding_desc{ DML_BINDING_TYPE_BUFFER, &output_buffer_binding };
 	GetBindingTable()->BindOutputs(1, &output_binding_desc);
+}
+
+void egx::ConvLayer::UploadWeights(Device& dev, CommandContext& context, const std::vector<uint16_t>& weights)
+{
+	// Change weights from NCHW to NHWC
+	std::vector<uint16_t> transformed_weights(weights.size());
+	UINT N = filter_dims.dims[0];
+	UINT C = filter_dims.dims[1];
+	UINT H = filter_dims.dims[2];
+	UINT W = filter_dims.dims[3];
+	for (UINT n = 0; n < N; n++)
+	{
+		for (UINT c = 0; c < C; c++)
+		{
+			for (UINT h = 0; h < H; h++)
+			{
+				for (UINT w = 0; w < W; w++)
+				{
+					UINT nchw_index =
+						n * C * H * W +
+						c * H * W +
+						h * W + w;
+					UINT nhwc_index = 
+						n * C * H * W +
+						h * C * W + 
+						w * C + c;
+					transformed_weights[nhwc_index] = weights[nchw_index];
+				}
+			}
+		}
+	}
+
+	egx::CPUBuffer cpu_buffer(transformed_weights.data(), (int)sizeof(uint16_t)* transformed_weights.size());
+	context.SetTransitionBuffer(*weight_tensor_buffer, egx::GPUBufferState::CopyDest);
+	dev.ScheduleUpload(context, cpu_buffer, *weight_tensor_buffer);
+	context.SetTransitionBuffer(*weight_tensor_buffer, egx::GPUBufferState::UnorderedAccess);
+}
+void egx::ConvLayer::UploadBias(Device& dev, CommandContext& context, const std::vector<uint16_t>& bias)
+{
+	egx::CPUBuffer cpu_buffer(bias.data(), (int)sizeof(uint16_t) * bias.size());
+	context.SetTransitionBuffer(*bias_tensor_buffer, egx::GPUBufferState::CopyDest);
+	dev.ScheduleUpload(context, cpu_buffer, *bias_tensor_buffer);
+	context.SetTransitionBuffer(*bias_tensor_buffer, egx::GPUBufferState::UnorderedAccess);
 }
 
 void egx::ConvLayer::CreateConvInitializer(Device& dev, IDMLDevice* dml_dev, std::vector<ConvLayer>& layers)

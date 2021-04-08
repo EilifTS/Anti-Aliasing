@@ -2,7 +2,7 @@ Buffer<half> history_buffer : register(t0);
 Buffer<half> cnn_res : register(t1);
 
 Texture2D input_texture	: register(t2);
-Texture2D depth_buffer	: register(t3);
+Texture2D<float> depth_buffer	: register(t3);
 SamplerState linear_clamp : register(s0);
 
 #ifndef UPSAMPLE_FACTOR
@@ -23,6 +23,14 @@ struct PSInput
 	float2 uv : TEXCOORD1;
 };
 
+float linear_depth(float depth)
+{
+	float far = 100.0;
+	float near = 0.1;
+	depth = near * far / (far - depth * (far - near));
+	return (depth - near) / (far - near);
+}
+
 float4 PS(PSInput input) : SV_TARGET
 { 
 	uint2 hr_pixel_pos = (uint2)input.position.xy; // Position in pixels of pixel in high res image
@@ -33,8 +41,8 @@ float4 PS(PSInput input) : SV_TARGET
 	float2 hr_jitter_pos = input.position.xy + (float2(0.5, 0.5) - jitter_offset) * UPSAMPLE_FACTOR;
 	float2 hr_jitter_uv = hr_jitter_pos * rec_window_size;
 	float4 jau_rgbd = float4(0.0, 0.0, 0.0, 0.0);
-	jau_rgbd.rgb = input_texture.Sample(linear_clamp, hr_jitter_uv);
-	jau_rgbd.a = depth_buffer.Sample(linear_clamp, hr_jitter_uv);
+	jau_rgbd.rgb = pow(input_texture.Sample(linear_clamp, hr_jitter_uv), 1.0 / 2.2);
+	jau_rgbd.a = linear_depth(depth_buffer.Sample(linear_clamp, hr_jitter_uv));
 
 	// Load history
 	uint2 window_size_int = (uint2)window_size;
@@ -52,6 +60,7 @@ float4 PS(PSInput input) : SV_TARGET
 	// Combine
 	//alpha = 0.1; // Temp testing
 	float4 output = history * (1.0 - alpha) + jau_rgbd * alpha;
+	output.rgb = pow(output.rgb, 2.2);
 	output.a += depth_res;
 
 	// Return

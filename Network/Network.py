@@ -22,7 +22,7 @@ if(__name__ == '__main__'):
     data_train = dataset.SSDataset(64, upsample_factor, videos[:10], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
     data_val1 = dataset.SSDataset(64, upsample_factor, videos[80:90], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
     data_val2 = dataset.SSDataset(64, upsample_factor, videos[80:90], 1, [0], transform=None)
-    data_test = dataset.SSDataset(64, upsample_factor, videos[90:], 1, [0], transform=None)
+    data_test = dataset.SSDataset(64, upsample_factor, videos[:10], 1, [0], transform=None)
     loader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, num_workers=4, collate_fn=dataset.SSDatasetCollate)
     loader_val1 = torch.utils.data.DataLoader(data_val1, batch_size=batch_size, shuffle=False, num_workers=4, collate_fn=dataset.SSDatasetCollate)
     loader_val2 = torch.utils.data.DataLoader(data_val2, batch_size=1, shuffle=False, num_workers=0, collate_fn=dataset.SSDatasetCollate)
@@ -71,6 +71,7 @@ if(__name__ == '__main__'):
             if torch.is_tensor(v):
                 state[k] = v.cuda()
 
+    utils.SaveModelWeights(model)
     #for g in optimizer.param_groups:
     #    print(g['lr'])
     #    g['lr'] = 4e-5
@@ -92,7 +93,7 @@ if(__name__ == '__main__'):
     #utils.AddGradientHooks(model)
     #utils.CheckMasterModelSampleEff(model, loader_val1, loss_function)
     #utils.VisualizeFBModel(model, loader_test)
-    #utils.VisualizeMasterModel(model, loader_test)
+    utils.VisualizeMasterModel(model, loader_test)
     #utils.TestFBModel(model, loader_test)
     #utils.TestMasterModel(model, loader_test)
     #utils.VisualizeDifference(model, loader_test)

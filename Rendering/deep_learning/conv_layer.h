@@ -12,6 +12,9 @@ namespace egx
 	public:
 		ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input_dims, UINT output_channels, UINT filter_size, bool fuse_activation);
 
+		void UploadWeights(Device& dev, CommandContext& context, const std::vector<uint16_t>& weights);
+		void UploadBias(Device& dev, CommandContext& context, const std::vector<uint16_t>& bias);
+
 		void CreateBindingTable(IDMLDevice* dml_dev, DescriptorHeap& desc_heap, UINT index);
 		void BindResources(ID3D12Resource* input, ID3D12Resource* output);
 

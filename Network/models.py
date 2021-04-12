@@ -93,6 +93,67 @@ def BiCubicGridSample(texture, grid):
    
     return out[:,:channels,:,:]
 
+def catmullSampleHD(texture, uv):
+    
+    mv = UVToGrid(uv)
+
+    color = F.grid_sample(texture, mv, mode='bilinear', align_corners=False, padding_mode='border')
+
+    return color
+
+def BiCubicGridSampleHD(texture, grid):
+    N, channels, height, width = texture.shape
+    window_size = torch.tensor([width, height]).cuda()
+    rec_window_size = torch.tensor([1.0 / width, 1.0 / height]).cuda()
+    uv = GridToUV(grid)
+    position = uv * window_size
+    center_position = torch.floor(position - 0.5) + 0.5
+    f = position - center_position
+    f2 = f * f
+    f3 = f2 * f
+
+    w0 = -0.5 * f3 + f2 - 0.5 * f
+    w1 = 1.5 * f3 - 2.5 * f2 + 1.0
+    w2 = -1.5 * f3 + 2.0 * f2 + 0.5 * f
+    w3 = 0.5 * f3 - 0.5 * f2
+
+    w12 = w1 + w2
+    tc12 = rec_window_size * (center_position + w2 / w12)
+    tc0 = rec_window_size * (center_position - 1.0)
+    tc3 = rec_window_size * (center_position + 2.0)
+
+    # Reshape for multiplication
+    _, h_grid, w_grid, _ = grid.shape
+    w0 = w0.unsqueeze(1)
+    w12 = w12.unsqueeze(1)
+    w3 = w3.unsqueeze(1)
+    w0 = w0.expand((N, channels, h_grid, w_grid, 2))
+    w12 = w12.expand((N, channels, h_grid, w_grid, 2))
+    w3 = w3.expand((N, channels, h_grid, w_grid, 2))
+
+    # More accurate version that uses more samples
+    sp1 = torch.stack((tc0[:,:,:,0], tc0[:,:,:,1]),dim=3)
+    sp2 = torch.stack((tc12[:,:,:,0], tc0[:,:,:,1]),dim=3)
+    sp3 = torch.stack((tc3[:,:,:,0], tc0[:,:,:,1]),dim=3)
+    sp4 = torch.stack((tc0[:,:,:,0], tc12[:,:,:,1]),dim=3)
+    sp5 = torch.stack((tc12[:,:,:,0], tc12[:,:,:,1]),dim=3)
+    sp6 = torch.stack((tc3[:,:,:,0], tc12[:,:,:,1]),dim=3)
+    sp7 = torch.stack((tc0[:,:,:,0], tc3[:,:,:,1]),dim=3)
+    sp8 = torch.stack((tc12[:,:,:,0], tc3[:,:,:,1]),dim=3)
+    sp9 = torch.stack((tc3[:,:,:,0], tc3[:,:,:,1]),dim=3)
+    c1 = catmullSampleHD(texture, sp1) * (w0[:,:,:,:,0] * w0[:,:,:,:,1])
+    c2 = catmullSampleHD(texture, sp2) * (w12[:,:,:,:,0] * w0[:,:,:,:,1])
+    c3 = catmullSampleHD(texture, sp3) * (w3[:,:,:,:,0] * w0[:,:,:,:,1])
+    c4 = catmullSampleHD(texture, sp4) * (w0[:,:,:,:,0] * w12[:,:,:,:,1])
+    c5 = catmullSampleHD(texture, sp5) * (w12[:,:,:,:,0] * w12[:,:,:,:,1])
+    c6 = catmullSampleHD(texture, sp6) * (w3[:,:,:,:,0] * w12[:,:,:,:,1])
+    c7 = catmullSampleHD(texture, sp7) * (w0[:,:,:,:,0] * w3[:,:,:,:,1])
+    c8 = catmullSampleHD(texture, sp8) * (w12[:,:,:,:,0] * w3[:,:,:,:,1])
+    c9 = catmullSampleHD(texture, sp9) * (w3[:,:,:,:,0] * w3[:,:,:,:,1])
+    out = c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8 + c9
+   
+    return out
+
 class ZeroUpsampling(nn.Module):
     def __init__(self, factor, channels):
         super(ZeroUpsampling, self).__init__()
@@ -569,43 +630,29 @@ class MasterNet2(nn.Module):
         #    )
 
         self.down = nn.Sequential(
-            PixelUnshuffle(self.factor),
-            nn.Conv2d(128, 32, 1, stride=1, padding=0),
+            #PixelUnshuffle(self.factor),
+            #nn.Conv2d(128, 32, 1, stride=1, padding=0),
+            nn.Conv2d(8, 32, 4, stride=4, padding=0),
             )
         self.cnn1 = nn.Sequential(
-            nn.ReplicationPad2d(1),
-            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            nn.Conv2d(32, 32, 3, stride=1, padding=1, padding_mode='replicate'),
             nn.ReLU(),
-            nn.ReplicationPad2d(1),
-            nn.Conv2d(32, 32, 3, stride=1, padding=0),
-            )
-        self.cnn1 = nn.Sequential(
-            nn.ReplicationPad2d(1),
-            nn.Conv2d(32, 32, 3, stride=1, padding=0),
-            nn.ReLU(),
-            nn.ReplicationPad2d(1),
-            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            nn.Conv2d(32, 32, 3, stride=1, padding=1, padding_mode='replicate'),
             )
         self.cnn2 = nn.Sequential(
-            nn.ReplicationPad2d(1),
-            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            nn.Conv2d(32, 32, 3, stride=1, padding=1, padding_mode='replicate'),
             nn.ReLU(),
-            nn.ReplicationPad2d(1),
-            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            nn.Conv2d(32, 32, 3, stride=1, padding=1, padding_mode='replicate'),
             )
         self.cnn3 = nn.Sequential(
-            nn.ReplicationPad2d(1),
-            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            nn.Conv2d(32, 32, 3, stride=1, padding=1, padding_mode='replicate'),
             nn.ReLU(),
-            nn.ReplicationPad2d(1),
-            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            nn.Conv2d(32, 32, 3, stride=1, padding=1, padding_mode='replicate'),
             )
         self.cnn4 = nn.Sequential(
-            nn.ReplicationPad2d(1),
-            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            nn.Conv2d(32, 32, 3, stride=1, padding=1, padding_mode='replicate'),
             nn.ReLU(),
-            nn.ReplicationPad2d(1),
-            nn.Conv2d(32, 32, 3, stride=1, padding=0),
+            nn.Conv2d(32, 32, 3, stride=1, padding=1, padding_mode='replicate'),
             )
 
         self.up = nn.Sequential(
@@ -644,9 +691,10 @@ class MasterNet2(nn.Module):
             #f_mv = torch.flatten(mv, 2)
             #f_mv1 = torch.gather(f_mv[:,0:1,:], 2, f_depth_fronts)
             #f_mv2 = torch.gather(f_mv[:,1:2,:], 2, f_depth_fronts)
-            #mv = torch.cat((f_mv1, f_mv2), dim=1).view((mini_batch, 2, height, width))
+            #mv_dil = torch.cat((f_mv1, f_mv2), dim=1).view((mini_batch, 2, height, width))
 
             mv = F.interpolate(mv, scale_factor=self.factor, mode='bilinear', align_corners=False)
+            #mv_dil = F.interpolate(mv_dil, scale_factor=self.factor, mode='bilinear', align_corners=False)
             
             # Use network to calc offsets
             #window_size = torch.tensor([[[[width]], [[height]]]]).expand((mini_batch, 2, height, width)).cuda()
@@ -667,8 +715,8 @@ class MasterNet2(nn.Module):
         
             # History reprojection
             #history = F.grid_sample(history, mv, mode='bilinear', align_corners=False)
-            history = F.grid_sample(history, mv, mode='bicubic', align_corners=False, padding_mode='border')
-            #history = BiCubicGridSample(history, mv)
+            #history = F.grid_sample(history, mv, mode='bicubic', align_corners=False, padding_mode='border')
+            history = BiCubicGridSampleHD(history, mv)
             
 
             ## Special case for padding
@@ -688,14 +736,12 @@ class MasterNet2(nn.Module):
         small_input = small_input + self.cnn4(small_input)
         residual = self.up(small_input)
 
-
         # History reweighting
         alpha = torch.clamp(residual[:,0:1,:,:], 0.0, 1.0)
 
         history = history*(1.0 - alpha) + frame_bilinear * alpha
         history[:,3,:,:] = history[:,3,:,:] + residual[:,1,:,:]
         history = torch.clamp(history, 0.0, 1.0)
- 
 
         # Reconstruction
         return history[:,:3,:,:], history

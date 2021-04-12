@@ -14,11 +14,16 @@ DLTUS::DLTUS(egx::Device& dev, egx::CommandContext& context, const ema::point2D&
 	: master_net(dev, context, window_size, upsample_factor),
 	jitter(Jitter::Halton(2, 3, jitter_count)),
 	jitter_count(jitter_count), jitter_index(0),
+	upsample_factor((int)upsample_factor),
 	history_buffer(dev, egx::TextureFormat::FLOAT16x4, window_size),
-	window_size(window_size)
+	window_size(window_size),
+	linear_depth(dev, egx::TextureFormat::FLOAT32x1, window_size / upsample_factor)
 {
 	history_buffer.CreateShaderResourceView(dev);
 	history_buffer.CreateRenderTargetView(dev);
+
+	linear_depth.CreateShaderResourceView(dev);
+	linear_depth.CreateRenderTargetView(dev);
 
 	macro_list.SetMacro("UPSAMPLE_FACTOR", emisc::ToString(upsample_factor));
 
@@ -26,12 +31,41 @@ DLTUS::DLTUS(egx::Device& dev, egx::CommandContext& context, const ema::point2D&
 	shader_constants[1] = ema::vec2(1.0f / (float)window_size.x, 1.0f / (float)window_size.y);
 	shader_constants[2] = ema::vec2(0.0f, 0.0f);
 
+	initializeLinearizeDepth(dev);
 	initializeRenderInit(dev);
 	initializeRenderFinalize(dev);
 	initializeFormatConverter(dev);
 }
 
 
+void DLTUS::initializeLinearizeDepth(egx::Device& dev)
+{
+	// Create root signature
+	linearize_depth_rs.InitDescriptorTable(0, egx::ShaderVisibility::Pixel);
+	linearize_depth_rs.Finalize(dev);
+
+	// Create Shaders
+	egx::Shader VS;
+	egx::Shader PS;
+	VS.CompileVertexShader("../Rendering/shaders/deep_learning/linearize_depth_vs.hlsl", macro_list);
+	PS.CompilePixelShader("../Rendering/shaders/deep_learning/linearize_depth_ps.hlsl", macro_list);
+	// Empty input layout
+	egx::InputLayout input_layout;
+
+	// Create PSO
+	linearize_depth_ps.SetRootSignature(linearize_depth_rs);
+	linearize_depth_ps.SetInputLayout(input_layout);
+	linearize_depth_ps.SetPrimitiveTopology(egx::TopologyType::Triangle);
+	linearize_depth_ps.SetVertexShader(VS);
+	linearize_depth_ps.SetPixelShader(PS);
+	linearize_depth_ps.SetDepthStencilFormat(egx::TextureFormat::D32);
+	linearize_depth_ps.SetRenderTargetFormat(linear_depth.Format());
+
+	linearize_depth_ps.SetBlendState(egx::BlendState::NoBlend());
+	linearize_depth_ps.SetRasterState(egx::RasterState::Default());
+	linearize_depth_ps.SetDepthStencilState(egx::DepthStencilState::DepthOff());
+	linearize_depth_ps.Finalize(dev);
+}
 void DLTUS::initializeRenderInit(egx::Device& dev)
 {
 	// Create root signature
@@ -134,21 +168,43 @@ void DLTUS::Execute(egx::Device& dev,
 {
 	shader_constants[2] = jitter.Get(jitter_index);
 
-	renderInitialize(dev, context, depth_stencil_buffer, motion_vectors, new_frame);
+	renderLinearizeDepth(dev, context, depth_stencil_buffer);
+	renderInitialize(dev, context, motion_vectors, new_frame);
 	renderNetwork(dev, context);
-	renderFinalize(dev, context, new_frame, depth_stencil_buffer);
+	renderFinalize(dev, context, new_frame);
 	renderFormatConverter(dev, context, target);
 
 	jitter_index = (jitter_index + 1) % jitter_count;
 }
 
+void DLTUS::renderLinearizeDepth(egx::Device& dev,
+	egx::CommandContext& context,
+	egx::DepthBuffer& depth_stencil_buffer)
+{
+	context.SetTransitionBuffer(depth_stencil_buffer, egx::GPUBufferState::PixelResource);
+	context.SetTransitionBuffer(linear_depth, egx::GPUBufferState::RenderTarget);
+
+	context.SetRootSignature(linearize_depth_rs);
+	context.SetPipelineState(linearize_depth_ps);
+
+	context.SetRootDescriptorTable(0, depth_stencil_buffer);
+
+	context.SetRenderTarget(linear_depth);
+
+	context.SetViewport(window_size / upsample_factor);
+	context.SetScissor(window_size / upsample_factor);
+	context.SetPrimitiveTopology(egx::Topology::TriangleStrip);
+	context.SetStencilRefrenceValue(0);
+
+	context.Draw(4);
+}
+
 void DLTUS::renderInitialize(egx::Device& dev,
 	egx::CommandContext& context,
-	egx::DepthBuffer& depth_stencil_buffer,
 	egx::Texture2D& motion_vectors,
 	egx::Texture2D& new_frame)
 {
-	context.SetTransitionBuffer(depth_stencil_buffer, egx::GPUBufferState::NonPixelResource);
+	context.SetTransitionBuffer(linear_depth, egx::GPUBufferState::NonPixelResource);
 	context.SetTransitionBuffer(new_frame, egx::GPUBufferState::NonPixelResource);
 	context.SetTransitionBuffer(history_buffer, egx::GPUBufferState::NonPixelResource);
 	context.SetTransitionBuffer(motion_vectors, egx::GPUBufferState::NonPixelResource);
@@ -161,7 +217,7 @@ void DLTUS::renderInitialize(egx::Device& dev,
 	context.SetComputeRootDescriptorTable(1, new_frame);
 	context.SetComputeRootDescriptorTable(2, history_buffer);
 	context.SetComputeRootDescriptorTable(3, motion_vectors);
-	context.SetComputeRootDescriptorTable(4, depth_stencil_buffer);
+	context.SetComputeRootDescriptorTable(4, linear_depth);
 	context.SetComputeRootUAVDescriptorTable(5, master_net.GetInputBuffer());
 
 	context.Dispatch(DivUp(window_size.x, 32), DivUp(window_size.y, 16), 1);
@@ -176,10 +232,9 @@ void DLTUS::renderNetwork(egx::Device& dev, egx::CommandContext& context)
 void DLTUS::renderFinalize(
 	egx::Device& dev,
 	egx::CommandContext& context,
-	egx::Texture2D& new_frame,
-	egx::DepthBuffer& depth_stencil_buffer)
+	egx::Texture2D& new_frame)
 {
-	context.SetTransitionBuffer(depth_stencil_buffer, egx::GPUBufferState::PixelResource);
+	context.SetTransitionBuffer(linear_depth, egx::GPUBufferState::PixelResource);
 	context.SetTransitionBuffer(new_frame, egx::GPUBufferState::PixelResource);
 	context.SetTransitionBuffer(history_buffer, egx::GPUBufferState::RenderTarget);
 	context.SetTransitionBuffer(master_net.GetInputBuffer(), egx::GPUBufferState::PixelResource);
@@ -192,7 +247,7 @@ void DLTUS::renderFinalize(
 	context.SetRootDescriptorTable(1, master_net.GetInputBuffer());
 	context.SetRootDescriptorTable(2, master_net.GetOutputBuffer());
 	context.SetRootDescriptorTable(3, new_frame);
-	context.SetRootDescriptorTable(4, depth_stencil_buffer);
+	context.SetRootDescriptorTable(4, linear_depth);
 
 	context.SetRenderTarget(history_buffer);
 

@@ -137,6 +137,8 @@
     <FxCompile Include="shaders\deep_learning\finalize_network_vs.hlsl" />
     <FxCompile Include="shaders\deep_learning\finalize_network_ps.hlsl" />
     <FxCompile Include="shaders\deep_learning\init_network_cs.hlsl" />
+    <FxCompile Include="shaders\deep_learning\linearize_depth_vs.hlsl" />
+    <FxCompile Include="shaders\deep_learning\linearize_depth_ps.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\deferred\g_buffer.hlsli" />
@@ -145,5 +147,6 @@
     <None Include="shaders\fxaa\fxaa_header.hlsli" />
     <None Include="shaders\headers\camera.hlsli" />
     <None Include="shaders\headers\model.hlsli" />
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

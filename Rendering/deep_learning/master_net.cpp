@@ -38,8 +38,7 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
     //UINT output_channels = 128;
 
     // Down
-    shuffle_layers.push_back(PixelShuffle(dev, dml_device.Get(), input_buffer_size, 4, true));
-    conv_layers.push_back(ConvLayer(dev, dml_device.Get(), shuffle_layers[0].GetOutputDims(), 32, 1, false));
+    conv_layers.push_back(ConvLayer(dev, dml_device.Get(), input_buffer_size, 32, 4, false, 4));
 
     // Res block 1
     conv_layers.push_back(ConvLayer(dev, dml_device.Get(), conv_layers[0].GetOutputDims(), 32, 3, true));
@@ -66,32 +65,32 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
 
     // Upload weights as biases
     // Down
-    conv_layers[0].UploadWeights(dev, context, weight_map["down.1.weight"]);
-    conv_layers[0].UploadBias(dev, context, weight_map["down.1.bias"]);
+    conv_layers[0].UploadWeights(dev, context, weight_map["down.0.weight"]);
+    conv_layers[0].UploadBias(dev, context, weight_map["down.0.bias"]);
 
     // Res block 1
-    conv_layers[1].UploadWeights(dev, context, weight_map["cnn1.1.weight"]);
-    conv_layers[1].UploadBias(dev, context, weight_map["cnn1.1.bias"]);
-    conv_layers[2].UploadWeights(dev, context, weight_map["cnn1.4.weight"]);
-    conv_layers[2].UploadBias(dev, context, weight_map["cnn1.4.bias"]);
+    conv_layers[1].UploadWeights(dev, context, weight_map["cnn1.0.weight"]);
+    conv_layers[1].UploadBias(dev, context, weight_map["cnn1.0.bias"]);
+    conv_layers[2].UploadWeights(dev, context, weight_map["cnn1.2.weight"]);
+    conv_layers[2].UploadBias(dev, context, weight_map["cnn1.2.bias"]);
 
     // Res block 2
-    conv_layers[3].UploadWeights(dev, context, weight_map["cnn2.1.weight"]);
-    conv_layers[3].UploadBias(dev, context, weight_map["cnn2.1.bias"]);
-    conv_layers[4].UploadWeights(dev, context, weight_map["cnn2.4.weight"]);
-    conv_layers[4].UploadBias(dev, context, weight_map["cnn2.4.bias"]);
+    conv_layers[3].UploadWeights(dev, context, weight_map["cnn2.0.weight"]);
+    conv_layers[3].UploadBias(dev, context, weight_map["cnn2.0.bias"]);
+    conv_layers[4].UploadWeights(dev, context, weight_map["cnn2.2.weight"]);
+    conv_layers[4].UploadBias(dev, context, weight_map["cnn2.2.bias"]);
 
     // Res block 3
-    conv_layers[5].UploadWeights(dev, context, weight_map["cnn3.1.weight"]);
-    conv_layers[5].UploadBias(dev, context, weight_map["cnn3.1.bias"]);
-    conv_layers[6].UploadWeights(dev, context, weight_map["cnn3.4.weight"]);
-    conv_layers[6].UploadBias(dev, context, weight_map["cnn3.4.bias"]);
+    conv_layers[5].UploadWeights(dev, context, weight_map["cnn3.0.weight"]);
+    conv_layers[5].UploadBias(dev, context, weight_map["cnn3.0.bias"]);
+    conv_layers[6].UploadWeights(dev, context, weight_map["cnn3.2.weight"]);
+    conv_layers[6].UploadBias(dev, context, weight_map["cnn3.2.bias"]);
 
     // Res block 4
-    conv_layers[7].UploadWeights(dev, context, weight_map["cnn4.1.weight"]);
-    conv_layers[7].UploadBias(dev, context, weight_map["cnn4.1.bias"]);
-    conv_layers[8].UploadWeights(dev, context, weight_map["cnn4.4.weight"]);
-    conv_layers[8].UploadBias(dev, context, weight_map["cnn4.4.bias"]);
+    conv_layers[7].UploadWeights(dev, context, weight_map["cnn4.0.weight"]);
+    conv_layers[7].UploadBias(dev, context, weight_map["cnn4.0.bias"]);
+    conv_layers[8].UploadWeights(dev, context, weight_map["cnn4.2.weight"]);
+    conv_layers[8].UploadBias(dev, context, weight_map["cnn4.2.bias"]);
 
     dev.QueueList(context);
     dev.WaitForGPU();
@@ -141,7 +140,6 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
     conv_layers[7].CreateBindingTable(dml_device.Get(), *descriptor_heap, 7);
     conv_layers[8].CreateBindingTable(dml_device.Get(), *descriptor_heap, 8);
     shuffle_layers[0].CreateBindingTable(dml_device.Get(), *descriptor_heap, 0);
-    shuffle_layers[1].CreateBindingTable(dml_device.Get(), *descriptor_heap, 1);
     add_layers[0].CreateBindingTable(dml_device.Get(), *descriptor_heap, 0);
     add_layers[1].CreateBindingTable(dml_device.Get(), *descriptor_heap, 1);
     add_layers[2].CreateBindingTable(dml_device.Get(), *descriptor_heap, 2);
@@ -151,11 +149,11 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
     UINT64 max_int1_size = shuffle_layers[0].GetOutputBufferSize();
     UINT64 max_int2_size = conv_layers[0].GetOutputBufferSize();
     UINT64 max_int3_size = add_layers[0].GetOutputBufferSize();
-    input_buffer = std::make_unique<UnorderedAccessBuffer>(dev, shuffle_layers[0].GetInputBufferSize());
+    input_buffer = std::make_unique<UnorderedAccessBuffer>(dev, conv_layers[0].GetInputBufferSize());
     intermediate_buffer1 = std::make_unique<UnorderedAccessBuffer>(dev, max_int1_size);
     intermediate_buffer2 = std::make_unique<UnorderedAccessBuffer>(dev, max_int2_size);
     intermediate_buffer3 = std::make_unique<UnorderedAccessBuffer>(dev, max_int3_size);
-    output_buffer = std::make_unique<UnorderedAccessBuffer>(dev, shuffle_layers[1].GetOutputBufferSize());
+    output_buffer = std::make_unique<UnorderedAccessBuffer>(dev, shuffle_layers[0].GetOutputBufferSize());
 
     input_buffer->CreateUnorderedAccessView(dev, true);
     output_buffer->CreateUnorderedAccessView(dev, true);
@@ -163,8 +161,8 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
     output_buffer->CreateShaderResourceView(dev);
 
     // Down
-    shuffle_layers[0].BindResources(input_buffer->buffer.Get(), intermediate_buffer1->buffer.Get());
-    conv_layers[0].BindResources(intermediate_buffer1->buffer.Get(), intermediate_buffer3->buffer.Get());
+    //shuffle_layers[0].BindResources(input_buffer->buffer.Get(), intermediate_buffer1->buffer.Get());
+    conv_layers[0].BindResources(input_buffer->buffer.Get(), intermediate_buffer3->buffer.Get());
 
     // Res block 1
     conv_layers[1].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer1->buffer.Get());
@@ -186,7 +184,7 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
     conv_layers[8].BindResources(intermediate_buffer1->buffer.Get(), intermediate_buffer2->buffer.Get());
     add_layers[3].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer2->buffer.Get());
 
-    shuffle_layers[1].BindResources(intermediate_buffer3->buffer.Get(), output_buffer->buffer.Get());
+    shuffle_layers[0].BindResources(intermediate_buffer3->buffer.Get(), output_buffer->buffer.Get());
 
     dev.QueueList(context);
     dev.WaitForGPU();
@@ -204,8 +202,8 @@ void egx::MasterNet::Execute(egx::Device& dev,
     // Record and execute
 
     // Down
-    command_recorder->RecordDispatch(context.command_list.Get(), shuffle_layers[0].GetCompiledOperator(), shuffle_layers[0].GetBindingTable());
-    context.SetUABarrier();
+    //command_recorder->RecordDispatch(context.command_list.Get(), shuffle_layers[0].GetCompiledOperator(), shuffle_layers[0].GetBindingTable());
+    //context.SetUABarrier();
     command_recorder->RecordDispatch(context.command_list.Get(), conv_layers[0].GetCompiledOperator(), conv_layers[0].GetBindingTable());
     context.SetUABarrier();
 
@@ -242,7 +240,8 @@ void egx::MasterNet::Execute(egx::Device& dev,
     context.SetUABarrier();
 
     // Up
-    command_recorder->RecordDispatch(context.command_list.Get(), shuffle_layers[1].GetCompiledOperator(), shuffle_layers[1].GetBindingTable());
+    command_recorder->RecordDispatch(context.command_list.Get(), shuffle_layers[0].GetCompiledOperator(), shuffle_layers[0].GetBindingTable());
+    context.SetUABarrier();
 
     //dev.QueueListAndWaitForFinish(context);
 

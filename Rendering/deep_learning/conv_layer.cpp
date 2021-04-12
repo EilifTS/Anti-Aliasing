@@ -18,11 +18,11 @@ namespace
 	const DML_TENSOR_DATA_TYPE tensor_type = DML_TENSOR_DATA_TYPE_FLOAT16;
 }
 
-egx::ConvLayer::ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input_dims, UINT output_channels, UINT filter_size, bool fuse_activation)
+egx::ConvLayer::ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input_dims, UINT output_channels, UINT filter_size, bool fuse_activation, UINT stride)
 {
 	filter_dims = { output_channels, input_dims.dims[1], filter_size, filter_size };
 	this->input_dims = { input_dims.dims[0], input_dims.dims[1], input_dims.dims[2], input_dims.dims[3] };
-	output_dims = { input_dims.dims[0], output_channels, input_dims.dims[2], input_dims.dims[3] };
+	output_dims = { input_dims.dims[0], output_channels, input_dims.dims[2] / stride, input_dims.dims[3] / stride};
 
 	// Describe input and output tensors
 	auto input_strides = CalculateStrides(
@@ -101,8 +101,8 @@ egx::ConvLayer::ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input
 	bias_desc.Desc = &bias_buffer_desc;
 
 	// Describe, create and compile conv operator
-	UINT padding_size = static_cast<UINT>(ceil((filter_size - 1) / 2.0f));
-	UINT strides[] = { 1, 1 };
+	UINT padding_size = static_cast<UINT>(ceil((filter_size / stride - 1) / 2.0f));
+	UINT strides[] = { stride, stride };
 	UINT dilations[] = { 1, 1 };
 	UINT start_padding[] = { padding_size, padding_size };
 	UINT end_padding[] = { padding_size, padding_size };

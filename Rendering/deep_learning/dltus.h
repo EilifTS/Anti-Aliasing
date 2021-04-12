@@ -21,21 +21,24 @@ public:
 		egx::Texture2D& new_frame,
 		egx::RenderTarget& target);
 private:
+	void initializeLinearizeDepth(egx::Device& dev);
 	void initializeRenderInit(egx::Device& dev);
 	void initializeRenderFinalize(egx::Device& dev);
 	void initializeFormatConverter(egx::Device& dev);
 
+
+	void renderLinearizeDepth(egx::Device& dev,
+		egx::CommandContext& context,
+		egx::DepthBuffer& depth_stencil_buffer);
 	void renderInitialize(egx::Device& dev,
 		egx::CommandContext& context,
-		egx::DepthBuffer& depth_stencil_buffer,
 		egx::Texture2D& motion_vectors,
 		egx::Texture2D& new_frame);
 	void renderNetwork(egx::Device& dev, egx::CommandContext& context);
 	void renderFinalize(
 		egx::Device& dev,
 		egx::CommandContext& context,
-		egx::Texture2D& new_frame,
-		egx::DepthBuffer& depth_stencil_buffer);
+		egx::Texture2D& new_frame);
 	void renderFormatConverter(
 		egx::Device& dev,
 		egx::CommandContext& context,
@@ -50,10 +53,16 @@ private:
 	int jitter_index;
 	ema::vec2 shader_constants[3];
 	ema::point2D window_size;
+	int upsample_factor;
 
 	// Common shader res
 	egx::RenderTarget history_buffer;
 	egx::ShaderMacroList macro_list;
+
+	// Linearize depth
+	egx::RootSignature linearize_depth_rs;
+	egx::PipelineState linearize_depth_ps;
+	egx::RenderTarget linear_depth;
 
 	// Initialize render
 	egx::RootSignature initialize_rs;

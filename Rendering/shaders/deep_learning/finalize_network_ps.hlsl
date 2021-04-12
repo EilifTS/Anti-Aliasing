@@ -23,14 +23,6 @@ struct PSInput
 	float2 uv : TEXCOORD1;
 };
 
-float linear_depth(float depth)
-{
-	float far = 100.0;
-	float near = 0.1;
-	depth = near * far / (far - depth * (far - near));
-	return (depth - near) / (far - near);
-}
-
 float4 PS(PSInput input) : SV_TARGET
 { 
 	uint2 hr_pixel_pos = (uint2)input.position.xy; // Position in pixels of pixel in high res image
@@ -42,7 +34,7 @@ float4 PS(PSInput input) : SV_TARGET
 	float2 hr_jitter_uv = hr_jitter_pos * rec_window_size;
 	float4 jau_rgbd = float4(0.0, 0.0, 0.0, 0.0);
 	jau_rgbd.rgb = pow(input_texture.Sample(linear_clamp, hr_jitter_uv), 1.0 / 2.2);
-	jau_rgbd.a = linear_depth(depth_buffer.Sample(linear_clamp, hr_jitter_uv));
+	jau_rgbd.a = depth_buffer.Sample(linear_clamp, hr_jitter_uv);
 
 	// Load history
 	uint2 window_size_int = (uint2)window_size;
@@ -54,7 +46,7 @@ float4 PS(PSInput input) : SV_TARGET
 	history.a = history_buffer[index * 8 + 7];
 
 	// Load alpha and depth_res
-	float alpha = saturate(cnn_res[index * 2 + 0]);
+	float alpha = clamp(cnn_res[index * 2 + 0], 0.0, 1.0);
 	float depth_res = cnn_res[index * 2 + 1];
 
 	// Combine

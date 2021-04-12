@@ -65,12 +65,13 @@ egx::PixelShuffle::PixelShuffle(Device& dev, IDMLDevice* dml_dev, const DMLDims&
 	// Describe, create and compile conv operator
 	if (!inverse)
 	{
-		DML_DEPTH_TO_SPACE_OPERATOR_DESC dts_desc = {};
+		DML_DEPTH_TO_SPACE1_OPERATOR_DESC dts_desc = {};
 		dts_desc.InputTensor = &input_desc;
 		dts_desc.OutputTensor = &output_desc;
 		dts_desc.BlockSize = block_size;
+		dts_desc.Order = DML_DEPTH_SPACE_ORDER_COLUMN_ROW_DEPTH;
 
-		DML_OPERATOR_DESC op_desc = { DML_OPERATOR_DEPTH_TO_SPACE, &dts_desc };
+		DML_OPERATOR_DESC op_desc = { DML_OPERATOR_DEPTH_TO_SPACE1, &dts_desc };
 
 		ComPtr<IDMLOperator> op;
 		THROWIFFAILED(dml_dev->CreateOperator(&op_desc, IID_PPV_ARGS(&op)), "Failed to create DML depth to space operator");
@@ -79,12 +80,13 @@ egx::PixelShuffle::PixelShuffle(Device& dev, IDMLDevice* dml_dev, const DMLDims&
 	}
 	else
 	{
-		DML_SPACE_TO_DEPTH_OPERATOR_DESC std_desc = {};
+		DML_SPACE_TO_DEPTH1_OPERATOR_DESC std_desc = {};
 		std_desc.InputTensor = &input_desc;
 		std_desc.OutputTensor = &output_desc;
 		std_desc.BlockSize = block_size;
+		std_desc.Order = DML_DEPTH_SPACE_ORDER_COLUMN_ROW_DEPTH;
 
-		DML_OPERATOR_DESC op_desc = { DML_OPERATOR_SPACE_TO_DEPTH, &std_desc };
+		DML_OPERATOR_DESC op_desc = { DML_OPERATOR_SPACE_TO_DEPTH1, &std_desc };
 
 		ComPtr<IDMLOperator> op;
 		THROWIFFAILED(dml_dev->CreateOperator(&op_desc, IID_PPV_ARGS(&op)), "Failed to create DML space to depth operator");

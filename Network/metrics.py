@@ -172,4 +172,4 @@ class MasterLoss2(torch.nn.Module):
             weight += 1.0
             torch.cuda.empty_cache()
         #print(dloss.item(), loss.item())
-        return (0*dloss + loss) / weight
+        return (loss / weight) + 0.0*(dloss / (weight - 1.0))

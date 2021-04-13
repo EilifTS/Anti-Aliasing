@@ -269,8 +269,7 @@ def TestFBModel(model, dataloader):
         plt.plot(range(1, len(dli) + 1), ssim_list)
         plt.show()
 
-def TestMasterModel(model, dataloader):
-    print("Testing model")
+def subTestMasterModel(model, dataloader):
     model.eval()
     with torch.no_grad():
         dli = iter(dataloader)
@@ -305,26 +304,31 @@ def TestMasterModel(model, dataloader):
             # Print info
             test_str = '{0} / {1} \t PSNR: {2:.2f} \t SSIM: {3:.4f} \t Time: {4:.4}ms   '
             print(test_str.format(i, len(dli), psnr_list[i], ssim_list[i], time_list[i]), end="\r")
+    return psnr_list, ssim_list, time_list
+def TestMasterModel(model, dataloader):
+    print("Testing model")
+    
+    psnr_list, ssim_list, time_list = subTestMasterModel(model, dataloader)
 
-        # Print averages
-        print("")
-        print("PSNR average:", np.average(psnr_list))
-        print("SSIM average:", np.average(ssim_list))
-        print("Time average:", np.average(time_list))
-        # Plot results
-        plt.figure()
-        plt.xlabel("Frame")
-        plt.ylabel("PSNR")
-        plt.plot(range(1, len(dli) + 1), psnr_list)
-        plt.figure()
-        plt.xlabel("Frame")
-        plt.ylabel("SSIM")
-        plt.plot(range(1, len(dli) + 1), ssim_list)
-        plt.figure()
-        plt.xlabel("Frame")
-        plt.ylabel("Time")
-        plt.plot(range(1, len(dli) + 1), time_list)
-        plt.show()
+    # Print averages
+    print("")
+    print("PSNR average:", np.average(psnr_list))
+    print("SSIM average:", np.average(ssim_list))
+    print("Time average:", np.average(time_list))
+    # Plot results
+    plt.figure()
+    plt.xlabel("Frame")
+    plt.ylabel("PSNR")
+    plt.plot(range(1, len(psnr_list) + 1), psnr_list)
+    plt.figure()
+    plt.xlabel("Frame")
+    plt.ylabel("SSIM")
+    plt.plot(range(1, len(ssim_list) + 1), ssim_list)
+    plt.figure()
+    plt.xlabel("Frame")
+    plt.ylabel("Time")
+    plt.plot(range(1, len(time_list) + 1), time_list)
+    plt.show()
 
 
 def CheckMasterModelSampleEff(model, dataloader, loss_function):
@@ -523,3 +527,20 @@ def SaveModelWeights(model):
         f.write(param_float_count.to_bytes(4, byteorder='little', signed=False))
         f.write(struct.pack('f'*len(param_list), *param_list))
     f.close()
+
+def TestMultiple(dataloader):
+    model_list = []
+    model_list.append((models.TraditionalModel(4, 'bilinear', False), 'bilinear'))
+    model_list.append((models.TraditionalModel(4, 'bilinear', True), 'JAU-bilinear'))
+    model_list.append((models.TraditionalModel(4, 'bicubic', False), 'bicubic'))
+    model_list.append((models.TraditionalModel(4, 'bicubic', True), 'JAU-bicubic'))
+    plt.figure()
+    for model, name in model_list:
+        print("Testing", name)
+        psnr_list, ssim_list, time_list = subTestMasterModel(model, dataloader)
+        plt.xlabel("Frame")
+        plt.ylabel("PSNR")
+        plt.plot(range(1, len(psnr_list) + 1), psnr_list, label=name)
+    plt.title("Jitter Aligned Upsampling Comparison")
+    plt.legend()
+    plt.show()

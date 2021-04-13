@@ -18,9 +18,12 @@ namespace
 	const DML_TENSOR_DATA_TYPE tensor_type = DML_TENSOR_DATA_TYPE_FLOAT16;
 }
 
-egx::ConvLayer::ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input_dims, UINT output_channels, UINT filter_size, bool fuse_activation, UINT stride)
+egx::ConvLayer::ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input_dims, UINT output_channels, UINT filter_size, bool fuse_activation, UINT stride, bool transposed)
 {
-	filter_dims = { output_channels, input_dims.dims[1], filter_size, filter_size };
+	if(transposed)
+		filter_dims = { input_dims.dims[1], output_channels, filter_size, filter_size };
+	else
+		filter_dims = { output_channels, input_dims.dims[1], filter_size, filter_size };
 	this->input_dims = { input_dims.dims[0], input_dims.dims[1], input_dims.dims[2], input_dims.dims[3] };
 	output_dims = { input_dims.dims[0], output_channels, input_dims.dims[2] / stride, input_dims.dims[3] / stride};
 
@@ -82,7 +85,7 @@ egx::ConvLayer::ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input
 	filter_desc.Desc = &filter_buffer_desc;
 
 	// Describe bias
-	UINT bias_dims[] = { 1, filter_dims.dims[0], 1, 1 };
+	UINT bias_dims[] = { 1, output_channels, 1, 1 };
 	auto bias_strides = CalculateStrides(
 		tensor_layout,
 		{ bias_dims[0], bias_dims[1], bias_dims[2], bias_dims[3] },
@@ -117,7 +120,7 @@ egx::ConvLayer::ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input
 	conv_desc.BiasTensor = &bias_desc;
 	conv_desc.OutputTensor = &output_desc;
 	conv_desc.Mode = DML_CONVOLUTION_MODE_CROSS_CORRELATION;
-	conv_desc.Direction = DML_CONVOLUTION_DIRECTION_FORWARD;
+	conv_desc.Direction = transposed ? DML_CONVOLUTION_DIRECTION_BACKWARD : DML_CONVOLUTION_DIRECTION_FORWARD;
 	conv_desc.DimensionCount = 2;
 	conv_desc.Strides = strides;
 	conv_desc.Dilations = dilations;

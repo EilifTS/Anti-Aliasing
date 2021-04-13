@@ -10,7 +10,7 @@ namespace egx
 	class ConvLayer
 	{
 	public:
-		ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input_dims, UINT output_channels, UINT filter_size, bool fuse_activation, UINT stride = 1);
+		ConvLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input_dims, UINT output_channels, UINT filter_size, bool fuse_activation, UINT stride = 1, bool transposed = false);
 
 		void UploadWeights(Device& dev, CommandContext& context, const std::vector<uint16_t>& weights);
 		void UploadBias(Device& dev, CommandContext& context, const std::vector<uint16_t>& bias);

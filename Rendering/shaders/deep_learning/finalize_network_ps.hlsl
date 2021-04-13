@@ -34,7 +34,7 @@ float4 PS(PSInput input) : SV_TARGET
 	float2 hr_jitter_uv = hr_jitter_pos * rec_window_size;
 	float4 jau_rgbd = float4(0.0, 0.0, 0.0, 0.0);
 	jau_rgbd.rgb = pow(input_texture.Sample(linear_clamp, hr_jitter_uv), 1.0 / 2.2);
-	jau_rgbd.a = depth_buffer.Sample(linear_clamp, hr_jitter_uv);
+	jau_rgbd.a = 1.0;// depth_buffer.Sample(linear_clamp, hr_jitter_uv);
 
 	// Load history
 	uint2 window_size_int = (uint2)window_size;
@@ -47,13 +47,13 @@ float4 PS(PSInput input) : SV_TARGET
 
 	// Load alpha and depth_res
 	float alpha = clamp(cnn_res[index * 2 + 0], 0.0, 1.0);
-	float depth_res = cnn_res[index * 2 + 1];
+	float depth_res = clamp(cnn_res[index * 2 + 1], 0.0, 1.0);
 
 	// Combine
 	//alpha = 0.1; // Temp testing
 	float4 output = history * (1.0 - alpha) + jau_rgbd * alpha;
 	output.rgb = pow(output.rgb, 2.2);
-	output.a += depth_res;
+	output.a *= depth_res;
 
 	// Return
 	return saturate(output);

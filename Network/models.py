@@ -186,6 +186,7 @@ def JitterAlignedInterpolation(img, jitter, factor, mode='bilinear'):
                 [0,1,2.0*(0.5-jitter[i,1]) / H]], device='cuda'))
     theta = torch.stack(theta)
     grid = F.affine_grid(theta, (N,C,H*factor,W*factor), align_corners=False).float()
+    #return BiCubicGridSample(img, grid)
     return F.grid_sample(img, grid, mode=mode, align_corners=False, padding_mode='border')
 
 def IdentityGrid(shape):
@@ -616,23 +617,29 @@ class MasterNet2(nn.Module):
 
         self.zero_up = ZeroUpsampling(factor, 4)
 
-        # Network for dilation motion vectors
-        #self.mv_net = nn.Sequential(
-        #    nn.ReplicationPad2d(1),
-        #    nn.Conv2d(3, 64, 3, stride=1, padding=0),
+        #autoencoder
+        #self.cnn1 = nn.Sequential(
+        #    nn.Conv2d(8, 16, 2, stride=2),
         #    nn.ReLU(),
-        #    nn.ReplicationPad2d(1),
-        #    nn.Conv2d(64, 64, 3, stride=1, padding=0),
+        #    nn.Conv2d(16, 32, 2, stride=2),
         #    nn.ReLU(),
-        #    nn.ReplicationPad2d(1),
-        #    nn.Conv2d(64, 32, 3, stride=1, padding=0),
-        #    nn.PixelShuffle(self.factor),
+        #    nn.Conv2d(32, 64, 2, stride=2),
+        #    nn.ReLU(),
+        #    nn.Conv2d(64, 128, 2, stride=2),
+        #    nn.ReLU(),
+        #    nn.ConvTranspose2d(128, 64, 2, stride=2),
+        #    nn.ReLU(),
+        #    nn.ConvTranspose2d(64, 32, 2, stride=2),
+        #    nn.ReLU(),
+        #    nn.ConvTranspose2d(32, 16, 2, stride=2),
+        #    nn.ReLU(),
+        #    nn.ConvTranspose2d(16, 4, 2, stride=2),
         #    )
 
         self.down = nn.Sequential(
             #PixelUnshuffle(self.factor),
             #nn.Conv2d(128, 32, 1, stride=1, padding=0),
-            nn.Conv2d(8, 32, 4, stride=4, padding=0),
+            nn.Conv2d(8, 32, 4, stride=4),
             )
         self.cnn1 = nn.Sequential(
             nn.Conv2d(32, 32, 3, stride=1, padding=1, padding_mode='replicate'),
@@ -667,11 +674,13 @@ class MasterNet2(nn.Module):
 
         # Getting frame info
         #frame_padding = torch.zeros(size=(mini_batch, 32 - 4, height, width), device='cuda')
-        frame = torch.cat((frame, depth), dim=1)
+        frame_ones = torch.cat((frame, torch.ones(size=( mini_batch, 1, height, width), device='cuda')), dim=1)
+        
         
         # Frame upsampling
         #frame = JitterAlignedBilinearInterpolation(frame, jitter, self.factor)
-        frame_bilinear = JitterAlignedInterpolation(frame, jitter, self.factor, mode='bicubic')
+        frame_bilinear = JitterAlignedInterpolation(frame_ones, jitter, self.factor, mode='bilinear')
+        frame = torch.cat((frame, depth), dim=1)
         frame = self.zero_up(frame)
         frame = JitterAlign(frame, jitter, self.factor)
 
@@ -696,27 +705,13 @@ class MasterNet2(nn.Module):
             mv = F.interpolate(mv, scale_factor=self.factor, mode='bilinear', align_corners=False)
             #mv_dil = F.interpolate(mv_dil, scale_factor=self.factor, mode='bilinear', align_corners=False)
             
-            # Use network to calc offsets
-            #window_size = torch.tensor([[[[width]], [[height]]]]).expand((mini_batch, 2, height, width)).cuda()
-            #mv *= window_size
-            #mv_offsets = self.mv_net(torch.cat((mv, depth), dim=1))
-            #window_size = torch.tensor([[[[width]], [[height]]]]).expand((mini_batch, 2, height*self.factor, width*self.factor)).cuda()
-            #mv_offsets = torch.clamp(mv_offsets, -1.0, 1.0)
-            #mv_offsets /= window_size
-            #mv_offsets *= 2
-            #mv_offsets = torch.movedim(mv_offsets, 1, 3)
-            #mv_offsets += IdentityGrid(mv_offsets.shape)
-            #mv = F.grid_sample(mv, mv_offsets, mode='bilinear', align_corners=False, padding_mode='border')
-            #mv /= window_size
-
-            
             mv = torch.movedim(mv, 1, 3)
             mv += IdentityGrid(mv.shape)
         
             # History reprojection
             #history = F.grid_sample(history, mv, mode='bilinear', align_corners=False)
-            #history = F.grid_sample(history, mv, mode='bicubic', align_corners=False, padding_mode='border')
-            history = BiCubicGridSampleHD(history, mv)
+            history = F.grid_sample(history, mv, mode='bicubic', align_corners=False, padding_mode='border')
+            #history = BiCubicGridSampleHD(history, mv)
             
 
             ## Special case for padding
@@ -737,10 +732,13 @@ class MasterNet2(nn.Module):
         residual = self.up(small_input)
 
         # History reweighting
-        alpha = torch.clamp(residual[:,0:1,:,:], 0.0, 1.0)
+        residual = torch.clamp(residual, 0.0, 1.0)
+        alpha = residual[:,0:1,:,:]
 
         history = history*(1.0 - alpha) + frame_bilinear * alpha
-        history[:,3,:,:] = history[:,3,:,:] + residual[:,1,:,:]
+        history_start = history[:,0:3,:,:]
+        history_end = history[:,3:4,:,:] * residual[:,1:2,:,:]
+        history = torch.cat((history_start, history_end), dim=1)
         history = torch.clamp(history, 0.0, 1.0)
 
         # Reconstruction
@@ -750,7 +748,6 @@ class MasterNet2(nn.Module):
         history = None
         out = []
 
-       
         for i in range(x.seq_length - 1, -1, -1):
             reconstructed, history = self.sub_forward(
                 x.input_images[i].cuda(), 
@@ -771,18 +768,20 @@ class MasterNet2(nn.Module):
         return out
 
     
-class BicubicModel(nn.Module):
-    def __init__(self, factor):
-        super(BicubicModel, self).__init__()
+class TraditionalModel(nn.Module):
+    def __init__(self, factor, mode, jitter_aligned=False):
+        super(TraditionalModel, self).__init__()
         self.factor = factor
+        self.mode = mode
+        self.jitter_aligned = jitter_aligned
         self.up = nn.Upsample(scale_factor=factor, mode='bilinear', align_corners=False)
 
     def sub_forward(self, frame, depth, mv, jitter, history):
         # Reconstruction
-        #out = torch.clamp(self.up(frame), 0, 1)
-        #out = BilinearWithJitter(frame, jitter, self.factor)
-        out = JitterAlignedBilinearInterpolation(frame, jitter, self.factor)
-        return out, history
+        if(self.jitter_aligned):
+            return JitterAlignedInterpolation(frame, jitter, self.factor, self.mode), history
+        else:
+            return F.interpolate(frame, scale_factor=self.factor, mode=self.mode, align_corners=False), history
 
     def forward(self, x):
         history = None

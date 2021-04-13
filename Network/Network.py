@@ -19,7 +19,7 @@ if(__name__ == '__main__'):
     upsample_factor = 4
     width, height = 1920, 1080
     batch_size = 4
-    data_train = dataset.SSDataset(64, upsample_factor, videos[:80], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
+    data_train = dataset.SSDataset(64, upsample_factor, videos[:10], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
     data_val1 = dataset.SSDataset(64, upsample_factor, videos[80:90], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
     data_val2 = dataset.SSDataset(64, upsample_factor, videos[80:90], 1, [0], transform=None)
     data_test = dataset.SSDataset(64, upsample_factor, videos[90:], 1, [0], transform=None)
@@ -48,7 +48,7 @@ if(__name__ == '__main__'):
     
     # Create optimizer
     params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.Adam(params, lr=1e-4)
+    optimizer = torch.optim.Adam(params, lr=4e-4)
 
     # Load model 
     if(load_model):
@@ -74,7 +74,7 @@ if(__name__ == '__main__'):
     #utils.SaveModelWeights(model)
     #for g in optimizer.param_groups:
     #    print(g['lr'])
-    #    g['lr'] = 1e-5
+    #    g['lr'] = 4e-4
 
     print("Model parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
     #model.half()
@@ -87,7 +87,7 @@ if(__name__ == '__main__'):
         print("Directory", model_name, "allready exist")
 
 
-    epochs = 110
+    epochs = 200
 
     # Testing
     #utils.AddGradientHooks(model)
@@ -95,7 +95,8 @@ if(__name__ == '__main__'):
     #utils.VisualizeFBModel(model, loader_test)
     #utils.VisualizeMasterModel(model, loader_test)
     #utils.TestFBModel(model, loader_test)
-    utils.TestMasterModel(model, loader_test)
+    #utils.TestMasterModel(model, loader_test)
+    #utils.TestMultiple(loader_test)
     #utils.VisualizeDifference(model, loader_test)
     #utils.PlotLosses(train_losses, val_epochs, val_losses, val_psnrs, val_ssims)
     #utils.IllustrateJitterPattern(loader_test, 16, 4)
@@ -104,7 +105,7 @@ if(__name__ == '__main__'):
         print('Epoch {}'.format(epoch))
         train_loss = utils.TrainEpoch(model, loader_train, optimizer, loss_function)
         train_losses.append(train_loss)
-        if(epoch % 1 == 0):
+        if(epoch % 5 == 0):
             val_loss, val_psnr, val_ssim = utils.ValidateModel(model, loader_val1, loader_val2, loss_function)
             #val_loss, val_psnr, val_ssim = utils.ValidateFBModel(model, loader_val1, loader_val2, loss_function)
             val_epochs.append(epoch)

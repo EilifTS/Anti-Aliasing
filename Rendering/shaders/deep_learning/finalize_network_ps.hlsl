@@ -48,11 +48,12 @@ float4 PS(PSInput input) : SV_TARGET
 	// Load alpha and depth_res
 	float alpha = clamp(cnn_res[index * 2 + 0], 0.0, 1.0);
 	float depth_res = clamp(cnn_res[index * 2 + 1], 0.0, 1.0);
+	//float depth_res = cnn_res[index * 2 + 1];
 
 	// Combine
 	//alpha = 0.1; // Temp testing
 	float4 output = history * (1.0 - alpha) + jau_rgbd * alpha;
-	output.rgb = pow(output.rgb, 2.2);
+	output.rgb = output.rgb;
 	output.a *= depth_res;
 
 	// Return

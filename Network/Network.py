@@ -10,7 +10,7 @@ import os
 
 if(__name__ == '__main__'):
     torch.backends.cudnn.benchmark = True
-    #dataset.ConvertPNGDatasetToBMP(64, 4, 100, 60)
+    #dataset.ConvertPNGDatasetToBMP(None, 4, 100, 60)
     torch.manual_seed(17) # Split the dataset up the same way every time
     videos = torch.randperm(100)
     torch.seed()
@@ -71,10 +71,10 @@ if(__name__ == '__main__'):
             if torch.is_tensor(v):
                 state[k] = v.cuda()
 
-    #utils.SaveModelWeights(model)
+    utils.SaveModelWeights(model)
     #for g in optimizer.param_groups:
     #    print(g['lr'])
-    #    g['lr'] = 4e-4
+    #    g['lr'] = 1e-5
 
     print("Model parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
     #model.half()
@@ -105,7 +105,7 @@ if(__name__ == '__main__'):
         print('Epoch {}'.format(epoch))
         train_loss = utils.TrainEpoch(model, loader_train, optimizer, loss_function)
         train_losses.append(train_loss)
-        if(epoch % 5 == 0):
+        if(epoch % 1 == 0):
             val_loss, val_psnr, val_ssim = utils.ValidateModel(model, loader_val1, loader_val2, loss_function)
             #val_loss, val_psnr, val_ssim = utils.ValidateFBModel(model, loader_val1, loader_val2, loss_function)
             val_epochs.append(epoch)

@@ -26,10 +26,10 @@ namespace
 	static const float near_plane = 0.1f;
 	static const float far_plane = 100.0f;
 
-	static const bool disable_super_sampling = false;
+	static const bool disable_super_sampling = true;
 	static const int super_sample_options[] = { 64 };
 	static const int upsample_factor_options[] = { 4 };
-	static const int jitter_count = 16;
+	static const int jitter_count = 30;
 
 }
 

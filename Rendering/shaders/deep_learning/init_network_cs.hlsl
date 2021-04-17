@@ -7,6 +7,7 @@ Texture2D			history_buffer		: register(t1);
 Texture2D<float2>	motion_vectors		: register(t2);
 Texture2D<float>	depth_buffer		: register(t3);
 SamplerState		linear_clamp		: register(s0);
+SamplerState		point_clamp		: register(s1);
 
 cbuffer constants : register(b0)
 {
@@ -27,7 +28,7 @@ float4 catmullSample(float2 uv, bool is_input)
         return float4(c, d);
     }
     float4 c = history_buffer.SampleLevel(linear_clamp, uv, 0);
-    c.rgb = pow(c.rgb, 1.0 / 2.2);
+    c.rgb = c.rgb;
     return c;
 }
 
@@ -102,7 +103,7 @@ void CS(uint3 block_id : SV_GroupID, uint3 thread_id : SV_GroupThreadID)
         {
             //history = catmullRom(prev_frame_uv, false);
             history = history_buffer.SampleLevel(linear_clamp, prev_frame_uv, 0);
-            history.rgb = pow(history.rgb, 1.0 / 2.2);
+            history.rgb = history.rgb;
         }
         else
             history = jau_rgbd;

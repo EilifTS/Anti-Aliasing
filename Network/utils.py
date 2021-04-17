@@ -460,6 +460,8 @@ def IllustrateJitterPattern(dataloader, num_jitters, factor):
     plt.yticks(np.arange(0,factor + 1, 1))
     plt.grid()
     plt.scatter(jitters[:,0], jitters[:,1])
+    for i in range(num_jitters):
+        plt.annotate(str(i), (jitters[i,0] + 0.05, jitters[i,1] + 0.05))
     plt.show()
 
 def AddGradientHooks(model):

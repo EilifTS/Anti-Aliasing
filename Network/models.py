@@ -617,25 +617,6 @@ class MasterNet2(nn.Module):
 
         self.zero_up = ZeroUpsampling(factor, 4)
 
-        #autoencoder
-        #self.cnn1 = nn.Sequential(
-        #    nn.Conv2d(8, 16, 2, stride=2),
-        #    nn.ReLU(),
-        #    nn.Conv2d(16, 32, 2, stride=2),
-        #    nn.ReLU(),
-        #    nn.Conv2d(32, 64, 2, stride=2),
-        #    nn.ReLU(),
-        #    nn.Conv2d(64, 128, 2, stride=2),
-        #    nn.ReLU(),
-        #    nn.ConvTranspose2d(128, 64, 2, stride=2),
-        #    nn.ReLU(),
-        #    nn.ConvTranspose2d(64, 32, 2, stride=2),
-        #    nn.ReLU(),
-        #    nn.ConvTranspose2d(32, 16, 2, stride=2),
-        #    nn.ReLU(),
-        #    nn.ConvTranspose2d(16, 4, 2, stride=2),
-        #    )
-
         self.down = nn.Sequential(
             #PixelUnshuffle(self.factor),
             #nn.Conv2d(128, 32, 1, stride=1, padding=0),
@@ -711,7 +692,7 @@ class MasterNet2(nn.Module):
             # History reprojection
             #history = F.grid_sample(history, mv, mode='bilinear', align_corners=False)
             history = F.grid_sample(history, mv, mode='bicubic', align_corners=False, padding_mode='border')
-            #history = BiCubicGridSampleHD(history, mv)
+            #history = BiCubicGridSample(history, mv)
             
 
             ## Special case for padding
@@ -739,8 +720,7 @@ class MasterNet2(nn.Module):
         history_start = history[:,0:3,:,:]
         history_end = history[:,3:4,:,:] * residual[:,1:2,:,:]
         history = torch.cat((history_start, history_end), dim=1)
-        history = torch.clamp(history, 0.0, 1.0)
-
+        history = torch.clamp(history, 0, 1.0)
         # Reconstruction
         return history[:,:3,:,:], history
 

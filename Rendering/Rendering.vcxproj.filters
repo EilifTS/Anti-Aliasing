@@ -139,6 +139,8 @@
     <FxCompile Include="shaders\deep_learning\init_network_cs.hlsl" />
     <FxCompile Include="shaders\deep_learning\linearize_depth_vs.hlsl" />
     <FxCompile Include="shaders\deep_learning\linearize_depth_ps.hlsl" />
+    <FxCompile Include="shaders\deep_learning\format_converter_vs.hlsl" />
+    <FxCompile Include="shaders\deep_learning\format_converter_ps.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\deferred\g_buffer.hlsli" />

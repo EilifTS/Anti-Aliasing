@@ -76,8 +76,11 @@ void DLTUS::initializeRenderInit(egx::Device& dev)
 	initialize_rs.InitDescriptorTable(3, egx::ShaderVisibility::All); // Depth buffer
 	initialize_rs.InitUnorderedAccessTable(0, 1, egx::ShaderVisibility::All); // Output
 	auto sampler = egx::Sampler::LinearClamp();
+	auto sampler2 = egx::Sampler::PointClamp();
 	sampler.SetVisibility(egx::ShaderVisibility::All);
+	sampler2.SetVisibility(egx::ShaderVisibility::All);
 	initialize_rs.AddSampler(sampler, 0);
+	initialize_rs.AddSampler(sampler2, 1);
 	initialize_rs.Finalize(dev);
 
 	// Create Shaders
@@ -138,8 +141,8 @@ void DLTUS::initializeFormatConverter(egx::Device& dev)
 	// Create Shaders
 	egx::Shader VS;
 	egx::Shader PS;
-	VS.CompileVertexShader("../Rendering/shaders/taa/format_converter_vs.hlsl");
-	PS.CompilePixelShader("../Rendering/shaders/taa/format_converter_ps.hlsl");
+	VS.CompileVertexShader("../Rendering/shaders/deep_learning/format_converter_vs.hlsl");
+	PS.CompilePixelShader("../Rendering/shaders/deep_learning/format_converter_ps.hlsl");
 
 	// Empty input layout
 	egx::InputLayout input_layout;

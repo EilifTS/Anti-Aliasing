@@ -382,12 +382,12 @@ def VisualizeMasterModel(model, dataloader):
                 history = None
             item.ToCuda()
             res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
-            res = res[:,0:3,:,:]
+            res = history[:,0:3,:,:]
             res = res.squeeze().cpu().detach()
             res = dataset.ImageTorchToNumpy(res)
             window_name = "Image"
             cv2.imshow(window_name, res[:,:,:])
-            cv2.waitKey(0)
+            cv2.waitKey(100)
         cv2.destroyAllWindows()
 
 def VisualizeDifference(model, dataloader):

@@ -374,6 +374,14 @@ class FBNet(nn.Module):
             )
         self.reconstruct = FBUNet()
 
+        
+        for p in self.parameters():
+            if(p.requires_grad):
+                if(p.dim() == 1): # Bias
+                    torch.nn.init.zeros_(p)
+                else: # Weight 
+                    torch.nn.init.xavier_normal_(p)
+
     def forward(self, x):
         num_frames = 5
         x.ToCuda()
@@ -647,6 +655,7 @@ class MasterNet2(nn.Module):
             nn.PixelShuffle(self.factor),
             )
 
+
     def sub_forward(self, frame, depth, mv, jitter, history):
         mini_batch, channels, height, width = frame.shape
 
@@ -656,7 +665,6 @@ class MasterNet2(nn.Module):
         # Getting frame info
         #frame_padding = torch.zeros(size=(mini_batch, 32 - 4, height, width), device='cuda')
         frame_ones = torch.cat((frame, torch.ones(size=( mini_batch, 1, height, width), device='cuda')), dim=1)
-        
         
         # Frame upsampling
         #frame = JitterAlignedBilinearInterpolation(frame, jitter, self.factor)

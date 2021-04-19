@@ -173,3 +173,23 @@ class MasterLoss2(torch.nn.Module):
             torch.cuda.empty_cache()
         #print(dloss.item(), loss.item())
         return (loss / weight) + 0.0*(dloss / (weight - 1.0))
+
+class MasterLoss3(torch.nn.Module):
+    def __init__(self, target_indices):
+        super(MasterLoss3, self).__init__()
+        self.target_indices = target_indices
+        self.ssim = SSIM()
+
+    def forward(self, img1, img2):
+        loss = torch.tensor([0.0], device="cuda")
+        dloss = torch.tensor([0.0], device="cuda")
+        weight = torch.tensor([0.0], device="cuda")
+        for i in range(len(img1)):
+            if(i != 0):
+                dt1 = img1[i-1].cuda() - img1[i].cuda()
+                dt2 = img2[i-1].cuda() - img2[i].cuda()
+                dloss += F.mse_loss(dt1, dt2)
+            loss += F.mse_loss(img1[i].cuda(), img2[i].cuda())
+            weight += 1.0
+            torch.cuda.empty_cache()
+        return (loss / weight) + (dloss / (weight - 1.0))

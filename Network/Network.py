@@ -19,7 +19,7 @@ if(__name__ == '__main__'):
     upsample_factor = 4
     width, height = 1920, 1080
     batch_size = 4
-    data_train = dataset.SSDataset(64, upsample_factor, videos[:10], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
+    data_train = dataset.SSDataset(64, upsample_factor, videos[:80], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
     data_val1 = dataset.SSDataset(64, upsample_factor, videos[80:90], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
     data_val2 = dataset.SSDataset(64, upsample_factor, videos[80:90], 1, [0], transform=None)
     data_test = dataset.SSDataset(64, upsample_factor, videos[90:], 1, [0], transform=None)
@@ -48,7 +48,7 @@ if(__name__ == '__main__'):
     
     # Create optimizer
     params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.Adam(params, lr=4e-4)
+    optimizer = torch.optim.Adam(params, lr=1e-4)
 
     # Load model 
     if(load_model):
@@ -70,8 +70,10 @@ if(__name__ == '__main__'):
         for k, v in state.items():
             if torch.is_tensor(v):
                 state[k] = v.cuda()
+    
 
-    utils.SaveModelWeights(model)
+
+    #utils.SaveModelWeights(model)
     #for g in optimizer.param_groups:
     #    print(g['lr'])
     #    g['lr'] = 1e-5
@@ -87,7 +89,7 @@ if(__name__ == '__main__'):
         print("Directory", model_name, "allready exist")
 
 
-    epochs = 200
+    epochs = 100
 
     # Testing
     #utils.AddGradientHooks(model)

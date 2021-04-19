@@ -198,7 +198,8 @@ int main()
 		for (int video_index = 0; video_index < video_count; video_index++)
 		{
 			video.LoadFromFile(video_index);
-			Jitter jitter = Jitter::Halton(2, 3, jitter_count);
+			//Jitter jitter = Jitter::Halton(2, 3, jitter_count);
+			Jitter jitter = Jitter::Custom();
 
 			// Make folder for all images in this video
 			std::string jitter_video_directory_name = jitter_directory_name + "/video" + emisc::ToString(video_index);

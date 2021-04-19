@@ -18,24 +18,15 @@ cbuffer constants : register(b0)
 
 RWBuffer<half> out_tensor   : register(u0);
 
-float4 catmullSample(float2 uv, bool is_input)
+float4 catmullSample(float2 uv)
 {
-    if (is_input)
-    {
-        float3 c = input_texture.SampleLevel(linear_clamp, uv, 0);
-        float d = depth_buffer.SampleLevel(linear_clamp, uv, 0);
-        c = pow(c, 1.0 / 2.2);
-        return float4(c, d);
-    }
     float4 c = history_buffer.SampleLevel(linear_clamp, uv, 0);
-    c.rgb = c.rgb;
     return c;
 }
 
-float4 catmullRom(float2 uv, bool is_input)
+float4 catmullRom(float2 uv)
 {
-    int factor = is_input ? UPSAMPLE_FACTOR : 1;
-    float2 position = uv * window_size / factor;
+    float2 position = uv * window_size;
     float2 center_position = floor(position - 0.5) + 0.5;
     float2 f = position - center_position;
     float2 f2 = f * f;
@@ -48,17 +39,17 @@ float4 catmullRom(float2 uv, bool is_input)
     // float2 w2 = 1.0 - w0 - w1 - w3
 
     float2 w12 = w1 + w2;
-    float2 tc12 = factor * rec_window_size * (center_position + w2 / w12);
-    float4 center_color = catmullSample(tc12, is_input);
+    float2 tc12 = rec_window_size * (center_position + w2 / w12);
+    float4 center_color = catmullSample(tc12);
 
-    float2 tc0 = factor * rec_window_size * (center_position - 1.0);
-    float2 tc3 = factor * rec_window_size * (center_position + 2.0);
+    float2 tc0 = rec_window_size * (center_position - 1.0);
+    float2 tc3 = rec_window_size * (center_position + 2.0);
     float4 color =
-        catmullSample(float2(tc12.x, tc0.y), is_input) * (w12.x * w0.y) +
-        catmullSample(float2(tc0.x, tc12.y), is_input) * (w0.x * w12.y) +
+        catmullSample(float2(tc12.x, tc0.y)) * (w12.x * w0.y) +
+        catmullSample(float2(tc0.x, tc12.y)) * (w0.x * w12.y) +
         center_color * (w12.x * w12.y) +
-        catmullSample(float2(tc3.x, tc12.y), is_input) * (w3.x * w12.y) +
-        catmullSample(float2(tc12.x, tc3.y), is_input) * (w12.x * w3.y);
+        catmullSample(float2(tc3.x, tc12.y)) * (w3.x * w12.y) +
+        catmullSample(float2(tc12.x, tc3.y)) * (w12.x * w3.y);
     float weight = (w12.x * w0.y) + (w0.x * w12.y) + (w12.x * w12.y) + (w3.x * w12.y) + (w12.x * w3.y);
     return color / weight;
 }
@@ -100,11 +91,7 @@ void CS(uint3 block_id : SV_GroupID, uint3 thread_id : SV_GroupThreadID)
 
         float4 history = float4(0.0, 0.0, 0.0, 0.0);
         if (prev_frame_uv.x > 0.0 && prev_frame_uv.x <= 1.0 && prev_frame_uv.y > 0.0 && prev_frame_uv.y <= 1.0) // Check if uv is inside history buffer
-        {
-            //history = catmullRom(prev_frame_uv, false);
-            history = history_buffer.SampleLevel(linear_clamp, prev_frame_uv, 0);
-            history.rgb = history.rgb;
-        }
+            history = catmullRom(prev_frame_uv);
         else
             history = jau_rgbd;
 

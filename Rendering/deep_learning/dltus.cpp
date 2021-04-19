@@ -12,7 +12,8 @@ namespace
 
 DLTUS::DLTUS(egx::Device& dev, egx::CommandContext& context, const ema::point2D& window_size, int jitter_count, float upsample_factor)
 	: master_net(dev, context, window_size, upsample_factor),
-	jitter(Jitter::Halton(2, 3, jitter_count)),
+	//jitter(Jitter::Halton(2, 3, 64*64)),
+	jitter(Jitter::Custom()),
 	jitter_count(jitter_count), jitter_index(0),
 	upsample_factor((int)upsample_factor),
 	history_buffer(dev, egx::TextureFormat::FLOAT16x4, window_size),

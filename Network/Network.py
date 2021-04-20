@@ -32,7 +32,7 @@ if(__name__ == '__main__'):
 
     # Create model
     model_name = 'modelMaster'
-    load_model = True
+    load_model = False
     start_epoch = 0
     train_losses = []
     val_epochs = []
@@ -89,7 +89,7 @@ if(__name__ == '__main__'):
         print("Directory", model_name, "allready exist")
 
 
-    epochs = 100
+    epochs = 110
 
     # Testing
     #utils.AddGradientHooks(model)

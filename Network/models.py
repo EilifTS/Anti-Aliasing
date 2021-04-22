@@ -652,7 +652,7 @@ class MasterNet2(nn.Module):
             )
 
         self.up = nn.Sequential(
-            nn.PixelShuffle(self.factor),
+            nn.PixelShuffle(4),
             )
 
 

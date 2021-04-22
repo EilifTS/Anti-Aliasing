@@ -39,7 +39,7 @@ class VGGPerceptualLoss(torch.nn.Module):
         for block in self.blocks:
             x = block(x)
             y = block(y)
-            loss += torch.nn.functional.l1_loss(x, y)
+            loss += torch.nn.functional.mse_loss(x, y)
         return loss
 
 class PSNR(torch.nn.Module):

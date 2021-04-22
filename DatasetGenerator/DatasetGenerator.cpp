@@ -28,7 +28,7 @@ namespace
 
 	static const bool disable_super_sampling = true;
 	static const int super_sample_options[] = { 64 };
-	static const int upsample_factor_options[] = { 4 };
+	static const int upsample_factor_options[] = { 2 };
 	static const int jitter_count = 30;
 
 }
@@ -199,7 +199,7 @@ int main()
 		{
 			video.LoadFromFile(video_index);
 			//Jitter jitter = Jitter::Halton(2, 3, jitter_count);
-			Jitter jitter = Jitter::Custom();
+			Jitter jitter = Jitter::Custom(upsampling_factor);
 
 			// Make folder for all images in this video
 			std::string jitter_video_directory_name = jitter_directory_name + "/video" + emisc::ToString(video_index);

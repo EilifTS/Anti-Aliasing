@@ -14,13 +14,13 @@ if(__name__ == '__main__'):
     torch.manual_seed(17) # Split the dataset up the same way every time
     videos = torch.randperm(100)
     torch.seed()
-    sequence_length = 5 # Number inputs used in the model
-    target_indices = [0]#, 15, 31] # The targets the model will calculate loss against, [0] means the last image, [0, 1] the two last etc.
-    upsample_factor = 2
+    sequence_length = 30 # Number inputs used in the model
+    target_indices = [0, 1, 2]#, 15, 31] # The targets the model will calculate loss against, [0] means the last image, [0, 1] the two last etc.
+    upsample_factor = 4
     width, height = 1920, 1080
-    batch_size = 8
-    data_train = dataset.SSDataset(64, upsample_factor, videos[:80], sequence_length, target_indices, transform=dataset.RandomCrop(196, width, height, upsample_factor))
-    data_val1 = dataset.SSDataset(64, upsample_factor, videos[80:90], sequence_length, target_indices, transform=dataset.RandomCrop(196, width, height, upsample_factor))
+    batch_size = 4
+    data_train = dataset.SSDataset(64, upsample_factor, videos[:80], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
+    data_val1 = dataset.SSDataset(64, upsample_factor, videos[80:90], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
     data_val2 = dataset.SSDataset(64, upsample_factor, videos[80:90], 1, [0], transform=None)
     data_test = dataset.SSDataset(64, upsample_factor, videos[90:], 1, [0], transform=None)
     loader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, num_workers=4, collate_fn=dataset.SSDatasetCollate)
@@ -39,12 +39,13 @@ if(__name__ == '__main__'):
     val_losses = []
     val_psnrs = []
     val_ssims = []
-    model = models.FBNet(upsample_factor)
+    #model = models.FBNet(upsample_factor)
     #model = models.MasterNet(upsample_factor, sequence_length)
-    #model = models.MasterNet2(upsample_factor)
-    #model = models.BicubicModel(upsample_factor)
-    loss_function = metrics.FBLoss()
+    model = models.MasterNet2(upsample_factor)
+    #model = models.TraditionalModel(upsample_factor, 'bilinear', True)
+    #loss_function = metrics.FBLoss()
     #loss_function = metrics.MasterLoss2(target_indices)
+    loss_function = metrics.MasterLoss3(target_indices)
     
     # Create optimizer
     params = [p for p in model.parameters() if p.requires_grad]
@@ -108,8 +109,8 @@ if(__name__ == '__main__'):
         train_loss = utils.TrainEpoch(model, loader_train, optimizer, loss_function)
         train_losses.append(train_loss)
         if(epoch % 1 == 0):
-            #val_loss, val_psnr, val_ssim = utils.ValidateModel(model, loader_val1, loader_val2, loss_function)
-            val_loss, val_psnr, val_ssim = utils.ValidateFBModel(model, loader_val1, loader_val2, loss_function)
+            val_loss, val_psnr, val_ssim = utils.ValidateModel(model, loader_val1, loader_val2, loss_function)
+            #val_loss, val_psnr, val_ssim = utils.ValidateFBModel(model, loader_val1, loader_val2, loss_function)
             val_epochs.append(epoch)
             val_losses.append(val_loss)
             val_psnrs.append(val_psnr)
@@ -133,8 +134,8 @@ if(__name__ == '__main__'):
             }, model_name + "/" + model_name + ".pt")
 
         # Saving test image
-        #utils.SaveTestImage(model, loader_test, 30, model_name, epoch)
-        utils.SaveTestImageFB(model, loader_test, 30, model_name, epoch)
+        utils.SaveTestImage(model, loader_test, 30, model_name, epoch)
+        #utils.SaveTestImageFB(model, loader_test, 30, model_name, epoch)
         print('')
 
         #window_name = "Image"

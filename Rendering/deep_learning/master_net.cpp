@@ -31,7 +31,9 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
 	);
 
     // Load weights
-    auto weight_map = loadWeights();
+    auto weight_map = loadWeights("../network/MasterNet4x4/nn_weights.bin");
+    if(upsample_factor == 2)
+        weight_map = loadWeights("../network/MasterNet2x2/nn_weights.bin");
 
     // Create layers
     DMLDims input_buffer_size = { 1, 8, window_size.y, window_size.x};
@@ -249,9 +251,8 @@ void egx::MasterNet::Execute(egx::Device& dev,
 }
 
 
-std::unordered_map<std::string, std::vector<uint16_t>> egx::MasterNet::loadWeights()
+std::unordered_map<std::string, std::vector<uint16_t>> egx::MasterNet::loadWeights(const std::string& file_path)
 {
-    std::string file_path = "../network/nn_weights.bin";
     std::ifstream file(file_path, std::ios::binary);
     if (file.fail())
         throw std::runtime_error("Failed to load file " + file_path);

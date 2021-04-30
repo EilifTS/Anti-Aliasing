@@ -27,7 +27,7 @@ namespace egx
 			CommandContext& context);
 
 	private:
-		std::unordered_map<std::string, std::vector<uint16_t>> loadWeights();
+		std::unordered_map<std::string, std::vector<uint16_t>> loadWeights(const std::string& file_path);
 			
 	private:
 		ema::point2D window_size;

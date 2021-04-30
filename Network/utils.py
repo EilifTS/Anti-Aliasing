@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import skvideo.measure
 
 class Evaluator():
     def __init__(self, metrics):
@@ -253,7 +254,9 @@ def TestFBModel(model, dataloader):
             # Print info
             test_str = '{0} / {1} \t PSNR: {2:.2f} \t SSIM: {3:.4f} \t '
             print(test_str.format(i, len(dli), psnr_list[i], ssim_list[i]), end="\r")
-
+        
+        np.save("ModelPSNR", psnr_list)
+        np.save("ModelSSIM", ssim_list)
         # Print averages
         print("")
         print("PSNR average:", np.average(psnr_list))
@@ -269,6 +272,9 @@ def TestFBModel(model, dataloader):
         plt.plot(range(1, len(dli) + 1), ssim_list)
         plt.show()
 
+def toGrayScale(img):
+    return 0.299*img[:,0,:,:] + 0.587*img[:,1,:,:] + 0.114*img[:,2,:,:]
+
 def subTestMasterModel(model, dataloader):
     model.eval()
     with torch.no_grad():
@@ -280,6 +286,14 @@ def subTestMasterModel(model, dataloader):
         ssim_list = np.zeros(len(dli))
         time_list = np.zeros(len(dli))
         history = None
+
+        #strred_dist = np.zeros(shape=(600, 1080, 1920))
+        #strred_target = np.zeros(shape=(600, 1080, 1920))
+        #tpsnr = metrics.TPSNR()
+        #tpsnr_list = np.zeros(len(dli))
+        #prev_res = None
+        #prev_target = None
+
         for i, item in enumerate(dli):
 
             if(i % 60 == 0): # Clear history at the start of each video
@@ -297,13 +311,25 @@ def subTestMasterModel(model, dataloader):
             torch.cuda.synchronize()
             time_list[i] = starter.elapsed_time(ender)
 
+            #strred_dist[i,:,:] = toGrayScale(res.detach().cpu()).numpy()
+            #strred_target[i,:,:] = toGrayScale(item.target_images[0].detach().cpu()).numpy()
+            #if(i != 0):
+            #    tpsnr_list[i] = tpsnr(res, prev_res, item.target_images[0], prev_target)
+            #prev_res = res
+            #prev_target = item.target_images[0]
+
             # Get performance measures
             psnr_list[i] = psnr(res, item.target_images[0])
             ssim_list[i] = ssim(res, item.target_images[0])
 
             # Print info
+            #test_str = '{0} / {1} \t PSNR: {2:.2f} \t TPSNR: {5:.2f} \t SSIM: {3:.4f} \t Time: {4:.4}ms   '
             test_str = '{0} / {1} \t PSNR: {2:.2f} \t SSIM: {3:.4f} \t Time: {4:.4}ms   '
             print(test_str.format(i, len(dli), psnr_list[i], ssim_list[i], time_list[i]), end="\r")
+    #_, strred, _ = skvideo.measure.strred(strred_target, strred_dist)
+    #print(strred)
+    np.save("ModelPSNR", psnr_list)
+    np.save("ModelSSIM", ssim_list)
     return psnr_list, ssim_list, time_list
 def TestMasterModel(model, dataloader):
     print("Testing model")
@@ -313,6 +339,7 @@ def TestMasterModel(model, dataloader):
     # Print averages
     print("")
     print("PSNR average:", np.average(psnr_list))
+    #print("TPSNR average:", np.average(tpsnr_list[1:]))
     print("SSIM average:", np.average(ssim_list))
     print("Time average:", np.average(time_list))
     # Plot results
@@ -387,7 +414,7 @@ def VisualizeMasterModel(model, dataloader):
             res = dataset.ImageTorchToNumpy(res)
             window_name = "Image"
             cv2.imshow(window_name, res[:,:,:])
-            cv2.waitKey(100)
+            cv2.waitKey(0)
         cv2.destroyAllWindows()
 
 def VisualizeDifference(model, dataloader):
@@ -531,18 +558,33 @@ def SaveModelWeights(model):
     f.close()
 
 def TestMultiple(dataloader):
-    model_list = []
-    model_list.append((models.TraditionalModel(4, 'bilinear', False), 'bilinear'))
-    model_list.append((models.TraditionalModel(4, 'bilinear', True), 'JAU-bilinear'))
-    model_list.append((models.TraditionalModel(4, 'bicubic', False), 'bicubic'))
-    model_list.append((models.TraditionalModel(4, 'bicubic', True), 'JAU-bicubic'))
+    file_list = []
+    #file_list.append(("JAU2x2", "JAU 2x2"))
+    file_list.append(("JAU4x4", "JAU 4x4"))
+    #file_list.append(("MasterNet2x2", "Our 2x2"))
+    file_list.append(("MasterNet4x4", "Our 4x4"))
+    #file_list.append(("XNet2x2", "Xiao et. al. 2x2"))
+    file_list.append(("XNet4x4", "Xiao et. al. 4x4"))
+
     plt.figure()
-    for model, name in model_list:
-        print("Testing", name)
-        psnr_list, ssim_list, time_list = subTestMasterModel(model, dataloader)
+    for file, name in file_list:
+        psnr_list = np.load("Results/" + file + "PSNR.npy")
         plt.xlabel("Frame")
         plt.ylabel("PSNR")
         plt.plot(range(1, len(psnr_list) + 1), psnr_list, label=name)
-    plt.title("Jitter Aligned Upsampling Comparison")
+        print(file, "average PSNR:", np.average(psnr_list))
+
+    plt.title("PSNR on Testing Dataset")
+    plt.legend()
+
+    plt.figure()
+    for file, name in file_list:
+        ssim_list = np.load("Results/" + file + "SSIM.npy")
+        plt.xlabel("Frame")
+        plt.ylabel("SSIM")
+        plt.plot(range(1, len(ssim_list) + 1), ssim_list, label=name)
+        print(file, "average SSIM:", np.average(ssim_list))
+
+    plt.title("SSIM on Testing Dataset")
     plt.legend()
     plt.show()

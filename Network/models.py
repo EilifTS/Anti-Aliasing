@@ -711,6 +711,7 @@ class MasterNet2(nn.Module):
 
             history[mask] = frame_bilinear[mask]
 
+        #history[:,3:4,:,:] *= 0
 
         small_input = torch.cat((frame, history), dim=1)
         small_input = self.down(small_input)

@@ -130,6 +130,21 @@ def ssim(img1, img2, window_size = 11, size_average = True):
     
     return _ssim(img1, img2, window, window_size, channel, size_average)
 
+class TPSNR(torch.nn.Module):
+    def __init__(self):
+        super(TPSNR, self).__init__()
+
+    def forward(self, img1, img2, target1, target2):
+        mse = F.mse_loss(img1 - img2, target1 - target2)
+        tpsnr = 20*torch.log10(1.0 / torch.sqrt(mse))
+        return tpsnr
+
+    def name(self):
+        return "TPSNR"
+
+    def unit(self):
+        return "dB"
+
 class FBLoss(torch.nn.Module):
     def __init__(self):
         super(FBLoss, self).__init__()
@@ -172,7 +187,7 @@ class MasterLoss2(torch.nn.Module):
             weight += 1.0
             torch.cuda.empty_cache()
         #print(dloss.item(), loss.item())
-        return (loss / weight) + 0.0*(dloss / (weight - 1.0))
+        return (loss / weight)# + 0.0*(dloss / (weight - 1.0))
 
 class MasterLoss3(torch.nn.Module):
     def __init__(self, target_indices):

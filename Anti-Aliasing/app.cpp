@@ -15,7 +15,7 @@ namespace
 	const static float far_plane = 100.0f;
 
 	// Upsampling
-	static const int upsample_numerator = 4;
+	static const int upsample_numerator = 2;
 	static const int upsample_denominator = 1;
 	static const bool use_upsample = upsample_numerator != 1 || upsample_denominator != 1;
 }

@@ -11,18 +11,19 @@ import os
 if(__name__ == '__main__'):
     torch.backends.cudnn.benchmark = True
     #dataset.ConvertPNGDatasetToBMP(None, 2, 100, 60)
+    #dataset.ConvertPNGDatasetToH5(64, [2, 4], 100, 60)
     torch.manual_seed(17) # Split the dataset up the same way every time
     videos = torch.randperm(100)
     torch.seed()
     sequence_length = 30 # Number inputs used in the model
-    target_indices = [0, 1, 2]#, 15, 31] # The targets the model will calculate loss against, [0] means the last image, [0, 1] the two last etc.
+    target_count = 5
     upsample_factor = 4
     width, height = 1920, 1080
     batch_size = 4
-    data_train = dataset.SSDataset(64, upsample_factor, videos[:80], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
-    data_val1 = dataset.SSDataset(64, upsample_factor, videos[80:90], sequence_length, target_indices, transform=dataset.RandomCrop(256, width, height, upsample_factor))
-    data_val2 = dataset.SSDataset(64, upsample_factor, videos[80:90], 1, [0], transform=None)
-    data_test = dataset.SSDataset(64, upsample_factor, videos[90:], 1, [0], transform=None)
+    data_train = dataset.SSDataset(64, upsample_factor, videos[:80], sequence_length, target_count, transform=dataset.RandomCrop(256, width, height, upsample_factor))
+    data_val1 = dataset.SSDataset(64, upsample_factor, videos[80:90], sequence_length, target_count, transform=dataset.RandomCrop(256, width, height, upsample_factor))
+    data_val2 = dataset.SSDataset(64, upsample_factor, videos[80:90], 1, 1, transform=None)
+    data_test = dataset.SSDataset(64, upsample_factor, videos[90:], 1, 1, transform=None)
     loader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, num_workers=4, collate_fn=dataset.SSDatasetCollate)
     loader_val1 = torch.utils.data.DataLoader(data_val1, batch_size=batch_size, shuffle=False, num_workers=4, collate_fn=dataset.SSDatasetCollate)
     loader_val2 = torch.utils.data.DataLoader(data_val2, batch_size=1, shuffle=False, num_workers=0, collate_fn=dataset.SSDatasetCollate)
@@ -44,8 +45,8 @@ if(__name__ == '__main__'):
     model = models.MasterNet2(upsample_factor)
     #model = models.TraditionalModel(upsample_factor, 'bilinear', True)
     #loss_function = metrics.FBLoss()
-    #loss_function = metrics.MasterLoss2(target_indices)
-    loss_function = metrics.MasterLoss3(target_indices)
+    #loss_function = metrics.MasterLoss2(target_count)
+    loss_function = metrics.MasterLoss2(target_count)
     
     # Create optimizer
     params = [p for p in model.parameters() if p.requires_grad]

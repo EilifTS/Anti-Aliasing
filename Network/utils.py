@@ -57,16 +57,17 @@ def TrainEpoch(model, dataloader, optimizer, loss_function):
         res = model.forward(item)
         target = item.target_images
         loss = loss_function(target, res)
-
+        
         # Backward
         optimizer.zero_grad()
-        loss.backward()
-
+        for j in range(len(loss)-1):
+            loss[j].backward(retain_graph=True)
+        loss[-1].backward(retain_graph=False)
         #for name, param in model.named_parameters():
         #    print(name, param.grad.norm())
 
         optimizer.step()
-        current_loss = loss.item()
+        current_loss = torch.mean(loss).item()
         losses[i] = current_loss
 
         if(math.isnan(current_loss)):
@@ -118,7 +119,7 @@ def ValidateModel(model, dataloader1, dataloader2, loss_function):
             # Forward
             res = model.forward(item)
             target = item.target_images
-            loss = loss_function(target, res)
+            loss = torch.mean(loss_function(target, res))
             current_loss = loss.item()
             losses[i] = current_loss
 
@@ -135,7 +136,7 @@ def ValidateModel(model, dataloader1, dataloader2, loss_function):
                 history = None
             item.ToCuda()
             # Forward
-            res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
+            res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0], item.motion_vectors[0], item.jitters[0], history)
             psnrs[i] = psnr(item.target_images[0], res).item()
             ssims[i] = ssim(item.target_images[0], res).item()
 
@@ -304,7 +305,7 @@ def subTestMasterModel(model, dataloader):
             starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
             #with torch.cuda.amp.autocast():
             starter.record()
-            res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
+            res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0], item.motion_vectors[0], item.jitters[0], history)
             ender.record()
 
             #Get timing info
@@ -408,8 +409,8 @@ def VisualizeMasterModel(model, dataloader):
             if(i % 60 == 0): # Clear history at the start of each video
                 history = None
             item.ToCuda()
-            res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
-            res = history[:,0:3,:,:]
+            res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0], item.motion_vectors[0], item.jitters[0], history)
+            res = res
             res = res.squeeze().cpu().detach()
             res = dataset.ImageTorchToNumpy(res)
             window_name = "Image"
@@ -507,7 +508,7 @@ def SaveTestImage(model, loader, image_nr, model_name, epoch):
         for i in range(image_nr):
             item = next(dli)
             item.ToCuda()
-            res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0].unsqueeze(1), item.motion_vectors[0], item.jitters[0], history)
+            res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0], item.motion_vectors[0], item.jitters[0], history)
         res = res.squeeze().cpu().detach()
         res = dataset.ImageTorchToNumpy(res)
         cv2.imwrite(model_name + "/temp_img" + str(epoch) + ".png", res)

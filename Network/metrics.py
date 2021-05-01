@@ -1,4 +1,5 @@
-
+import dataset
+import cv2
 import torch
 import torchvision
 import torch.nn.functional as F
@@ -167,44 +168,27 @@ class MasterLoss(torch.nn.Module):
         return loss / len(img1)
 
 class MasterLoss2(torch.nn.Module):
-    def __init__(self, target_indices):
+    def __init__(self, target_count):
         super(MasterLoss2, self).__init__()
-        self.target_indices = target_indices
-        self.ssim = SSIM()
+        self.target_count = target_count
 
     def forward(self, img1, img2):
-        loss = torch.tensor([0.0], device="cuda")
-        dloss = torch.tensor([0.0], device="cuda")
-        weight = torch.tensor([0.0], device="cuda")
+        loss = torch.zeros(len(img1), device="cuda")
         for i in range(len(img1)):
-            if(i != 0):
-                dt1 = img1[i-1].cuda() - img1[i].cuda()
-                dt2 = img2[i-1].cuda() - img2[i].cuda()
-                dloss += F.l1_loss(dt1, dt2)
-            #loss += F.mse_loss(img1[i].cuda(), img2[i].cuda())
-            loss += F.l1_loss(img1[i].cuda(), img2[i].cuda())
-            #loss += 1.0 - self.ssim(img1[i].cuda(), img2[i].cuda())
-            weight += 1.0
-            torch.cuda.empty_cache()
-        #print(dloss.item(), loss.item())
-        return (loss / weight)# + 0.0*(dloss / (weight - 1.0))
+            loss[i] = F.l1_loss(img1[i].cuda(), img2[i].cuda())
+        return loss
 
 class MasterLoss3(torch.nn.Module):
-    def __init__(self, target_indices):
+    def __init__(self, target_count):
         super(MasterLoss3, self).__init__()
-        self.target_indices = target_indices
+        self.target_count = target_count
         self.ssim = SSIM()
 
     def forward(self, img1, img2):
-        loss = torch.tensor([0.0], device="cuda")
-        dloss = torch.tensor([0.0], device="cuda")
-        weight = torch.tensor([0.0], device="cuda")
-        for i in range(len(img1)):
-            if(i != 0):
-                dt1 = img1[i-1].cuda() - img1[i].cuda()
-                dt2 = img2[i-1].cuda() - img2[i].cuda()
-                dloss += F.mse_loss(dt1, dt2)
-            loss += F.mse_loss(img1[i].cuda(), img2[i].cuda())
-            weight += 1.0
-            torch.cuda.empty_cache()
-        return (loss / weight) + (dloss / (weight - 1.0))
+        loss = torch.zeros(len(img1), device="cuda")
+        for i in range(1, len(img1)):
+            dt1 = img1[i-1].cuda() - img1[i].cuda()
+            dt2 = img2[i-1].cuda() - img2[i].cuda()
+            loss[i-1] = F.mse_loss(dt1, dt2)
+            loss[i-1] += F.mse_loss(img1[i].cuda(), img2[i].cuda())
+        return loss

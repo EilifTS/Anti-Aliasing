@@ -386,7 +386,7 @@ class FBNet(nn.Module):
         num_frames = 5
         x.ToCuda()
         frames = [x.input_images[i] for i in range(num_frames)]
-        depths = [DepthToLinear(x.depth_buffers[i].unsqueeze(1)) for i in range(num_frames)]
+        depths = [DepthToLinear(x.depth_buffers[i]) for i in range(num_frames)]
         frames = [torch.cat(x, dim=1) for x in zip(frames, depths)]
         del depths
 
@@ -712,7 +712,6 @@ class MasterNet2(nn.Module):
             history[mask] = frame_bilinear[mask]
 
         #history[:,3:4,:,:] *= 0
-
         small_input = torch.cat((frame, history), dim=1)
         small_input = self.down(small_input)
         small_input = small_input + self.cnn1(small_input)
@@ -737,23 +736,22 @@ class MasterNet2(nn.Module):
         history = None
         out = []
 
-        for i in range(x.seq_length - 1, -1, -1):
+        for i in range(x.seq_length):
             reconstructed, history = self.sub_forward(
                 x.input_images[i].cuda(), 
-                x.depth_buffers[i].unsqueeze(1).cuda(), 
+                x.depth_buffers[i].cuda(), 
                 x.motion_vectors[i].cuda(), 
                 x.jitters[i].cuda(), 
                 history)
-            if(i in x.target_indices):
+            if(i >= x.seq_length - x.target_count):
                 out.append(reconstructed[:,:,:,:])
-            
+
             # Memory optimization
             x.input_images[i] = None 
             x.depth_buffers[i] = None 
             x.motion_vectors[i] = None 
             x.jitters[i] = None
-            torch.cuda.empty_cache()
-        out.reverse()
+            torch.cuda.empty_cache()  
         return out
 
     
@@ -777,7 +775,7 @@ class TraditionalModel(nn.Module):
         out = []
         reconstructed, history = self.sub_forward(
             x.input_images[0], 
-            x.depth_buffers[0].unsqueeze(1), 
+            x.depth_buffers[0], 
             x.motion_vectors[0], 
             x.jitters[0], 
             history)

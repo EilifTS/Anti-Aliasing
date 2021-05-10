@@ -153,7 +153,9 @@ class FBLoss(torch.nn.Module):
         self.vgg = VGGPerceptualLoss()
 
     def forward(self, img1, img2):
-        return 1.0 - self.ssim(img1[0], img2) + 0.1 * self.vgg(img1[0], img2)
+        loss = torch.zeros(1, device="cuda")
+        loss[0] = 1.0 - self.ssim(img1[0], img2) + 0.1 * self.vgg(img1[0], img2)
+        return loss
 
 class MasterLoss(torch.nn.Module):
     def __init__(self):
@@ -178,17 +180,20 @@ class MasterLoss2(torch.nn.Module):
             loss[i] = F.l1_loss(img1[i].cuda(), img2[i].cuda())
         return loss
 
-class MasterLoss3(torch.nn.Module):
-    def __init__(self, target_count):
+class SpatioTemporalLoss(torch.nn.Module):
+    def __init__(self, theta):
         super(MasterLoss3, self).__init__()
-        self.target_count = target_count
-        self.ssim = SSIM()
+        self.theta = theta
 
     def forward(self, img1, img2):
-        loss = torch.zeros(len(img1), device="cuda")
+        loss = torch.zeros(len(img1) - 1, device="cuda")
         for i in range(1, len(img1)):
-            dt1 = img1[i-1].cuda() - img1[i].cuda()
-            dt2 = img2[i-1].cuda() - img2[i].cuda()
-            loss[i-1] = F.mse_loss(dt1, dt2)
-            loss[i-1] += F.mse_loss(img1[i].cuda(), img2[i].cuda())
+            p1 = img1[i].cuda()
+            p0 = img1[i-1].cuda()
+            t1 = img2[i].cuda()
+            t0 = img2[i-1].cuda()
+            d1 = p1 - t1
+            d0 = p0 - t0
+            l = (torch.abs(d1-d0) - torch.abs(d1) - torch.abs(d0)) * self.theta + torch.abs(d1) + torch.abs(d0)
+            loss[i-1] = torch.mean(l)
         return loss

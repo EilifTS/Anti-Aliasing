@@ -57,6 +57,7 @@ def TrainEpoch(model, dataloader, optimizer, loss_function):
         res = model.forward(item)
         target = item.target_images
         loss = loss_function(target, res)
+
         
         # Backward
         optimizer.zero_grad()
@@ -158,7 +159,7 @@ def GetZeroItem(num_frames, factor):
     item = dataset.SSDatasetItem(-1, -1, -1, -1, -1, -1)
     item.input_images = [torch.zeros(size=(1,3,H,W)) for i in range(num_frames)]
     item.motion_vectors = [torch.zeros(size=(1,H,W,2)) for i in range(num_frames)]
-    item.depth_buffers = [torch.zeros(size=(1,H,W)) for i in range(num_frames)]
+    item.depth_buffers = [torch.zeros(size=(1, 1,H,W)) for i in range(num_frames)]
     item.jitters = [torch.zeros(size=(1,2)) for i in range(num_frames)]
     return item
 
@@ -195,16 +196,16 @@ def ValidateFBModel(model, dataloader1, dataloader2, loss_function):
         item = None
         for i, x in enumerate(dataloader_iter2):
             if(i % 60 == 0): # Clear history at the start of each video
-                item = GetZeroItem(5, 4)
+                item = GetZeroItem(5, model.factor)
             # Forward
-            item.input_images.pop()
-            item.motion_vectors.pop()
-            item.depth_buffers.pop()
-            item.jitters.pop()
-            item.input_images.insert(0,x.input_images[0])
-            item.motion_vectors.insert(0,x.motion_vectors[0])
-            item.depth_buffers.insert(0,x.depth_buffers[0])
-            item.jitters.insert(0,x.jitters[0])
+            item.input_images = item.input_images[1:]
+            item.motion_vectors = item.motion_vectors[1:]
+            item.depth_buffers = item.depth_buffers[1:]
+            item.jitters = item.jitters[1:]
+            item.input_images.append(x.input_images[0])
+            item.motion_vectors.append(x.motion_vectors[0])
+            item.depth_buffers.append(x.depth_buffers[0])
+            item.jitters.append(x.jitters[0])
             res = model.forward(item)
 
             cuda_target = x.target_images[0].cuda()
@@ -239,14 +240,15 @@ def TestFBModel(model, dataloader):
         ssim_list = np.zeros(len(dli))
         for i, x in enumerate(dli):
             if(i % 60 == 0): # Clear history at the start of each video
-                item = GetZeroItem(5, 4)
-            item.input_images.pop()
-            item.motion_vectors.pop()
-            item.depth_buffers.pop()
-            item.input_images.insert(0,x.input_images[0])
-            item.motion_vectors.insert(0,x.motion_vectors[0])
-            item.depth_buffers.insert(0,x.depth_buffers[0])
-            item.jitters.insert(0,x.jitters[0])
+                item = GetZeroItem(5, model.factor)
+            item.input_images = item.input_images[1:]
+            item.motion_vectors = item.motion_vectors[1:]
+            item.depth_buffers = item.depth_buffers[1:]
+            item.jitters = item.jitters[1:]
+            item.input_images.append(x.input_images[0])
+            item.motion_vectors.append(x.motion_vectors[0])
+            item.depth_buffers.append(x.depth_buffers[0])
+            item.jitters.append(x.jitters[0])
             res = model.forward(item)
             
             cuda_target = x.target_images[0].cuda()
@@ -516,18 +518,18 @@ def SaveTestImage(model, loader, image_nr, model_name, epoch):
 def SaveTestImageFB(model, loader, image_nr, model_name, epoch):
     with torch.no_grad(): 
         dli = iter(loader)
-        item = GetZeroItem(5,4)
+        item = GetZeroItem(5,model.factor)
         res = None
         for i in range(image_nr):
             x = next(dli)
-            item.input_images.pop()
-            item.motion_vectors.pop()
-            item.depth_buffers.pop()
-            item.jitters.pop()
-            item.input_images.insert(0,x.input_images[0])
-            item.motion_vectors.insert(0,x.motion_vectors[0])
-            item.depth_buffers.insert(0,x.depth_buffers[0])
-            item.jitters.insert(0,x.jitters[0])
+            item.input_images = item.input_images[1:]
+            item.motion_vectors = item.motion_vectors[1:]
+            item.depth_buffers = item.depth_buffers[1:]
+            item.jitters = item.jitters[1:]
+            item.input_images.append(x.input_images[0])
+            item.motion_vectors.append(x.motion_vectors[0])
+            item.depth_buffers.append(x.depth_buffers[0])
+            item.jitters.append(x.jitters[0])
             if(i == image_nr - 1):
                 res = model.forward(item)
         res = res.squeeze().cpu().detach()
@@ -560,12 +562,24 @@ def SaveModelWeights(model):
 
 def TestMultiple(dataloader):
     file_list = []
-    #file_list.append(("JAU2x2", "JAU 2x2"))
-    file_list.append(("JAU4x4", "JAU 4x4"))
-    #file_list.append(("MasterNet2x2", "Our 2x2"))
-    file_list.append(("MasterNet4x4", "Our 4x4"))
-    #file_list.append(("XNet2x2", "Xiao et. al. 2x2"))
-    file_list.append(("XNet4x4", "Xiao et. al. 4x4"))
+    
+    # 4x4
+    file_list.append(("JAU4x4", "JAU"))
+    file_list.append(("TUS1004x4", "TUS"))
+    file_list.append(("XNet4x4", "Xiao et. al."))
+    file_list.append(("MasterNet4x4", "DLTUS(4, 1)"))
+
+    # 2x2
+    #file_list.append(("JAU2x2", "JAU"))
+    #file_list.append(("TUS502x2", "TUS"))
+    #file_list.append(("XNet2x2", "Xiao et. al."))
+    #file_list.append(("MasterNet2x2", "DLTUS(2, 1)"))
+
+    # Biased 2x2
+    #file_list.append(("JAU2x2Biased", "JAU"))
+    #file_list.append(("TUS502x2Biased", "TUS"))
+    #file_list.append(("XNet2x2Biased", "Xiao et. al."))
+    #file_list.append(("MasterNet2x2Biased", "DLTUS(2, 2)"))
 
     plt.figure()
     for file, name in file_list:
@@ -575,7 +589,9 @@ def TestMultiple(dataloader):
         plt.plot(range(1, len(psnr_list) + 1), psnr_list, label=name)
         print(file, "average PSNR:", np.average(psnr_list))
 
-    plt.title("PSNR on Testing Dataset")
+    plt.grid(axis="y")
+    #plt.title("PSNR on Dataset 1 with 2x2 Upsampling")
+    plt.title("PSNR on Dataset 1 with 4x4 Upsampling")
     plt.legend()
 
     plt.figure()
@@ -586,6 +602,8 @@ def TestMultiple(dataloader):
         plt.plot(range(1, len(ssim_list) + 1), ssim_list, label=name)
         print(file, "average SSIM:", np.average(ssim_list))
 
-    plt.title("SSIM on Testing Dataset")
+    plt.grid(axis="y")
+    #plt.title("SSIM on Dataset 1 with 2x2 Upsampling")
+    plt.title("SSIM on Dataset 1 with 4x4 Upsampling")
     plt.legend()
     plt.show()

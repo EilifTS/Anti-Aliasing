@@ -220,25 +220,65 @@ class TUS(nn.Module):
         super(TUS, self).__init__()
         self.factor = factor
         self.alpha = alpha
-        self.history = None
         self.zero_up = ZeroUpsampling(self.factor, 3)
 
-    def forward(self, x):
-        out = self.zero_up.forward_with_jitter(x.input_images[0], x.jitters[0])
+    def sub_forward(self, frame, depth, mv, jitter, history):
+        mini_batch, channels, height, width = frame.shape
+        z_up = self.zero_up(frame)
+        z_up = JitterAlign(z_up, jitter, self.factor)
+        frame_bilinear = JitterAlignedInterpolation(frame, jitter, self.factor, mode='bilinear')
         
-        if(self.history != None):
-            upsampled_mv = torch.movedim(x.motion_vectors[0], 3, 1)
-            upsampled_mv = F.interpolate(upsampled_mv, scale_factor=self.factor, mode='bilinear', align_corners=False)
-            upsampled_mv = torch.movedim(upsampled_mv, 1, 3)
+        if(history == None):
+            history = frame_bilinear
+        else:
+            mv = torch.movedim(mv, 3, 1)
+            mv = F.interpolate(mv, scale_factor=self.factor, mode='bilinear', align_corners=False)
+            mv = torch.movedim(mv, 1, 3)
 
-            reprojected_history = F.grid_sample(self.history, upsampled_mv, mode='bilinear', align_corners=False)
-            out = self.alpha * out + (1-self.alpha) * reprojected_history
+            history = torch.clamp(F.grid_sample(history, mv, mode='bicubic', align_corners=False), 0, 1)
 
-        self.history = out
+            ## Special case for padding
+            mask = torch.logical_or(torch.greater(mv, 1.0), torch.less(mv, -1.0))
+            mask = torch.logical_or(mask[:,:,:,0], mask[:,:,:,1])
+            mask = mask.unsqueeze(1)
+            mask = mask.expand(1, 3, height*self.factor, width*self.factor)
+
+            history[mask] = frame_bilinear[mask]
+            
+        #_, depth_fronts = F.max_pool2d(1.1-depth, 3, stride=1, padding=1, return_indices=True)
+        #f_depth_fronts = torch.flatten(depth_fronts, 2)
+        #f_mv = torch.flatten(mv, 2)
+        #f_mv1 = torch.gather(f_mv[:,0:1,:], 2, f_depth_fronts)
+        #f_mv2 = torch.gather(f_mv[:,1:2,:], 2, f_depth_fronts)
+        #mv_dil = torch.cat((f_mv1, f_mv2), dim=1).view((mini_batch, 2, height, width))
+
+        # History clamp
+        max_color = F.max_pool2d(frame, 3, stride=1, padding=1)
+        min_color = -F.max_pool2d(-frame, 3, stride=1, padding=1)
+        max_color_hr = F.interpolate(max_color, scale_factor=self.factor, mode='nearest')
+        min_color_hr = F.interpolate(min_color, scale_factor=self.factor, mode='nearest')
+
+        history, _ = torch.min(torch.stack((max_color_hr, history)), dim=0)
+        history, _ = torch.max(torch.stack((min_color_hr, history)), dim=0)
+
+        beta = torch.ones(size=(1, 3, height, width), device='cuda')
+        beta = self.zero_up(beta)
+        beta = JitterAlign(beta, jitter, self.factor)
+        beta = beta * self.alpha
+        history = beta * z_up + (1-beta) * history
+        return history, history
+
+    def forward(self, x):
+        history = None
+        out = []
+        reconstructed, history = self.sub_forward(
+            x.input_images[0], 
+            x.depth_buffers[0], 
+            x.motion_vectors[0], 
+            x.jitters[0], 
+            history)
+        out.append(reconstructed[:,:,:,:])
         return out
-
-    def reset_history(self):
-        self.history = None
 
     def name(self):
         name = "TAA_" + str(self.alpha)
@@ -390,12 +430,13 @@ class FBNet(nn.Module):
         frames = [torch.cat(x, dim=1) for x in zip(frames, depths)]
         del depths
 
-        frames[0] = self.main_feature_extractor(frames[0])
-        for i in range(1, num_frames):
+        frames[-1] = self.main_feature_extractor(frames[-1])
+        for i in range(0, num_frames - 1):
             frames[i] = self.other_feature_extractor(frames[i])
         frames = [JitterAlign(frames[i], x.jitters[i], self.factor) for i in range(num_frames)]
 
-        mvs = [x.motion_vectors[i] for i in range(num_frames - 1)]
+
+        mvs = [x.motion_vectors[i] for i in range(1, num_frames)]
 
         for i in range(len(mvs)):
             mvs[i] = torch.movedim(mvs[i], 3, 1)
@@ -403,11 +444,11 @@ class FBNet(nn.Module):
             mvs[i] = torch.movedim(mvs[i], 1, 3)
 
 
-        for i in range(1, num_frames):
-            for j in range(i - 1, -1, -1):
+        for i in range(0, num_frames - 1):
+            for j in range(i, num_frames-1):
                 frames[i] = F.grid_sample(frames[i], mvs[j], mode='bilinear', align_corners=False)
         del mvs
-
+        
         feature_weight_input = torch.cat((
             frames[0][:,:4,:,:],
             frames[1][:,:4,:,:], 
@@ -711,7 +752,7 @@ class MasterNet2(nn.Module):
 
             history[mask] = frame_bilinear[mask]
 
-        #history[:,3:4,:,:] *= 0
+        #history[:,3:4,:,:] *= 0 # Deactivate accumulation buffer
         small_input = torch.cat((frame, history), dim=1)
         small_input = self.down(small_input)
         small_input = small_input + self.cnn1(small_input)
@@ -754,7 +795,6 @@ class MasterNet2(nn.Module):
             torch.cuda.empty_cache()  
         return out
 
-    
 class TraditionalModel(nn.Module):
     def __init__(self, factor, mode, jitter_aligned=False):
         super(TraditionalModel, self).__init__()

@@ -33,7 +33,7 @@ float4 PS(PSInput input) : SV_TARGET
 	float2 hr_jitter_pos = input.position.xy + (float2(0.5, 0.5) - jitter_offset) * UPSAMPLE_FACTOR;
 	float2 hr_jitter_uv = hr_jitter_pos * rec_window_size;
 	float4 jau_rgbd = float4(0.0, 0.0, 0.0, 0.0);
-	jau_rgbd.rgb = pow(input_texture.Sample(linear_clamp, hr_jitter_uv), 1.0 / 2.2);
+	jau_rgbd.rgb = input_texture.Sample(linear_clamp, hr_jitter_uv);
 	jau_rgbd.a = 1.0;// depth_buffer.Sample(linear_clamp, hr_jitter_uv);
 
 	// Load history

@@ -8,17 +8,11 @@ import PIL
 import h5py
 import torch.autograd.profiler as profiler
 
-ss_path_png =               '../DatasetGenerator/data/spp{0}/video{1}/spp{0}_v{1}_f{2}.png'
-image_path_png =            '../DatasetGenerator/data/us{0}/images/video{1}/image_us{0}_v{1}_f{2}.png'
-motion_vector_path_png =    '../DatasetGenerator/data/us{0}/motion_vectors/video{1}/motion_vectors_us{0}_v{1}_f{2}.png'
-depth_path_png =            '../DatasetGenerator/data/us{0}/depth/video{1}/depth_us{0}_v{1}_f{2}.png'
-jitter_path_png =           '../DatasetGenerator/data/us{0}/jitter/video{1}/jitter_us{0}_v{1}_f{2}.txt'
-
-ss_path =               'data/spp{0}/video{1}/spp{0}_v{1}_f{2}.bmp'
-image_path =            'data/us{0}/images/video{1}/image_us{0}_v{1}_f{2}.bmp'
-motion_vector_path =    'data/us{0}/motion_vectors/video{1}/motion_vectors_us{0}_v{1}_f{2}.bmp'
-depth_path =            'data/us{0}/depth/video{1}/depth_us{0}_v{1}_f{2}.bmp'
-jitter_path =           'data/us{0}/jitter/video{1}/jitter_us{0}_v{1}_f{2}.txt'
+ss_path =               '../DatasetGenerator/data/spp{0}/video{1}/spp{0}_v{1}_f{2}.png'
+image_path =            '../DatasetGenerator/data/us{0}/images/video{1}/image_us{0}_v{1}_f{2}.png'
+motion_vector_path =    '../DatasetGenerator/data/us{0}/motion_vectors/video{1}/motion_vectors_us{0}_v{1}_f{2}.png'
+depth_path =            '../DatasetGenerator/data/us{0}/depth/video{1}/depth_us{0}_v{1}_f{2}.png'
+jitter_path =           '../DatasetGenerator/data/us{0}/jitter/video{1}/jitter_us{0}_v{1}_f{2}.txt'
 
 def LoadTargetImage(ss_factor, video_index, frame_index):
     return cv2.imread(ss_path.format(ss_factor, video_index, frame_index))

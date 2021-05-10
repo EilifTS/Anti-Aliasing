@@ -26,10 +26,12 @@ namespace
 	static const float near_plane = 0.1f;
 	static const float far_plane = 100.0f;
 
-	static const bool disable_super_sampling = true;
+	static const bool disable_super_sampling = false;
 	static const int super_sample_options[] = { 64 };
 	static const int upsample_factor_options[] = { 2 };
-	static const int jitter_count = 30;
+	static const int jitter_count = 16;
+
+	static const float mipmap_bias = -0.5f * std::log2(4);
 
 }
 
@@ -93,7 +95,7 @@ int main()
 	{ // SSAA images
 
 		// Create resolution dependent resources
-		DeferredRenderer renderer(device, context, output_size, far_plane);
+		DeferredRenderer renderer(device, context, output_size, far_plane, mipmap_bias);
 		egx::FPCamera camera(device, context, (ema::vec2)output_size, near_plane, far_plane, 3.141592f / 3.0f, 0.0f, 0.0f);
 		egx::RenderTarget target1(device, egx::TextureFormat::UNORM8x4, output_size);
 		egx::RenderTarget target2(device, egx::TextureFormat::UNORM8x4, output_size);
@@ -170,7 +172,7 @@ int main()
 	{
 		ema::point2D input_resolution = output_size / upsampling_factor;
 		// Create resolution dependent resources
-		DeferredRenderer renderer(device, context, input_resolution, far_plane, - 0.5f * std::log2(upsampling_factor * upsampling_factor));
+		DeferredRenderer renderer(device, context, input_resolution, far_plane, - 0.5f * std::log2(upsampling_factor * upsampling_factor) + mipmap_bias);
 		renderer.SetSampler(DeferredRenderer::TextureSampler::TAABias);
 		egx::FPCamera camera(device, context, (ema::vec2)input_resolution, near_plane, far_plane, 3.141592f / 3.0f, 0.0f, 0.0f);
 		egx::RenderTarget target1(device, egx::TextureFormat::UNORM8x4, input_resolution);

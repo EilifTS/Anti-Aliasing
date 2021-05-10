@@ -14,8 +14,10 @@ namespace
 	const static float near_plane = 0.1f;
 	const static float far_plane = 100.0f;
 
+	const static float mipmap_bias = 0.0f;// -0.5f * std::log2(4);
+
 	// Upsampling
-	static const int upsample_numerator = 2;
+	static const int upsample_numerator = 4;
 	static const int upsample_denominator = 1;
 	static const bool use_upsample = upsample_numerator != 1 || upsample_denominator != 1;
 }
@@ -27,7 +29,7 @@ App::App(egx::Device& dev, egx::CommandContext& context, eio::InputManager& im)
 	aa_target(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize() * upsample_denominator / upsample_numerator),
 	aa_target_upsampled(dev, egx::TextureFormat::UNORM8x4, im.Window().WindowSize()),
 	renderer(dev, context, im.Window().WindowSize() * upsample_denominator / upsample_numerator, far_plane, 
-		- 0.5f * std::log2(upsample_numerator * upsample_numerator / (upsample_denominator * upsample_denominator))),
+		- 0.5f * std::log2(upsample_numerator * upsample_numerator / (upsample_denominator * upsample_denominator)) + mipmap_bias),
 	fxaa(dev, im.Window().WindowSize() * upsample_denominator / upsample_numerator),
 	taa(dev, im.Window().WindowSize(), 16, (float)upsample_numerator / (float)upsample_denominator),
 	ssaa(dev, im.Window().WindowSize(), 64),

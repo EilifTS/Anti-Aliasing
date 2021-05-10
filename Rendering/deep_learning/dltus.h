@@ -21,24 +21,24 @@ public:
 		egx::Texture2D& new_frame,
 		egx::RenderTarget& target);
 private:
-	void initializeLinearizeDepth(egx::Device& dev);
+	void initializeFormatInput(egx::Device& dev);
 	void initializeRenderInit(egx::Device& dev);
 	void initializeRenderFinalize(egx::Device& dev);
 	void initializeFormatConverter(egx::Device& dev);
 
 
-	void renderLinearizeDepth(egx::Device& dev,
+	void renderFormatInput(egx::Device& dev,
 		egx::CommandContext& context,
-		egx::DepthBuffer& depth_stencil_buffer);
+		egx::Texture2D& input_texture);
 	void renderInitialize(egx::Device& dev,
 		egx::CommandContext& context,
 		egx::Texture2D& motion_vectors,
-		egx::Texture2D& new_frame);
+		egx::DepthBuffer& depth_stencil_buffer);
 	void renderNetwork(egx::Device& dev, egx::CommandContext& context);
 	void renderFinalize(
 		egx::Device& dev,
 		egx::CommandContext& context,
-		egx::Texture2D& new_frame);
+		egx::DepthBuffer& depth_stencil_buffer);
 	void renderFormatConverter(
 		egx::Device& dev,
 		egx::CommandContext& context,
@@ -60,9 +60,9 @@ private:
 	egx::ShaderMacroList macro_list;
 
 	// Linearize depth
-	egx::RootSignature linearize_depth_rs;
-	egx::PipelineState linearize_depth_ps;
-	egx::RenderTarget linear_depth;
+	egx::RootSignature format_input_rs;
+	egx::PipelineState format_input_ps;
+	egx::RenderTarget formated_input;
 
 	// Initialize render
 	egx::RootSignature initialize_rs;

@@ -33,7 +33,7 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
     // Load weights
     auto weight_map = loadWeights("../network/MasterNet4x4/nn_weights.bin");
     if(upsample_factor == 2)
-        weight_map = loadWeights("../network/MasterNet2x2/nn_weights.bin");
+        weight_map = loadWeights("../network/MasterNet2x2/nn_weights_bias4.bin");
 
     // Create layers
     DMLDims input_buffer_size = { 1, 8, window_size.y, window_size.x};

@@ -502,6 +502,31 @@ def AddGradientHooks(model):
                 print(m.__name__, g.norm())
         layer.register_backward_hook(func)
             
+def SaveCroppedImages(img):
+    crops = [(0,0), (100,200)]
+    crop_size = 64
+    for i, (cx, cy) in enumerate(crops):
+        cimg = img[:,:,cy:cy+crop_size,cx:cx+crop_size]
+        cimg = cimg
+        cimg = dataset.ImageTorchToNumpy(cimg.squeeze().cpu().detach())
+        cv2.imwrite("crop_img" + str(i) + ".png", cimg)
+
+        # Red rectangle
+        img[:,0,cy:cy+crop_size,cx] = 1
+        img[:,1,cy:cy+crop_size,cx] = 0
+        img[:,2,cy:cy+crop_size,cx] = 0
+        img[:,0,cy:cy+crop_size,cx+crop_size] = 1
+        img[:,1,cy:cy+crop_size,cx+crop_size] = 0
+        img[:,2,cy:cy+crop_size,cx+crop_size] = 0
+        img[:,0,cy,cx:cx+crop_size] = 1
+        img[:,1,cy,cx:cx+crop_size] = 0
+        img[:,2,cy,cx:cx+crop_size] = 0
+        img[:,0,cy+crop_size,cx:cx+crop_size] = 1
+        img[:,1,cy+crop_size,cx:cx+crop_size] = 0
+        img[:,2,cy+crop_size,cx:cx+crop_size] = 0
+    img = dataset.ImageTorchToNumpy(img.squeeze().cpu().detach())
+    cv2.imwrite("crop_img_outlines.png", img)
+
 def SaveTestImage(model, loader, image_nr, model_name, epoch):
     with torch.no_grad(): 
         dli = iter(loader)

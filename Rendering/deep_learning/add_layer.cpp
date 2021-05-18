@@ -83,7 +83,7 @@ void egx::AddLayer::CreateBindingTable(IDMLDevice* dml_dev, DescriptorHeap& desc
 }
 
 
-void egx::AddLayer::BindResources(ID3D12Resource* A, ID3D12Resource* B)
+void egx::AddLayer::BindResources(ID3D12Resource* A, ID3D12Resource* B, ID3D12Resource* C)
 {
 	if (GetTemporaryResourceSize() != 0)
 	{
@@ -109,7 +109,7 @@ void egx::AddLayer::BindResources(ID3D12Resource* A, ID3D12Resource* B)
 	GetBindingTable()->BindInputs(2, input_binding_desc);
 
 	// Bind output
-	DML_BUFFER_BINDING output_buffer_binding{ A, 0, GetOutputBufferSize() };
+	DML_BUFFER_BINDING output_buffer_binding{ C, 0, GetOutputBufferSize() };
 	DML_BINDING_DESC output_binding_desc{ DML_BINDING_TYPE_BUFFER, &output_buffer_binding };
 	GetBindingTable()->BindOutputs(1, &output_binding_desc);
 }

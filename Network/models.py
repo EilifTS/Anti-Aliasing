@@ -93,6 +93,53 @@ def BiCubicGridSample(texture, grid):
    
     return out[:,:channels,:,:]
 
+def BiCubicGridSample2(texture, grid):
+    N, channels, height, width = texture.shape
+    window_size = torch.tensor([width, height]).cuda()
+    rec_window_size = torch.tensor([1.0 / width, 1.0 / height]).cuda()
+    uv = GridToUV(grid)
+    position = uv * window_size
+    center_position = torch.floor(position - 0.5) + 0.5
+    f = position - center_position
+    f2 = f * f
+    f3 = f2 * f
+
+    w0 = 0.25 * (-3.0 * f3 + 6.0 * f2 - 3.0 * f)
+    w1 = 0.25 * ( 5.0 * f3 - 9.0 * f2           + 4.0)
+    w2 = 0.25 * (-5.0 * f3 + 6.0 * f2 + 3.0 * f)
+    w3 = 0.25 * ( 3.0 * f3 - 3.0 * f2)
+
+    w12 = w1 + w2
+    tc12 = rec_window_size * (center_position + w2 / w12)
+    center_color = catmullSample(texture, tc12)
+    tc0 = rec_window_size * (center_position - 1.0)
+    tc3 = rec_window_size * (center_position + 2.0)
+    sp1 = torch.stack((tc12[:,:,:,0], tc0[:,:,:,1]),dim=3)
+    sp2 = torch.stack((tc0[:,:,:,0], tc12[:,:,:,1]),dim=3)
+    sp3 = torch.stack((tc3[:,:,:,0], tc12[:,:,:,1]),dim=3)
+    sp4 = torch.stack((tc12[:,:,:,0], tc3[:,:,:,1]),dim=3)
+
+    # Reshape for multiplication
+    _, h_grid, w_grid, _ = grid.shape
+    w0 = w0.unsqueeze(1)
+    w12 = w12.unsqueeze(1)
+    w3 = w3.unsqueeze(1)
+    w0 = w0.expand((N, channels + 1, h_grid, w_grid, 2))
+    w12 = w12.expand((N, channels + 1, h_grid, w_grid, 2))
+    w3 = w3.expand((N, channels + 1, h_grid, w_grid, 2))
+
+    c1 = catmullSample(texture, sp1) * (w12[:,:,:,:,0] *  w0[:,:,:,:,1])
+    c2 = catmullSample(texture, sp2) * ( w0[:,:,:,:,0] * w12[:,:,:,:,1])
+    c3 = catmullSample(texture, sp3) * ( w3[:,:,:,:,0] * w12[:,:,:,:,1])
+    c4 = catmullSample(texture, sp4) * (w12[:,:,:,:,0] *  w3[:,:,:,:,1])
+    c5 = center_color * (w12[:,:,:,:,0] * w12[:,:,:,:,1])
+    out = c1 + c2 + c3 + c4 + c5
+    rec = out[:,-1:,:,:]
+    rec = rec.expand((N,channels,h_grid,w_grid))
+    out = out[:,:channels,:,:] / rec
+   
+    return out[:,:channels,:,:]
+
 def catmullSampleHD(texture, uv):
     
     mv = UVToGrid(uv)
@@ -153,6 +200,130 @@ def BiCubicGridSampleHD(texture, grid):
     out = c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8 + c9
    
     return out
+
+def BiCubicGridSampleHD2(texture, grid):
+    N, channels, height, width = texture.shape
+    window_size = torch.tensor([width, height]).cuda()
+    rec_window_size = torch.tensor([1.0 / width, 1.0 / height]).cuda()
+    uv = GridToUV(grid)
+    position = uv * window_size
+    center_position = torch.floor(position - 0.5) + 0.5
+    f = position - center_position
+    f2 = f * f
+    f3 = f2 * f
+
+    w0 = 0.25 * (-3.0 * f3 + 6.0 * f2 - 3.0 * f)
+    w1 = 0.25 * ( 5.0 * f3 - 9.0 * f2           + 4.0)
+    w2 = 0.25 * (-5.0 * f3 + 6.0 * f2 + 3.0 * f)
+    w3 = 0.25 * ( 3.0 * f3 - 3.0 * f2)
+
+    w12 = w1 + w2
+    tc12 = rec_window_size * (center_position + w2 / w12)
+    tc0 = rec_window_size * (center_position - 1.0)
+    tc3 = rec_window_size * (center_position + 2.0)
+
+    # Reshape for multiplication
+    _, h_grid, w_grid, _ = grid.shape
+    w0 = w0.unsqueeze(1)
+    w12 = w12.unsqueeze(1)
+    w3 = w3.unsqueeze(1)
+    w0 = w0.expand((N, channels, h_grid, w_grid, 2))
+    w12 = w12.expand((N, channels, h_grid, w_grid, 2))
+    w3 = w3.expand((N, channels, h_grid, w_grid, 2))
+
+    # More accurate version that uses more samples
+    sp1 = torch.stack((tc0[:,:,:,0], tc0[:,:,:,1]),dim=3)
+    sp2 = torch.stack((tc12[:,:,:,0], tc0[:,:,:,1]),dim=3)
+    sp3 = torch.stack((tc3[:,:,:,0], tc0[:,:,:,1]),dim=3)
+    sp4 = torch.stack((tc0[:,:,:,0], tc12[:,:,:,1]),dim=3)
+    sp5 = torch.stack((tc12[:,:,:,0], tc12[:,:,:,1]),dim=3)
+    sp6 = torch.stack((tc3[:,:,:,0], tc12[:,:,:,1]),dim=3)
+    sp7 = torch.stack((tc0[:,:,:,0], tc3[:,:,:,1]),dim=3)
+    sp8 = torch.stack((tc12[:,:,:,0], tc3[:,:,:,1]),dim=3)
+    sp9 = torch.stack((tc3[:,:,:,0], tc3[:,:,:,1]),dim=3)
+    c1 = catmullSampleHD(texture, sp1) * (w0[:,:,:,:,0] * w0[:,:,:,:,1])
+    c2 = catmullSampleHD(texture, sp2) * (w12[:,:,:,:,0] * w0[:,:,:,:,1])
+    c3 = catmullSampleHD(texture, sp3) * (w3[:,:,:,:,0] * w0[:,:,:,:,1])
+    c4 = catmullSampleHD(texture, sp4) * (w0[:,:,:,:,0] * w12[:,:,:,:,1])
+    c5 = catmullSampleHD(texture, sp5) * (w12[:,:,:,:,0] * w12[:,:,:,:,1])
+    c6 = catmullSampleHD(texture, sp6) * (w3[:,:,:,:,0] * w12[:,:,:,:,1])
+    c7 = catmullSampleHD(texture, sp7) * (w0[:,:,:,:,0] * w3[:,:,:,:,1])
+    c8 = catmullSampleHD(texture, sp8) * (w12[:,:,:,:,0] * w3[:,:,:,:,1])
+    c9 = catmullSampleHD(texture, sp9) * (w3[:,:,:,:,0] * w3[:,:,:,:,1])
+    out = c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8 + c9
+   
+    return out
+
+def sub_BiCubicConv(t, tt, ttt, f_1, f0, f1, f2):
+    r_1 =             1.0 * f0
+    r0 = -0.5 * f_1            + 0.5 * f1
+    r1 =  1.0 * f_1 - 2.5 * f0 + 2.0 * f1 - 0.5 * f2
+    r2 = -0.5 * f_1 + 1.5 * f0 - 1.5 * f1 + 0.5 * f2
+
+    return r_1 + r0 * t + r1 * tt + r2 * ttt
+
+# Not working and slower than other imps
+def BiCubicConv(texture, grid):
+    N, channels, height, width = texture.shape
+    window_size = torch.tensor([width, height]).cuda()
+    rec_window_size = torch.tensor([1.0 / width, 1.0 / height]).cuda()
+    uv = GridToUV(grid)
+    uv = uv.unsqueeze(1)
+    uv = uv.expand(-1,channels,-1,-1,-1)
+    position = uv * window_size
+    center_position = torch.floor(position)
+    f = position - center_position
+    f = torch.flatten(f, 2, -2)
+    ff = f * f
+    fff = ff * f
+
+    pos0 = center_position.long()
+    pos_1 = pos0 - 1
+    pos1 = pos0 + 1
+    pos2 = pos0 + 2
+
+    pos0[:,:,:,:,0] = torch.clamp(pos0[:,:,:,:,0], 0, width)
+    pos0[:,:,:,:,1] = torch.clamp(pos0[:,:,:,:,0], 0, height)
+    pos_1[:,:,:,:,0] = torch.clamp(pos_1[:,:,:,:,0], 0, width)
+    pos_1[:,:,:,:,1] = torch.clamp(pos_1[:,:,:,:,0], 0, height)
+    pos1[:,:,:,:,0] = torch.clamp(pos1[:,:,:,:,0], 0, width)
+    pos1[:,:,:,:,1] = torch.clamp(pos1[:,:,:,:,0], 0, height)
+    pos2[:,:,:,:,0] = torch.clamp(pos2[:,:,:,:,0], 0, width)
+    pos2[:,:,:,:,1] = torch.clamp(pos2[:,:,:,:,0], 0, height)
+
+    pos_1 = torch.flatten(pos_1, 2, -2)
+    pos0 = torch.flatten(pos0, 2, -2)
+    pos1 = torch.flatten(pos1, 2, -2)
+    pos2 = torch.flatten(pos2, 2, -2)
+    texture = torch.flatten(texture, 2)
+
+    g_1_1 = texture.scatter(2, pos_1[:,:,:,0] * height + pos_1[:,:,:,1], texture)
+    g0_1 = texture.scatter(2, pos0[:,:,:,0] * height + pos_1[:,:,:,1], texture)
+    g1_1 = texture.scatter(2, pos1[:,:,:,0] * height + pos_1[:,:,:,1], texture)
+    g2_1 = texture.scatter(2, pos2[:,:,:,0] * height + pos_1[:,:,:,1], texture)
+    b_1 = sub_BiCubicConv(f[:,:,:,0], ff[:,:,:,0], fff[:,:,:,0], g_1_1, g0_1, g1_1, g2_1)
+
+    g_10 = texture.scatter(2, pos_1[:,:,:,0] * height + pos0[:,:,:,1], texture)
+    g00 = texture.scatter(2, pos0[:,:,:,0] * height + pos0[:,:,:,1], texture)
+    g10 = texture.scatter(2, pos1[:,:,:,0] * height + pos0[:,:,:,1], texture)
+    g20 = texture.scatter(2, pos2[:,:,:,0] * height + pos0[:,:,:,1], texture)
+    b0 = sub_BiCubicConv(f[:,:,:,0], ff[:,:,:,0], fff[:,:,:,0], g_10, g00, g10, g20)
+    
+    g_11 = texture.scatter(2, pos_1[:,:,:,0] * height + pos1[:,:,:,1], texture)
+    g01 = texture.scatter(2, pos0[:,:,:,0] * height + pos1[:,:,:,1], texture)
+    g11 = texture.scatter(2, pos1[:,:,:,0] * height + pos1[:,:,:,1], texture)
+    g21 = texture.scatter(2, pos2[:,:,:,0] * height + pos1[:,:,:,1], texture)
+    b1 = sub_BiCubicConv(f[:,:,:,0], ff[:,:,:,0], fff[:,:,:,0], g_11, g01, g11, g21)
+
+    g_12 = texture.scatter(2, pos_1[:,:,:,0] * height + pos2[:,:,:,1], texture)
+    g02 = texture.scatter(2, pos0[:,:,:,0] * height + pos2[:,:,:,1], texture)
+    g12 = texture.scatter(2, pos1[:,:,:,0] * height + pos2[:,:,:,1], texture)
+    g22 = texture.scatter(2, pos2[:,:,:,0] * height + pos2[:,:,:,1], texture)
+    b2 = sub_BiCubicConv(f[:,:,:,0], ff[:,:,:,0], fff[:,:,:,0], g_12, g02, g12, g22)
+
+    res = sub_BiCubicConv(f[:,:,:,1], ff[:,:,:,1], fff[:,:,:,1], b_1, b0, b1, b2)
+
+    return torch.reshape(res, (N, channels, height, width))
 
 class ZeroUpsampling(nn.Module):
     def __init__(self, factor, channels):
@@ -236,6 +407,7 @@ class TUS(nn.Module):
             mv = torch.movedim(mv, 1, 3)
 
             history = torch.clamp(F.grid_sample(history, mv, mode='bicubic', align_corners=False), 0, 1)
+            #history = BiCubicGridSampleHD(history, mv)
 
             ## Special case for padding
             mask = torch.logical_or(torch.greater(mv, 1.0), torch.less(mv, -1.0))
@@ -472,7 +644,7 @@ class FBNet(nn.Module):
             frames[4]), dim=1)
         del frames
 
-        return self.reconstruct(reconstruction_input)
+        return torch.clamp(self.reconstruct(reconstruction_input), 0, 1)
 
     
 def pixel_unshuffle(input, downscale_factor):
@@ -693,7 +865,7 @@ class MasterNet2(nn.Module):
             )
 
         self.up = nn.Sequential(
-            nn.PixelShuffle(4),
+            nn.PixelShuffle(4)
             )
 
 
@@ -725,23 +897,23 @@ class MasterNet2(nn.Module):
             
             
             # MV-diation
-            #_, depth_fronts = F.max_pool2d(1.1-depth, 3, stride=1, padding=1, return_indices=True)
-            #f_depth_fronts = torch.flatten(depth_fronts, 2)
-            #f_mv = torch.flatten(mv, 2)
-            #f_mv1 = torch.gather(f_mv[:,0:1,:], 2, f_depth_fronts)
-            #f_mv2 = torch.gather(f_mv[:,1:2,:], 2, f_depth_fronts)
-            #mv_dil = torch.cat((f_mv1, f_mv2), dim=1).view((mini_batch, 2, height, width))
+            _, depth_fronts = F.max_pool2d(1.1-depth, 3, stride=1, padding=1, return_indices=True)
+            f_depth_fronts = torch.flatten(depth_fronts, 2)
+            f_mv = torch.flatten(mv, 2)
+            f_mv1 = torch.gather(f_mv[:,0:1,:], 2, f_depth_fronts)
+            f_mv2 = torch.gather(f_mv[:,1:2,:], 2, f_depth_fronts)
+            mv_dil = torch.cat((f_mv1, f_mv2), dim=1).view((mini_batch, 2, height, width))
 
-            mv = F.interpolate(mv, scale_factor=self.factor, mode='bilinear', align_corners=False)
-            #mv_dil = F.interpolate(mv_dil, scale_factor=self.factor, mode='bilinear', align_corners=False)
+            #mv = F.interpolate(mv, scale_factor=self.factor, mode='bilinear', align_corners=False)
+            mv = F.interpolate(mv_dil, scale_factor=self.factor, mode='bilinear', align_corners=False)
             
             mv = torch.movedim(mv, 1, 3)
             mv += IdentityGrid(mv.shape)
         
             # History reprojection
-            #history = F.grid_sample(history, mv, mode='bilinear', align_corners=False)
+            #history = F.grid_sample(history, mv, mode='bilinear', align_corners=False, padding_mode='border')
             history = F.grid_sample(history, mv, mode='bicubic', align_corners=False, padding_mode='border')
-            #history = BiCubicGridSample(history, mv)
+            #history = BiCubicGridSampleHD(history, mv)
             
 
             ## Special case for padding
@@ -763,6 +935,7 @@ class MasterNet2(nn.Module):
 
         # History reweighting
         residual = torch.clamp(residual, 0.0, 1.0)
+        #residual = F.sigmoid(residual)
         alpha = residual[:,0:1,:,:]
 
         history = history*(1.0 - alpha) + frame_bilinear * alpha

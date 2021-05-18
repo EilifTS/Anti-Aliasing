@@ -61,14 +61,13 @@ def TrainEpoch(model, dataloader, optimizer, loss_function):
         
         # Backward
         optimizer.zero_grad()
-        for j in range(len(loss)-1):
-            loss[j].backward(retain_graph=True)
-        loss[-1].backward(retain_graph=False)
+        loss = torch.mean(loss)
+        loss.backward()
         #for name, param in model.named_parameters():
         #    print(name, param.grad.norm())
 
         optimizer.step()
-        current_loss = torch.mean(loss).item()
+        current_loss = loss.item()
         losses[i] = current_loss
 
         if(math.isnan(current_loss)):
@@ -360,7 +359,6 @@ def TestMasterModel(model, dataloader):
     plt.plot(range(1, len(time_list) + 1), time_list)
     plt.show()
 
-
 def CheckMasterModelSampleEff(model, dataloader, loss_function):
     max_frames = 32
     model.eval()
@@ -407,7 +405,6 @@ def VisualizeMasterModel(model, dataloader):
         history = None
         i = 0
         for i, item in enumerate(dli):
-
             if(i % 60 == 0): # Clear history at the start of each video
                 history = None
             item.ToCuda()
@@ -494,38 +491,108 @@ def IllustrateJitterPattern(dataloader, num_jitters, factor):
         plt.annotate(str(i), (jitters[i,0] + 0.05, jitters[i,1] + 0.05))
     plt.show()
 
+
+hook_norm = {}
+hook_depth = {}
+hook_max_depth = 30
 def AddGradientHooks(model):
     for name, layer in model.named_children():
         layer.__name__ = name
+        hook_depth[name] = 0
+        for i in range(hook_max_depth):
+            hook_norm[name+str(i)] = 0.0
         def func(m, g1, g2):
             for g in list(g1):
-                print(m.__name__, g.norm())
-        layer.register_backward_hook(func)
+                depth = hook_depth[m.__name__]
+                hook_norm[m.__name__ + str(depth)] += g.norm()
+                hook_depth[m.__name__] = depth + 1
+                if(depth + 1 == hook_max_depth):
+                    hook_depth[m.__name__] = 0
+                #print(depth, m.__name__, g.norm())
+        layer.register_full_backward_hook(func)
+
+def PlotHookedGradients(model):
+    grads = np.zeros(hook_max_depth)
+    total = 0.0
+    for i in range(hook_max_depth):
+        for name, layer in model.named_children():
+            grads[i] += hook_norm[name+str(i+0)]
+        total += grads[i]
+    grads /= total
+    plt.figure()
+    plt.plot(np.arange(hook_max_depth), grads)
+    plt.show()
             
-def SaveCroppedImages(img):
-    crops = [(0,0), (100,200)]
-    crop_size = 64
+def GetCrops(model, loader, name, is_fb=False):
+    image_nrs = [29, 60+59]
+    crops = [[(225,625),(180,925),(355,50)],[(765,365),(325,350),(140,900)]]
+    with torch.no_grad(): 
+        dli = iter(loader)
+        if(is_fb):
+            item = GetZeroItem(5, model.factor)
+            for i in range(120):
+                print("Processing image nr " + str(i))
+                x = next(dli)
+                if(i%60 == 0):
+                    item = GetZeroItem(5, model.factor)
+            
+                item.input_images = item.input_images[1:]
+                item.motion_vectors = item.motion_vectors[1:]
+                item.depth_buffers = item.depth_buffers[1:]
+                item.jitters = item.jitters[1:]
+                item.input_images.append(x.input_images[0])
+                item.motion_vectors.append(x.motion_vectors[0])
+                item.depth_buffers.append(x.depth_buffers[0])
+                item.jitters.append(x.jitters[0])
+                    
+                if(i in image_nrs):
+                    item.ToCuda()
+                    res = model.forward(item)
+                    index = image_nrs.index(i)
+                    SaveCroppedImages(res, crops[index], index, name)
+                    SaveCroppedImages(x.target_images[0], crops[index], index, "target")
+                    SaveCroppedImages(x.input_images[0], crops[index], index, "input", model.factor)
+        else:
+            history = None
+            res = None
+            for i in range(120):
+                print("Processing image nr " + str(i))
+                if(i%60 == 0):
+                    history = None
+                item = next(dli)
+                item.ToCuda()
+                res, history = model.sub_forward(item.input_images[0], item.depth_buffers[0], item.motion_vectors[0], item.jitters[0], history)
+                if(i in image_nrs):
+                    index = image_nrs.index(i)
+                    SaveCroppedImages(res, crops[index], index, name)
+                    SaveCroppedImages(item.target_images[0], crops[index], index, "target")
+                    SaveCroppedImages(item.input_images[0], crops[index], index, "input", model.factor)
+
+def SaveCroppedImages(img, crops, index, name, f=1):
+    crop_size = 100 // f
     for i, (cx, cy) in enumerate(crops):
+        cx = cx // f
+        cy = cy // f
         cimg = img[:,:,cy:cy+crop_size,cx:cx+crop_size]
         cimg = cimg
         cimg = dataset.ImageTorchToNumpy(cimg.squeeze().cpu().detach())
-        cv2.imwrite("crop_img" + str(i) + ".png", cimg)
+        cv2.imwrite(name + "_img" + str(index) + "_crop" + str(i) + ".png", cimg)
 
         # Red rectangle
-        img[:,0,cy:cy+crop_size,cx] = 1
+        img[:,0,cy:cy+crop_size,cx] = 0
         img[:,1,cy:cy+crop_size,cx] = 0
-        img[:,2,cy:cy+crop_size,cx] = 0
-        img[:,0,cy:cy+crop_size,cx+crop_size] = 1
+        img[:,2,cy:cy+crop_size,cx] = 1
+        img[:,0,cy:cy+crop_size,cx+crop_size] = 0
         img[:,1,cy:cy+crop_size,cx+crop_size] = 0
-        img[:,2,cy:cy+crop_size,cx+crop_size] = 0
-        img[:,0,cy,cx:cx+crop_size] = 1
+        img[:,2,cy:cy+crop_size,cx+crop_size] = 1 
+        img[:,0,cy,cx:cx+crop_size] = 0
         img[:,1,cy,cx:cx+crop_size] = 0
-        img[:,2,cy,cx:cx+crop_size] = 0
-        img[:,0,cy+crop_size,cx:cx+crop_size] = 1
+        img[:,2,cy,cx:cx+crop_size] = 1
+        img[:,0,cy+crop_size,cx:cx+crop_size] = 0
         img[:,1,cy+crop_size,cx:cx+crop_size] = 0
-        img[:,2,cy+crop_size,cx:cx+crop_size] = 0
+        img[:,2,cy+crop_size,cx:cx+crop_size] = 1
     img = dataset.ImageTorchToNumpy(img.squeeze().cpu().detach())
-    cv2.imwrite("crop_img_outlines.png", img)
+    cv2.imwrite(name + "_img" + str(index) + "_outlines.png", img)
 
 def SaveTestImage(model, loader, image_nr, model_name, epoch):
     with torch.no_grad(): 
@@ -589,10 +656,10 @@ def TestMultiple(dataloader):
     file_list = []
     
     # 4x4
-    file_list.append(("JAU4x4", "JAU"))
-    file_list.append(("TUS1004x4", "TUS"))
-    file_list.append(("XNet4x4", "Xiao et. al."))
-    file_list.append(("MasterNet4x4", "DLTUS(4, 1)"))
+    #file_list.append(("JAU4x4", "JAU"))
+    #file_list.append(("TUS1004x4", "TUS"))
+    #file_list.append(("XNet4x4", "Xiao et. al."))
+    #file_list.append(("MasterNet4x4", "DLTUS(4, 1)"))
 
     # 2x2
     #file_list.append(("JAU2x2", "JAU"))
@@ -606,6 +673,12 @@ def TestMultiple(dataloader):
     #file_list.append(("XNet2x2Biased", "Xiao et. al."))
     #file_list.append(("MasterNet2x2Biased", "DLTUS(2, 2)"))
 
+    # Accumulation
+    file_list.append(("MasterNet4x4", "DLTUS(4,1) with accumulation buffer"))
+    file_list.append(("MasterNet4x4NA", "DLTUS(4,1) without accumulation buffer"))
+    file_list.append(("MasterNet2x2Biased", "DLTUS(2,2) without accumulation buffer"))
+    file_list.append(("MasterNet2x2BiasNoAccum", "DLTUS(2,2) without accumulation buffer"))
+
     plt.figure()
     for file, name in file_list:
         psnr_list = np.load("Results/" + file + "PSNR.npy")
@@ -615,8 +688,6 @@ def TestMultiple(dataloader):
         print(file, "average PSNR:", np.average(psnr_list))
 
     plt.grid(axis="y")
-    #plt.title("PSNR on Dataset 1 with 2x2 Upsampling")
-    plt.title("PSNR on Dataset 1 with 4x4 Upsampling")
     plt.legend()
 
     plt.figure()
@@ -628,7 +699,5 @@ def TestMultiple(dataloader):
         print(file, "average SSIM:", np.average(ssim_list))
 
     plt.grid(axis="y")
-    #plt.title("SSIM on Dataset 1 with 2x2 Upsampling")
-    plt.title("SSIM on Dataset 1 with 4x4 Upsampling")
     plt.legend()
     plt.show()

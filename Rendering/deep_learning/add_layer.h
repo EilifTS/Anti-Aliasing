@@ -13,7 +13,7 @@ namespace egx
 		AddLayer(Device& dev, IDMLDevice* dml_dev, const DMLDims& input_dims);
 
 		void CreateBindingTable(IDMLDevice* dml_dev, DescriptorHeap& desc_heap, UINT index);
-		void BindResources(ID3D12Resource* A, ID3D12Resource* B);
+		void BindResources(ID3D12Resource* A, ID3D12Resource* B, ID3D12Resource* C);
 
 		const DMLDims& GetInputDims()const { return input_dims; };
 		const DMLDims& GetOutputDims()const { return output_dims; };

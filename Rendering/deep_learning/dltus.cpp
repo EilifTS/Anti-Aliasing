@@ -224,7 +224,7 @@ void DLTUS::renderInitialize(egx::Device& dev,
 	context.SetComputeRootDescriptorTable(4, depth_stencil_buffer);
 	context.SetComputeRootUAVDescriptorTable(5, master_net.GetInputBuffer());
 
-	context.Dispatch(DivUp(window_size.x, 32), DivUp(window_size.y, 16), 1);
+	context.Dispatch(DivUp(window_size.x, 8), DivUp(window_size.y, 8), 1);
 	context.SetUABarrier();
 }
 

@@ -15,11 +15,11 @@ if(__name__ == '__main__'):
     torch.manual_seed(17) # Split the dataset up the same way every time
     videos = torch.randperm(100)
     torch.seed()
-    sequence_length = 5 # Number inputs used in the model
-    target_count = 1
-    upsample_factor = 4
+    sequence_length = 30 # Number inputs used in the model
+    target_count = 5
+    upsample_factor = 2
     width, height = 1920, 1080
-    batch_size = 8
+    batch_size = 4
     data_train = dataset.SSDataset(64, upsample_factor, videos[:80], sequence_length, target_count, transform=dataset.RandomCrop(256, width, height, upsample_factor))
     data_val1 = dataset.SSDataset(64, upsample_factor, videos[80:90], sequence_length, target_count, transform=dataset.RandomCrop(256, width, height, upsample_factor))
     data_val2 = dataset.SSDataset(64, upsample_factor, videos[80:90], 1, 1, transform=None)
@@ -44,14 +44,14 @@ if(__name__ == '__main__'):
     #model = models.MasterNet(upsample_factor, sequence_length)
     model = models.MasterNet2(upsample_factor)
     #model = models.TraditionalModel(upsample_factor, 'bilinear', True)
-    #model = models.TUS(upsample_factor, 1)
-    loss_function = metrics.FBLoss()
-    #loss_function = metrics.MasterLoss2(target_count)
-    #loss_function = metrics.MasterLoss2(target_count)
+    #model = models.TUS(upsample_factor, 0.1)
+    #loss_function = metrics.FBLoss()
+    loss_function = metrics.MasterLoss2(target_count)
+    #loss_function = metrics.SpatioTemporalLoss(0.9)
     
     # Create optimizer
     params = [p for p in model.parameters() if p.requires_grad]
-    #optimizer = torch.optim.Adam(params, lr=1e-4)
+    optimizer = torch.optim.Adam(params, lr=1e-4)
 
     # Load model 
     if(load_model):
@@ -69,10 +69,10 @@ if(__name__ == '__main__'):
         print("Model loaded")
 
     model.to('cuda')
-    #for state in optimizer.state.values():
-    #    for k, v in state.items():
-    #        if torch.is_tensor(v):
-    #            state[k] = v.cuda()
+    for state in optimizer.state.values():
+        for k, v in state.items():
+            if torch.is_tensor(v):
+                state[k] = v.cuda()
     
 
 
@@ -101,18 +101,20 @@ if(__name__ == '__main__'):
     #utils.VisualizeMasterModel(model, loader_test)
     #utils.TestFBModel(model, loader_test)
     #utils.TestMasterModel(model, loader_test)
-    utils.TestMultiple(loader_test)
+    #utils.TestMultiple(loader_test)
     #utils.VisualizeDifference(model, loader_test)
     #utils.PlotLosses(train_losses, val_epochs, val_losses, val_psnrs, val_ssims)
     #utils.IllustrateJitterPattern(loader_test, 16, 2)
+    #utils.GetCrops(model, loader_test, "MasterNet4x4TempLoss", False)
 
     for epoch in range(start_epoch, epochs):
         print('Epoch {}'.format(epoch))
         train_loss = utils.TrainEpoch(model, loader_train, optimizer, loss_function)
+        #utils.PlotHookedGradients(model)
         train_losses.append(train_loss)
         if(epoch % 1 == 0):
-            #val_loss, val_psnr, val_ssim = utils.ValidateModel(model, loader_val1, loader_val2, loss_function)
-            val_loss, val_psnr, val_ssim = utils.ValidateFBModel(model, loader_val1, loader_val2, loss_function)
+            val_loss, val_psnr, val_ssim = utils.ValidateModel(model, loader_val1, loader_val2, loss_function)
+            #val_loss, val_psnr, val_ssim = utils.ValidateFBModel(model, loader_val1, loader_val2, loss_function)
             if(len(val_ssims) == 0 or val_ssim > np.max(val_ssims)):
                 torch.save({
                     'epoch' : epoch,
@@ -139,8 +141,8 @@ if(__name__ == '__main__'):
             }, model_name + "/" + model_name + ".pt")
 
         # Saving test image
-        #utils.SaveTestImage(model, loader_test, 30, model_name, epoch)
-        utils.SaveTestImageFB(model, loader_test, 30, model_name, epoch)
+        utils.SaveTestImage(model, loader_test, 30, model_name, epoch)
+        #utils.SaveTestImageFB(model, loader_test, 30, model_name, epoch)
         print('')
 
         #window_name = "Image"

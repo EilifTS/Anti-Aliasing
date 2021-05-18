@@ -5,9 +5,36 @@
 #include "graphics/internal/d3dx12.h"
 #include "float16_compressor.h"
 
+#define OPTIM 2
+
 namespace
 {
-    
+    std::vector<uint16_t> pixelShuffleWeights(std::vector<uint16_t> weights, UINT output_channels, UINT input_channels, UINT kernel_size, UINT r)
+    {
+        std::vector<uint16_t> out(weights.size());
+        for (UINT o = 0; o < output_channels; o++)
+        {
+            for (UINT i = 0; i < input_channels; i++)
+            {
+                for (UINT y = 0; y < kernel_size; y++)
+                {
+                    for (UINT x = 0; x < kernel_size; x++)
+                    {
+                        UINT out_i = i * r * r + (y % r) * r + (x % r);
+                        UINT out_x = x / r;
+                        UINT out_y = y / r;
+                        out[o * input_channels * kernel_size * kernel_size +
+                            out_i * kernel_size * kernel_size / (r * r) +
+                            out_y * kernel_size / r + out_x] =
+                            weights[o * input_channels * kernel_size * kernel_size +
+                            i * kernel_size * kernel_size +
+                            y * kernel_size + x];
+                    }
+                }
+            }
+        }
+        return out;
+    }
 }
 
 egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point2D& window_size, int upsample_factor)
@@ -36,11 +63,16 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
         weight_map = loadWeights("../network/MasterNet2x2/nn_weights_bias4.bin");
 
     // Create layers
-    DMLDims input_buffer_size = { 1, 8, window_size.y, window_size.x};
     //UINT output_channels = 128;
 
     // Down
+#if OPTIM == 2
+    DMLDims input_buffer_size = { 1, 128, window_size.y / 4, window_size.x / 4 };
+    conv_layers.push_back(ConvLayer(dev, dml_device.Get(), input_buffer_size, 32, 1, false));
+#else
+    DMLDims input_buffer_size = { 1, 8, window_size.y, window_size.x };
     conv_layers.push_back(ConvLayer(dev, dml_device.Get(), input_buffer_size, 32, 4, false, 4));
+#endif
 
     // Res block 1
     conv_layers.push_back(ConvLayer(dev, dml_device.Get(), conv_layers[0].GetOutputDims(), 32, 3, true));
@@ -63,11 +95,17 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
     add_layers.push_back(AddLayer(dev, dml_device.Get(), conv_layers[8].GetOutputDims()));
 
     // Up
+#if OPTIM == 0
     shuffle_layers.push_back(PixelShuffle(dev, dml_device.Get(), add_layers[3].GetOutputDims(), 4));
+#endif
 
     // Upload weights as biases
     // Down
+#if OPTIM == 2
+    conv_layers[0].UploadWeights(dev, context, pixelShuffleWeights(weight_map["down.0.weight"], 32, 8, 4, 4));
+#else
     conv_layers[0].UploadWeights(dev, context, weight_map["down.0.weight"]);
+#endif
     conv_layers[0].UploadBias(dev, context, weight_map["down.0.bias"]);
 
     // Res block 1
@@ -98,17 +136,25 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
     dev.WaitForGPU();
 
     // Create operator initializer
-    ConvLayer::CreateConvInitializer(dev, dml_device.Get(), conv_layers);
-    PixelShuffle::CreatePixelShuffleInitializer(dev, dml_device.Get(), shuffle_layers);
-    AddLayer::CreateAddLayerInitializer(dev, dml_device.Get(), add_layers);
+    if (conv_layers.size() > 0)
+        ConvLayer::CreateConvInitializer(dev, dml_device.Get(), conv_layers);
+    if (shuffle_layers.size() > 0)
+        PixelShuffle::CreatePixelShuffleInitializer(dev, dml_device.Get(), shuffle_layers);
+    if (add_layers.size() > 0)
+        AddLayer::CreateAddLayerInitializer(dev, dml_device.Get(), add_layers);
 
     // Find size of descriptor heap
     ConvLayer::descriptor_start = 0;
     ConvLayer::descriptor_count = ConvLayer::GetDescriptorCount(conv_layers);
     UINT descriptor_count = ConvLayer::descriptor_count * conv_layers.size();
-    PixelShuffle::descriptor_start = descriptor_count;
-    PixelShuffle::descriptor_count = PixelShuffle::GetDescriptorCount(shuffle_layers);
-    descriptor_count = descriptor_count + PixelShuffle::descriptor_count * shuffle_layers.size();
+
+    if (shuffle_layers.size() > 0)
+    {
+        PixelShuffle::descriptor_start = descriptor_count;
+        PixelShuffle::descriptor_count = PixelShuffle::GetDescriptorCount(shuffle_layers);
+        descriptor_count = descriptor_count + PixelShuffle::descriptor_count * shuffle_layers.size();
+    }
+    
     AddLayer::descriptor_start = descriptor_count;
     AddLayer::descriptor_count = AddLayer::GetDescriptorCount(add_layers);
     descriptor_count = descriptor_count + AddLayer::descriptor_count * add_layers.size();
@@ -125,10 +171,12 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
         dml_device->CreateCommandRecorder(IID_PPV_ARGS(&command_recorder)),
         "Failed to create command recorder");
 
-    
-    ConvLayer::InitializeConvLayers(dml_device.Get(), command_recorder.Get(), context.command_list.Get(), *descriptor_heap, conv_layers);
-    PixelShuffle::InitializePixelShuffleLayers(dml_device.Get(), command_recorder.Get(), context.command_list.Get(), *descriptor_heap, shuffle_layers);
-    AddLayer::InitializeAddLayers(dml_device.Get(), command_recorder.Get(), context.command_list.Get(), *descriptor_heap, add_layers);
+    if(conv_layers.size() > 0)
+        ConvLayer::InitializeConvLayers(dml_device.Get(), command_recorder.Get(), context.command_list.Get(), *descriptor_heap, conv_layers);
+    if (shuffle_layers.size() > 0)
+        PixelShuffle::InitializePixelShuffleLayers(dml_device.Get(), command_recorder.Get(), context.command_list.Get(), *descriptor_heap, shuffle_layers);
+    if (add_layers.size() > 0)
+        AddLayer::InitializeAddLayers(dml_device.Get(), command_recorder.Get(), context.command_list.Get(), *descriptor_heap, add_layers);
 
 
     // Set binding table from init to execute
@@ -141,21 +189,26 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
     conv_layers[6].CreateBindingTable(dml_device.Get(), *descriptor_heap, 6);
     conv_layers[7].CreateBindingTable(dml_device.Get(), *descriptor_heap, 7);
     conv_layers[8].CreateBindingTable(dml_device.Get(), *descriptor_heap, 8);
-    shuffle_layers[0].CreateBindingTable(dml_device.Get(), *descriptor_heap, 0);
+    if(shuffle_layers.size() > 0)
+        shuffle_layers[0].CreateBindingTable(dml_device.Get(), *descriptor_heap, 0);
     add_layers[0].CreateBindingTable(dml_device.Get(), *descriptor_heap, 0);
     add_layers[1].CreateBindingTable(dml_device.Get(), *descriptor_heap, 1);
     add_layers[2].CreateBindingTable(dml_device.Get(), *descriptor_heap, 2);
     add_layers[3].CreateBindingTable(dml_device.Get(), *descriptor_heap, 3);
 
     // Create input and output buffer
-    UINT64 max_int1_size = shuffle_layers[0].GetOutputBufferSize();
+    UINT64 max_int1_size = add_layers[0].GetOutputBufferSize();
     UINT64 max_int2_size = conv_layers[0].GetOutputBufferSize();
     UINT64 max_int3_size = add_layers[0].GetOutputBufferSize();
     input_buffer = std::make_unique<UnorderedAccessBuffer>(dev, conv_layers[0].GetInputBufferSize());
     intermediate_buffer1 = std::make_unique<UnorderedAccessBuffer>(dev, max_int1_size);
     intermediate_buffer2 = std::make_unique<UnorderedAccessBuffer>(dev, max_int2_size);
     intermediate_buffer3 = std::make_unique<UnorderedAccessBuffer>(dev, max_int3_size);
+#if OPTIM == 0
     output_buffer = std::make_unique<UnorderedAccessBuffer>(dev, shuffle_layers[0].GetOutputBufferSize());
+#else
+    output_buffer = std::make_unique<UnorderedAccessBuffer>(dev, add_layers[3].GetOutputBufferSize());
+#endif
 
     input_buffer->CreateUnorderedAccessView(dev, true);
     output_buffer->CreateUnorderedAccessView(dev, true);
@@ -169,24 +222,28 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
     // Res block 1
     conv_layers[1].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer1->buffer.Get());
     conv_layers[2].BindResources(intermediate_buffer1->buffer.Get(), intermediate_buffer2->buffer.Get());
-    add_layers[0].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer2->buffer.Get());
+    add_layers[0].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer2->buffer.Get(), intermediate_buffer3->buffer.Get());
 
     // Res block 2
     conv_layers[3].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer1->buffer.Get());
     conv_layers[4].BindResources(intermediate_buffer1->buffer.Get(), intermediate_buffer2->buffer.Get());
-    add_layers[1].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer2->buffer.Get());
+    add_layers[1].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer2->buffer.Get(), intermediate_buffer3->buffer.Get());
 
     // Res block 3
     conv_layers[5].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer1->buffer.Get());
     conv_layers[6].BindResources(intermediate_buffer1->buffer.Get(), intermediate_buffer2->buffer.Get());
-    add_layers[2].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer2->buffer.Get());
+    add_layers[2].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer2->buffer.Get(), intermediate_buffer3->buffer.Get());
 
     // Res block 4
     conv_layers[7].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer1->buffer.Get());
     conv_layers[8].BindResources(intermediate_buffer1->buffer.Get(), intermediate_buffer2->buffer.Get());
-    add_layers[3].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer2->buffer.Get());
 
+#if OPTIM == 0
+    add_layers[3].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer2->buffer.Get(), intermediate_buffer3->buffer.Get());
     shuffle_layers[0].BindResources(intermediate_buffer3->buffer.Get(), output_buffer->buffer.Get());
+#else
+    add_layers[3].BindResources(intermediate_buffer3->buffer.Get(), intermediate_buffer2->buffer.Get(), output_buffer->buffer.Get());
+#endif
 
     dev.QueueList(context);
     dev.WaitForGPU();
@@ -242,8 +299,10 @@ void egx::MasterNet::Execute(egx::Device& dev,
     context.SetUABarrier();
 
     // Up
+#if OPTIM == 0
     command_recorder->RecordDispatch(context.command_list.Get(), shuffle_layers[0].GetCompiledOperator(), shuffle_layers[0].GetBindingTable());
     context.SetUABarrier();
+#endif
 
     //dev.QueueListAndWaitForFinish(context);
 
@@ -282,3 +341,4 @@ std::unordered_map<std::string, std::vector<uint16_t>> egx::MasterNet::loadWeigh
     }
     return output;
 }
+

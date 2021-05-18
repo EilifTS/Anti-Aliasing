@@ -182,7 +182,7 @@ class MasterLoss2(torch.nn.Module):
 
 class SpatioTemporalLoss(torch.nn.Module):
     def __init__(self, theta):
-        super(MasterLoss3, self).__init__()
+        super(SpatioTemporalLoss, self).__init__()
         self.theta = theta
 
     def forward(self, img1, img2):

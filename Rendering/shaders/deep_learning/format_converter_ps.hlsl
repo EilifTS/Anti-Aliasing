@@ -10,6 +10,6 @@ struct PSInput
 
 float4 PS(PSInput input) : SV_TARGET
 {
-	//return float4(tex.Sample(linear_clamp, input.uv).aaa, 1.0); // Converting from 8bit to 16bit
+	//return float4(tex.Sample(linear_clamp, input.uv).aaa, 1.0); // Show accum buffer
 	return float4(pow(tex.Sample(linear_clamp, input.uv).rgb, 2.2), 1.0); // Converting from 8bit to 16bit and getting the correct gamma
 }

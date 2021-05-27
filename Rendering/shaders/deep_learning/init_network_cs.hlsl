@@ -197,7 +197,11 @@ void CS(uint3 block_id : SV_GroupID, uint3 thread_id : SV_GroupThreadID)
 
         float4 history = float4(0.0, 0.0, 0.0, 0.0);
         if (prev_frame_uv.x > 0.0 && prev_frame_uv.x <= 1.0 && prev_frame_uv.y > 0.0 && prev_frame_uv.y <= 1.0) // Check if uv is inside history buffer
+        {
+            //history = history_buffer.SampleLevel(linear_clamp, prev_frame_uv, 0);
             history = catmullRom(prev_frame_uv);
+            //history = catmullRomAppx(prev_frame_uv);
+        }
         else
             history = jau_rgbd;
 

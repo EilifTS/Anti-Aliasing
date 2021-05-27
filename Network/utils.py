@@ -96,6 +96,181 @@ def TrainEpoch(model, dataloader, optimizer, loss_function):
     print('Training finished \t ' + finish_str.format(avg_loss, min_loss, max_loss, time.time()-start_time))
     return avg_loss
 
+def TrainEpochTBPTT(model, dataloader, optimizer, loss_function, video_length, k):
+    torch.seed() # To randomize
+    model.train()
+    dataloader_iter = iter(dataloader)
+    num_iterations = len(dataloader)
+    num_bp = video_length // k
+    losses = np.zeros(num_iterations*num_bp)
+    start_time = time.time()
+    for i, item in enumerate(dataloader_iter):
+        history = None
+
+        for j in range(video_length // k):
+            results = []
+            for n in range(k):
+                index = j * k + n
+                res, history = model.sub_forward(item.input_images[index].cuda(), 
+                                item.depth_buffers[index].cuda(), 
+                                item.motion_vectors[index].cuda(), 
+                                item.jitters[index].cuda(),
+                                history)
+                results.append(res)
+                
+            loss = loss_function(item.target_images[j*k:(j+1)*k], results)
+            
+            # Backward
+            optimizer.zero_grad()
+            loss = torch.mean(loss)
+            loss.backward()
+
+            optimizer.step()
+            current_loss = loss.item()
+            losses[i*num_bp+j] = current_loss
+
+            if(math.isnan(current_loss)):
+                print(losses)
+                print(item.video)
+                print(item.frame)
+                res = res[0][:,0:3,:,:]
+                res = res.squeeze().cpu().detach()
+                res = dataset.ImageTorchToNumpy(res)
+                window_name = "Image"
+                cv2.imshow(window_name, res[:,:,:])
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+                return
+
+            # Print info
+            current_time = time.time()
+            avg_time = (current_time - start_time) / (i*num_bp+j + 1)
+            remaining_time = avg_time * (num_iterations*num_bp - (i*num_bp+j + 1))
+            print(iteration_str.format(i, current_loss, remaining_time), end='\r')
+
+            history = history.detach()
+
+        
+    
+    # Print epoch summary
+    avg_loss = np.average(losses)
+    min_loss = np.min(losses)
+    max_loss = np.max(losses)
+    print('Training finished \t ' + finish_str.format(avg_loss, min_loss, max_loss, time.time()-start_time))
+    return avg_loss
+
+def TrainEpochTBPTT2(model, dataloader, optimizer, loss_function, video_length, k):
+    torch.seed() # To randomize
+    model.train()
+    dataloader_iter = iter(dataloader)
+    num_iterations = len(dataloader)
+    losses = np.zeros(video_length*num_iterations)
+    start_time = time.time()
+    
+    optimizer.zero_grad()
+    model_params = {}
+    for n, p in model.named_parameters():
+        if(p.requires_grad):
+            p.grad = torch.zeros(p.data.shape, device=p.data.device)
+            model_params[n] = p
+
+    for i, item in enumerate(dataloader_iter):
+        item.motion_vectors[0] = models.IdentityGrid(item.motion_vectors[0].shape).cpu()
+
+
+        # Initialize
+        mini_batch, channels, height, width = item.input_images[0].shape
+        frame_ones = torch.cat((item.input_images[0].cuda(), torch.ones(size=( mini_batch, 1, height, width), device='cuda')), dim=1)
+
+        history_list = [(None, None, None, models.JitterAlignedInterpolation(frame_ones, item.jitters[0].cuda(), model.factor, mode='bilinear'))]
+        for j in range(video_length):
+            state = history_list[-1][3].detach()
+            state.requires_grad=True
+
+            temp_model = models.MasterNet2(model.factor)
+            temp_model.load_state_dict(model.state_dict())
+            temp_model.to('cuda')
+
+            params = [p for p in temp_model.parameters() if p.requires_grad]
+            temp_optimizer = torch.optim.Adam(params, lr=1e-4)
+            temp_optimizer.load_state_dict(optimizer.state_dict())
+
+            res, history = temp_model.sub_forward(item.input_images[j].cuda(), 
+                            item.depth_buffers[j].cuda(), 
+                            item.motion_vectors[j].cuda(), 
+                            item.jitters[j].cuda(),
+                            state)
+            history_list.append((temp_model, temp_optimizer, state, history)) 
+
+            while len(history_list) > k:
+                # Delete stuff that is too old
+                del history_list[0]
+
+            loss = loss_function([item.target_images[j]], [res])
+            loss = torch.mean(loss)
+            
+            # Backward
+            temp_optimizer.zero_grad()
+            loss.backward(retain_graph=True)
+            optimizer.zero_grad()
+            for n in range(k-1):
+                # if we get all the way back to the "init_state", stop
+                if history_list[-n-2][2] is None:
+                    break
+
+                curr_grad = history_list[-n-1][2].grad
+                #print(n, torch.norm(curr_grad))
+                history_list[-n-2][1].zero_grad()
+                history_list[-n-2][2].grad = torch.zeros(history_list[-n-2][2].grad.shape, device=history_list[-n-2][2].grad.device)
+                history_list[-n-2][3].backward(curr_grad, retain_graph=True)
+            # Accumulate gradients
+            for n in range(k):
+                # if we get all the way back to the "init_state", stop
+                if history_list[-n-1][2] is None:
+                    break
+                for name, p in history_list[-n-1][0].named_parameters():
+                    if (p.requires_grad):
+                        #print(n, name, torch.norm(p.grad))
+                        model_params[name].grad += p.grad
+            optimizer.step()
+            current_loss = loss.item()
+            losses[i*video_length+j] = current_loss
+
+            #res = res[0,0:3,:,:]
+            #res = res.squeeze().cpu().detach()
+            #res = dataset.ImageTorchToNumpy(res)
+            #window_name = "Image"
+            #cv2.imshow(window_name, res[:,:,:])
+            #cv2.waitKey(0)
+
+            if(math.isnan(current_loss)):
+                print(losses)
+                print(i)
+                print(j)
+                res = res[0,0:3,:,:]
+                res = res.squeeze().cpu().detach()
+                res = dataset.ImageTorchToNumpy(res)
+                window_name = "Image"
+                cv2.imshow(window_name, res[:,:,:])
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+                return
+
+            # Print info
+            current_time = time.time()
+            avg_time = (current_time - start_time) / (i*video_length+j + 1)
+            remaining_time = avg_time * (num_iterations*video_length - (i*video_length+j + 1))
+            print(iteration_str.format(i*video_length+j, current_loss, remaining_time), end='\r')
+        model.load_state_dict(temp_model.state_dict())
+        optimizer.load_state_dict(temp_optimizer.state_dict())
+
+    # Print epoch summary
+    avg_loss = np.average(losses)
+    min_loss = np.min(losses)
+    max_loss = np.max(losses)
+    print('Training finished \t ' + finish_str.format(avg_loss, min_loss, max_loss, time.time()-start_time))
+    return avg_loss
+
 val_iteration_str = 'Current iteration: {0} \t Loss: {1:.6f} \t ETA: {2:.2f}s   '
 val_iteration_str2 = 'Current iteration: {0} \t PSNR: {1:.6f} \t SSIM: {2:.6f} \t ETA: {3:.2f}s   '
 val_finish_str = 'avg_loss: {0:.6f} \t avg_PSNR {1:.6f} \t avg_SSIM {2:.6f} \t total_time {3:.2f}s   '
@@ -674,10 +849,18 @@ def TestMultiple(dataloader):
     #file_list.append(("MasterNet2x2Biased", "DLTUS(2, 2)"))
 
     # Accumulation
-    file_list.append(("MasterNet4x4", "DLTUS(4,1) with accumulation buffer"))
-    file_list.append(("MasterNet4x4NA", "DLTUS(4,1) without accumulation buffer"))
-    file_list.append(("MasterNet2x2Biased", "DLTUS(2,2) without accumulation buffer"))
-    file_list.append(("MasterNet2x2BiasNoAccum", "DLTUS(2,2) without accumulation buffer"))
+    #file_list.append(("MasterNet4x4", "DLTUS(4,1) with accumulation buffer"))
+    #file_list.append(("MasterNet4x4NA", "DLTUS(4,1) without accumulation buffer"))
+    #file_list.append(("MasterNet2x2Biased", "DLTUS(2,2) with accumulation buffer"))
+    #file_list.append(("MasterNet2x2BiasNoAccum", "DLTUS(2,2) without accumulation buffer"))
+
+    # Reprojection
+    #file_list.append(("MasterNet2x2Bilinear", "DLTUS(2,1)-bilinear"))
+    #file_list.append(("MasterNet2x2Bic5", "DLTUS(2,1)-bicubic5"))
+    #file_list.append(("MasterNet2x2", "DLTUS(2,1)-bicubic9"))
+    
+    file_list.append(("MasterNet2x2", "DLTUS(2,1)"))
+    file_list.append(("MasterNet2x2-200", "DLTUS(2,1)-200"))
 
     plt.figure()
     for file, name in file_list:

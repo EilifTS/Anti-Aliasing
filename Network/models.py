@@ -897,15 +897,15 @@ class MasterNet2(nn.Module):
             
             
             # MV-diation
-            _, depth_fronts = F.max_pool2d(1.1-depth, 3, stride=1, padding=1, return_indices=True)
-            f_depth_fronts = torch.flatten(depth_fronts, 2)
-            f_mv = torch.flatten(mv, 2)
-            f_mv1 = torch.gather(f_mv[:,0:1,:], 2, f_depth_fronts)
-            f_mv2 = torch.gather(f_mv[:,1:2,:], 2, f_depth_fronts)
-            mv_dil = torch.cat((f_mv1, f_mv2), dim=1).view((mini_batch, 2, height, width))
+            #_, depth_fronts = F.max_pool2d(1.1-depth, 3, stride=1, padding=1, return_indices=True)
+            #f_depth_fronts = torch.flatten(depth_fronts, 2)
+            #f_mv = torch.flatten(mv, 2)
+            #f_mv1 = torch.gather(f_mv[:,0:1,:], 2, f_depth_fronts)
+            #f_mv2 = torch.gather(f_mv[:,1:2,:], 2, f_depth_fronts)
+            #mv_dil = torch.cat((f_mv1, f_mv2), dim=1).view((mini_batch, 2, height, width))
 
-            #mv = F.interpolate(mv, scale_factor=self.factor, mode='bilinear', align_corners=False)
-            mv = F.interpolate(mv_dil, scale_factor=self.factor, mode='bilinear', align_corners=False)
+            mv = F.interpolate(mv, scale_factor=self.factor, mode='bilinear', align_corners=False)
+            #mv = F.interpolate(mv_dil, scale_factor=self.factor, mode='bilinear', align_corners=False)
             
             mv = torch.movedim(mv, 1, 3)
             mv += IdentityGrid(mv.shape)
@@ -913,7 +913,7 @@ class MasterNet2(nn.Module):
             # History reprojection
             #history = F.grid_sample(history, mv, mode='bilinear', align_corners=False, padding_mode='border')
             history = F.grid_sample(history, mv, mode='bicubic', align_corners=False, padding_mode='border')
-            #history = BiCubicGridSampleHD(history, mv)
+            #history = BiCubicGridSample2(history, mv)
             
 
             ## Special case for padding
@@ -936,13 +936,13 @@ class MasterNet2(nn.Module):
         # History reweighting
         residual = torch.clamp(residual, 0.0, 1.0)
         #residual = F.sigmoid(residual)
-        alpha = residual[:,0:1,:,:]
 
+        alpha = residual[:,0:1,:,:]
         history = history*(1.0 - alpha) + frame_bilinear * alpha
         history_start = history[:,0:3,:,:]
-        history_end = history[:,3:4,:,:] * residual[:,1:2,:,:]
+        history_end = history[:,3:4,:,:]*residual[:,1:2,:,:]
         history = torch.cat((history_start, history_end), dim=1)
-        history = torch.clamp(history, 0, 1.0)
+        history = torch.clamp(history, 0.0, 1.0)
         # Reconstruction
         return history[:,:3,:,:], history
 

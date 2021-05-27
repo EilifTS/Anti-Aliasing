@@ -17,7 +17,7 @@ if(__name__ == '__main__'):
     torch.seed()
     sequence_length = 30 # Number inputs used in the model
     target_count = 5
-    upsample_factor = 2
+    upsample_factor = 4
     width, height = 1920, 1080
     batch_size = 4
     data_train = dataset.SSDataset(64, upsample_factor, videos[:80], sequence_length, target_count, transform=dataset.RandomCrop(256, width, height, upsample_factor))
@@ -77,9 +77,9 @@ if(__name__ == '__main__'):
 
 
     #utils.SaveModelWeights(model)
-    #for g in optimizer.param_groups:
+    for g in optimizer.param_groups:
     #    print(g['lr'])
-    #    g['lr'] = 1e-5
+        g['lr'] = 1e-4
 
     print("Model parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
     #model.half()
@@ -92,7 +92,7 @@ if(__name__ == '__main__'):
         print("Directory", model_name, "allready exist")
 
 
-    epochs = 100
+    epochs = 300
 
     # Testing
     #utils.AddGradientHooks(model)
@@ -110,6 +110,7 @@ if(__name__ == '__main__'):
     for epoch in range(start_epoch, epochs):
         print('Epoch {}'.format(epoch))
         train_loss = utils.TrainEpoch(model, loader_train, optimizer, loss_function)
+        #train_loss = utils.TrainEpochTBPTT2(model, loader_train, optimizer, loss_function, sequence_length, 20)
         #utils.PlotHookedGradients(model)
         train_losses.append(train_loss)
         if(epoch % 1 == 0):

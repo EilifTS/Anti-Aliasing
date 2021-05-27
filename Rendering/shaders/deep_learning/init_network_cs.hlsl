@@ -7,7 +7,7 @@
 #endif
 
 Texture2D			input_texture	    : register(t0);
-Texture2D			history_buffer		: register(t1);
+Texture2D<half4>	history_buffer		: register(t1);
 Texture2D<float2>	motion_vectors		: register(t2);
 Texture2D<float>	depth_buffer		: register(t3);
 SamplerState		linear_clamp		: register(s0);
@@ -22,13 +22,13 @@ cbuffer constants : register(b0)
 
 RWBuffer<half> out_tensor   : register(u0);
 
-float4 catmullSample(float2 uv)
+half4 catmullSample(float2 uv)
 {
-    float4 c = history_buffer.SampleLevel(linear_clamp, uv, 0);
+    half4 c = history_buffer.SampleLevel(linear_clamp, uv, 0);
     return c;
 }
 
-float4 catmullRomAppx(float2 uv)
+half4 catmullRomAppx(float2 uv)
 {
     float2 position = uv * window_size;
     float2 center_position = floor(position - 0.5) + 0.5;
@@ -36,29 +36,29 @@ float4 catmullRomAppx(float2 uv)
     float2 f2 = f * f;
     float2 f3 = f2 * f;
 
-    float2 w0 = 0.25 * (-3.0 * f3 + 6.0 * f2 - 3.0 * f);
-    float2 w1 = 0.25 * ( 5.0 * f3 - 9.0 * f2           + 4.0);
-    float2 w2 = 0.25 * (-5.0 * f3 + 6.0 * f2 + 3.0 * f);
-    float2 w3 = 0.25 * ( 3.0 * f3 - 3.0 * f2);
+    half2 w0 = half2(0.25 * (-3.0 * f3 + 6.0 * f2 - 3.0 * f));
+    half2 w1 = half2(0.25 * ( 5.0 * f3 - 9.0 * f2           + 4.0));
+    half2 w2 = half2(0.25 * (-5.0 * f3 + 6.0 * f2 + 3.0 * f));
+    half2 w3 = half2(0.25 * ( 3.0 * f3 - 3.0 * f2));
     // float2 w2 = 1.0 - w0 - w1 - w3
 
-    float2 w12 = w1 + w2;
-    float2 tc12 = rec_window_size * (center_position + w2 / w12);
-    float4 center_color = catmullSample(tc12);
+    half2 w12 = w1 + w2;
+    float2 tc12 = rec_window_size * (center_position + float2(w2) / float2(w12));
+    half4 center_color = catmullSample(tc12);
 
     float2 tc0 = rec_window_size * (center_position - 1.0);
     float2 tc3 = rec_window_size * (center_position + 2.0);
-    float4 color =
+    half4 color =
         catmullSample(float2(tc12.x, tc0.y)) * (w12.x * w0.y) +
         catmullSample(float2(tc0.x, tc12.y)) * (w0.x * w12.y) +
         center_color * (w12.x * w12.y) +
         catmullSample(float2(tc3.x, tc12.y)) * (w3.x * w12.y) +
         catmullSample(float2(tc12.x, tc3.y)) * (w12.x * w3.y);
-    float weight = (w12.x * w0.y) + (w0.x * w12.y) + (w12.x * w12.y) + (w3.x * w12.y) + (w12.x * w3.y);
+    half weight = (w12.x * w0.y) + (w0.x * w12.y) + (w12.x * w12.y) + (w3.x * w12.y) + (w12.x * w3.y);
     return color / weight;
 }
 
-float4 catmullRom(float2 uv)
+half4 catmullRom(float2 uv)
 {
     float2 position = uv * window_size;
     float2 center_position = floor(position - 0.5) + 0.5;
@@ -70,19 +70,19 @@ float4 catmullRom(float2 uv)
     //float2 w1 = 1.5 * f3 - 2.5 * f2 + 1.0;
     //float2 w2 = -1.5 * f3 + 2.0 * f2 + 0.5 * f;
     //float2 w3 = 0.5 * f3 - 0.5 * f2;
-    float2 w0 = 0.25 * (-3.0 * f3 + 6.0 * f2 - 3.0 * f);
-    float2 w1 = 0.25 * (5.0 * f3 - 9.0 * f2 + 4.0);
-    float2 w2 = 0.25 * (-5.0 * f3 + 6.0 * f2 + 3.0 * f);
-    float2 w3 = 0.25 * (3.0 * f3 - 3.0 * f2);
+    half2 w0 = half2(0.25 * (-3.0 * f3 + 6.0 * f2 - 3.0 * f));
+    half2 w1 = half2(0.25 * (5.0 * f3 - 9.0 * f2 + 4.0));
+    half2 w2 = half2(0.25 * (-5.0 * f3 + 6.0 * f2 + 3.0 * f));
+    half2 w3 = half2(0.25 * (3.0 * f3 - 3.0 * f2));
     //float2 w2 = 1.0 - w0 - w1 - w3
 
-    float2 w12 = w1 + w2;
-    float2 tc12 = rec_window_size * (center_position + w2 / w12);
-    float4 center_color = catmullSample(tc12);
+    half2 w12 = w1 + w2;
+    float2 tc12 = rec_window_size * (center_position + float2(w2) / float2(w12));
+    half4 center_color = catmullSample(tc12);
 
     float2 tc0 = rec_window_size * (center_position - 1.0);
     float2 tc3 = rec_window_size * (center_position + 2.0);
-    float4 color =
+    half4 color =
         catmullSample(float2(tc0.x, tc0.y))  * (w0.x  * w0.y) +
         catmullSample(float2(tc3.x, tc0.y))  * (w3.x  * w0.y) +
         catmullSample(float2(tc12.x, tc0.y)) * (w12.x * w0.y) +
@@ -187,7 +187,7 @@ void CS(uint3 block_id : SV_GroupID, uint3 thread_id : SV_GroupThreadID)
         float2 hr_jitter_uv = hr_jitter_pos * rec_window_size;
         float4 jau_rgbd = float4(0.0, 0.0, 0.0, 0.0);
         //jau_rgbd = catmullRom(hr_jitter_uv, true);
-        jau_rgbd.rgb = input_texture.SampleLevel(linear_clamp, hr_jitter_uv, 0);
+        jau_rgbd.rgb = input_texture.SampleLevel(linear_clamp, hr_jitter_uv, 0).rgb;
         jau_rgbd.a = 1.0;// depth_buffer.SampleLevel(linear_clamp, hr_jitter_uv, 0);
 
         // reproject history
@@ -195,7 +195,7 @@ void CS(uint3 block_id : SV_GroupID, uint3 thread_id : SV_GroupThreadID)
         float2 motion_vector = motion_vectors.SampleLevel(linear_clamp, hr_pixel_uv, 0);
         float2 prev_frame_uv = hr_pixel_uv + motion_vector;
 
-        float4 history = float4(0.0, 0.0, 0.0, 0.0);
+        half4 history = half4(0.0, 0.0, 0.0, 0.0);
         if (prev_frame_uv.x > 0.0 && prev_frame_uv.x <= 1.0 && prev_frame_uv.y > 0.0 && prev_frame_uv.y <= 1.0) // Check if uv is inside history buffer
         {
             //history = history_buffer.SampleLevel(linear_clamp, prev_frame_uv, 0);
@@ -203,7 +203,7 @@ void CS(uint3 block_id : SV_GroupID, uint3 thread_id : SV_GroupThreadID)
             //history = catmullRomAppx(prev_frame_uv);
         }
         else
-            history = jau_rgbd;
+            history = half4(jau_rgbd);
 
 
         // Fill output tensor
@@ -227,10 +227,10 @@ void CS(uint3 block_id : SV_GroupID, uint3 thread_id : SV_GroupThreadID)
         uint index6 = 8 * index + 6;
         uint index7 = 8 * index + 7;
 #endif
-        out_tensor[index0] = zero_up_rgbd.r;
-        out_tensor[index1] = zero_up_rgbd.g;
-        out_tensor[index2] = zero_up_rgbd.b;
-        out_tensor[index3] = zero_up_rgbd.a;
+        out_tensor[index0] = half(zero_up_rgbd.r);
+        out_tensor[index1] = half(zero_up_rgbd.g);
+        out_tensor[index2] = half(zero_up_rgbd.b);
+        out_tensor[index3] = half(zero_up_rgbd.a);
         out_tensor[index4] = history.r;
         out_tensor[index5] = history.g;
         out_tensor[index6] = history.b;

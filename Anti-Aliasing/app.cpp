@@ -17,7 +17,7 @@ namespace
 	const static float mipmap_bias = 0.0f;// -0.5f * std::log2(4);
 
 	// Upsampling
-	static const int upsample_numerator = 4;
+	static const int upsample_numerator = 2;
 	static const int upsample_denominator = 1;
 	static const bool use_upsample = upsample_numerator != 1 || upsample_denominator != 1;
 }

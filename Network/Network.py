@@ -77,9 +77,9 @@ if(__name__ == '__main__'):
 
 
     #utils.SaveModelWeights(model)
-    for g in optimizer.param_groups:
+    #for g in optimizer.param_groups:
     #    print(g['lr'])
-        g['lr'] = 1e-4
+    #    g['lr'] = 1e-4
 
     print("Model parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
     #model.half()

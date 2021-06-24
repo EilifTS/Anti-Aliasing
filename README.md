@@ -49,7 +49,7 @@ From NVIDIA should a GTX 1060 or newer work.
 
 # Usage
 
-| Keyboard & mouse input | Action |
+| Keyboard and Mouse Input | Action |
 |--- | --- |
 | WASD | Movement control |
 | Mouse movement | Rotation |
@@ -57,13 +57,13 @@ From NVIDIA should a GTX 1060 or newer work.
 | 2 | Set Anti-aliasing mode to FXAA |
 | 3 | Set Anti-aliasing mode to TAA |
 | 4 | Set Anti-aliasing mode to SSAA |
-| 5 | Toggle freeze frame (The right arrow button can be used to progress frames when the frame is frozen) |
+| 5 | Toggle freeze frame (The right arrow to skip frames) |
 | 6 | Toggle ray tracing |
 | 7 | Toggle DLCTUS |
 
 *When in TAA mode:*
 
-| Keyboard & mouse input | Action |
+| Keyboard & Mouse Input | Action |
 |--- | --- |
 | R | Toggle between bilinear interpolation and bicubic interpolation |
 | T | Toggle history rectification |
@@ -84,8 +84,8 @@ The deep learning pipeline has several steps:
 
 All steps are not necessary to run the network, as several pretrained networks are included in the project.
 
-## Camera Motin Capture
-Camera motion capure is done by starting the main application "Anti-Aliasing". Then pressing the "Q"-button will record a 60-frame sequence video.
+## Camera Motion Capture
+Camera motion capure is done by starting the main application `Anti-Aliasing`. Then pressing the "Q"-button will record a 60-frame sequence video.
 The video is stored as a .txt file in `DatasetGenerator/camera_positions/`, and the file contains world time, camera position and rotation.
 100 prerecorded .txt files are allready stored in the folder.
 

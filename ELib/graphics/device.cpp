@@ -185,12 +185,11 @@ namespace
 	}
 	bool checkFor16BitFloatSupport(ComPtr<ID3D12Device5> dev)
 	{
-		D3D12_FEATURE_DATA_SHADER_MODEL features = {};
-		features.HighestShaderModel = D3D_SHADER_MODEL_6_5;
-		HRESULT hr = dev->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &features, sizeof(features));
-		if (FAILED(hr) || features.HighestShaderModel < D3D_SHADER_MODEL_6_2)
+		D3D12_FEATURE_DATA_D3D12_OPTIONS4 features = {};
+		HRESULT hr = dev->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &features, sizeof(features));
+		if (FAILED(hr) || features.Native16BitShaderOpsSupported == false)
 		{
-			eio::Console::Log("Device does not native 16bit ops");
+			eio::Console::Log("Device does not support native 16bit ops");
 			return false;
 		}
 

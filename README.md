@@ -63,7 +63,7 @@ From NVIDIA should a GTX 1060 or newer work.
 
 *When in TAA mode:*
 
-| Keyboard & Mouse Input | Action |
+| Keyboard and Mouse Input | Action |
 |--- | --- |
 | R | Toggle between bilinear interpolation and bicubic interpolation |
 | T | Toggle history rectification |

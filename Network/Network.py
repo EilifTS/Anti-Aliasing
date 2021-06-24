@@ -17,7 +17,7 @@ if(__name__ == '__main__'):
     torch.seed()
     sequence_length = 30 # Number inputs used in the model
     target_count = 5
-    upsample_factor = 4
+    upsample_factor = 2
     width, height = 1920, 1080
     batch_size = 4
     data_train = dataset.SSDataset(64, upsample_factor, videos[:80], sequence_length, target_count, transform=dataset.RandomCrop(256, width, height, upsample_factor))
@@ -44,10 +44,10 @@ if(__name__ == '__main__'):
     #model = models.MasterNet(upsample_factor, sequence_length)
     model = models.MasterNet2(upsample_factor)
     #model = models.TraditionalModel(upsample_factor, 'bilinear', True)
-    #model = models.TUS(upsample_factor, 0.1)
+    #model = models.TUS(upsample_factor, 1.0)
     #loss_function = metrics.FBLoss()
     loss_function = metrics.MasterLoss2(target_count)
-    #loss_function = metrics.SpatioTemporalLoss(0.9)
+    #loss_function = metrics.SpatioTemporalLoss2(0.5)
     
     # Create optimizer
     params = [p for p in model.parameters() if p.requires_grad]
@@ -92,20 +92,23 @@ if(__name__ == '__main__'):
         print("Directory", model_name, "allready exist")
 
 
-    epochs = 300
+    epochs = 200
 
     # Testing
     #utils.AddGradientHooks(model)
     #utils.CheckMasterModelSampleEff(model, loader_val1, loss_function)
     #utils.VisualizeFBModel(model, loader_test)
-    #utils.VisualizeMasterModel(model, loader_test)
+    #utils.VisualizeMasterModel(model, loader_val2)
     #utils.TestFBModel(model, loader_test)
     #utils.TestMasterModel(model, loader_test)
+    #utils.TestTemporal(model, loader_test, False)
     #utils.TestMultiple(loader_test)
     #utils.VisualizeDifference(model, loader_test)
     #utils.PlotLosses(train_losses, val_epochs, val_losses, val_psnrs, val_ssims)
+    #utils.PlotLossesMultiple()
     #utils.IllustrateJitterPattern(loader_test, 16, 2)
-    #utils.GetCrops(model, loader_test, "MasterNet4x4TempLoss", False)
+    #utils.GetCrops(model, loader_test, "MasterNet2x2BiasTempLoss90", False)
+    utils.PlotMVMagnitudes(loader_test)
 
     for epoch in range(start_epoch, epochs):
         print('Epoch {}'.format(epoch))

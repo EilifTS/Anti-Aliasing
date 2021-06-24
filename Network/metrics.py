@@ -2,6 +2,7 @@ import dataset
 import cv2
 import torch
 import torchvision
+import models
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
@@ -194,6 +195,34 @@ class SpatioTemporalLoss(torch.nn.Module):
             t0 = img2[i-1].cuda()
             d1 = p1 - t1
             d0 = p0 - t0
+            l = (torch.abs(d1-d0) - torch.abs(d1) - torch.abs(d0)) * self.theta + torch.abs(d1) + torch.abs(d0)
+            loss[i-1] = torch.mean(l)
+        return loss
+
+class SpatioTemporalLoss2(torch.nn.Module):
+    def __init__(self, theta):
+        super(SpatioTemporalLoss2, self).__init__()
+        self.theta = theta
+
+    def forward(self, img1, img2, mvs, factor):
+        loss = torch.zeros(len(img1) - 1, device="cuda")
+        for i in range(1, len(img1)):
+            p1 = img1[i].cuda()
+            p0 = img1[i-1].cuda()
+            t1 = img2[i].cuda()
+            t0 = img2[i-1].cuda()
+            d1 = p1 - t1
+            d0 = p0 - t0
+
+            mv = mvs[i].cuda()
+            mv -= models.IdentityGrid(mv.shape)
+            mv = torch.movedim(mv, 3, 1)
+            mv = F.interpolate(mv, scale_factor=factor, mode='bilinear', align_corners=False)
+            mv = torch.movedim(mv, 1, 3)
+            mv += models.IdentityGrid(mv.shape)
+            d0 = F.grid_sample(d0, mv, mode='bilinear', align_corners=False)
+            p0v = F.grid_sample(p0, mv, mode='bilinear', align_corners=False)
+
             l = (torch.abs(d1-d0) - torch.abs(d1) - torch.abs(d0)) * self.theta + torch.abs(d1) + torch.abs(d0)
             loss[i-1] = torch.mean(l)
         return loss

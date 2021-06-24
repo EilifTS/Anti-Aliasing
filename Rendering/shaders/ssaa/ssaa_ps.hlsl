@@ -22,5 +22,7 @@ float4 PS(PSInput input) : SV_TARGET
 	float r = 1.0 / (float)N;
 	float t = 1.0 - r;
 	
-	return float4(r * new_sample + t * accumulated_sample, 1.0);
+	float4 output = float4(r * new_sample + t * accumulated_sample, 1.0);
+
+	return output;
 }

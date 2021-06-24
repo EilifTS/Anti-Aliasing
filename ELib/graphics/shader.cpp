@@ -66,7 +66,7 @@ namespace
         return std::wstring(s.begin(), s.end());
     }
 
-    ComPtr<ID3DBlob> compileShader2(const std::string& filename, const std::wstring& entry_point, const std::string& target_string, const std::vector<DxcDefine>& macro_list)
+    ComPtr<ID3DBlob> compileShader2(const std::string& filename, const std::wstring& entry_point, const std::string& target_string, const std::vector<DxcDefine>& macro_list, bool use_native_16bit_ops)
     {
         auto wfilename = convert_to_wstring(filename);
         auto wtarget_string = convert_to_wstring(target_string);
@@ -94,22 +94,19 @@ namespace
             "Failed to create blob from pinned");
 
         // Command line arguments
-        const wchar_t* pargs[] =
-        {
-            //                      L"-Zpr",            // Row-major matrices
-                                    L"-WX",             // Warnings as errors
-                                    L"-enable-16bit-types",
-            #ifdef _DEBUG
-                                    L"-Zi",             // Debug info
-                                    L"-Od",             // Disable optimizations
-            #else
-                                    L"-O3",             // Optimization level 3
-            #endif
-        };
+        std::vector<const wchar_t*> pargs;
+        pargs.push_back(L"-WX");                    // Warnings as errors
+        if (use_native_16bit_ops) pargs.push_back(L"-enable-16bit-types");
+#ifdef _DEBUG
+        pargs.push_back(L"-Zi");                    // Debug info
+        pargs.push_back(L"-Od");                    // Disable optimizations         
+#else
+        pargs.push_back(L"-O3");                    // Optimization level 3
+#endif
 
         // Compile
         ComPtr<IDxcOperationResult> presult;
-        THROWIFFAILED(pcompiler->Compile(ptext_blob.Get(), wfilename.c_str(), entry_point.c_str(), wtarget_string.c_str(), pargs, _countof(pargs), macro_list.data(), macro_list.size(), nullptr, &presult),
+        THROWIFFAILED(pcompiler->Compile(ptext_blob.Get(), wfilename.c_str(), entry_point.c_str(), wtarget_string.c_str(), pargs.data(), pargs.size(), macro_list.data(), macro_list.size(), nullptr, &presult),
             "Failed to compile shader " + filename);
 
         // Verify the result
@@ -172,25 +169,25 @@ void egx::Shader::CompileVertexShader(const std::string& path, const ShaderMacro
 {
 	shader_blob = compileShader(path, "VS", "vs_5_0", macro_list.getD3D());
 }
-void egx::Shader::CompileVertexShader2(const std::string& path, const ShaderMacroList& macro_list)
+void egx::Shader::CompileVertexShader2(const std::string& path, const ShaderMacroList& macro_list, bool use_native_16bit_ops)
 {
-    shader_blob = compileShader2(path, L"VS", "vs_6_5", macroToDxc(macro_list));
+    shader_blob = compileShader2(path, L"VS", "vs_6_5", macroToDxc(macro_list), use_native_16bit_ops);
 }
 
 void egx::Shader::CompilePixelShader(const std::string& path, const ShaderMacroList& macro_list)
 {
     shader_blob = compileShader(path, "PS", "ps_5_0", macro_list.getD3D());
 }
-void egx::Shader::CompilePixelShader2(const std::string& path, const ShaderMacroList& macro_list)
+void egx::Shader::CompilePixelShader2(const std::string& path, const ShaderMacroList& macro_list, bool use_native_16bit_ops)
 {
-	shader_blob = compileShader2(path, L"PS", "ps_6_5", macroToDxc(macro_list));
+	shader_blob = compileShader2(path, L"PS", "ps_6_5", macroToDxc(macro_list), use_native_16bit_ops);
 }
 
 void egx::Shader::CompileComputeShader(const std::string& path, const ShaderMacroList& macro_list)
 {
 	shader_blob = compileShader(path, "CS", "cs_5_0", macro_list.getD3D());
 }
-void egx::Shader::CompileComputeShader2(const std::string& path, const ShaderMacroList& macro_list)
+void egx::Shader::CompileComputeShader2(const std::string& path, const ShaderMacroList& macro_list, bool use_native_16bit_ops)
 {
-    shader_blob = compileShader2(path, L"CS", "cs_6_5", macroToDxc(macro_list));
+    shader_blob = compileShader2(path, L"CS", "cs_6_5", macroToDxc(macro_list), use_native_16bit_ops);
 }

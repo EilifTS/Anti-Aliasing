@@ -963,7 +963,7 @@ class MasterNet2(nn.Module):
             # Memory optimization
             x.input_images[i] = None 
             x.depth_buffers[i] = None 
-            x.motion_vectors[i] = None 
+            #x.motion_vectors[i] = None 
             x.jitters[i] = None
             torch.cuda.empty_cache()  
         return out

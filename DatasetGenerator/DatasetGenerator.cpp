@@ -28,10 +28,10 @@ namespace
 
 	static const bool disable_super_sampling = false;
 	static const int super_sample_options[] = { 64 };
-	static const int upsample_factor_options[] = { 2 };
+	static const int upsample_factor_options[] = { 2, 4 };
 	static const int jitter_count = 16;
 
-	static const float mipmap_bias = -0.5f * std::log2(4);
+	static const float mipmap_bias = 0.0f; //-0.5f * std::log2(4);
 
 }
 

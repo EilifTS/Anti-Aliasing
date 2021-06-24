@@ -58,9 +58,14 @@ egx::MasterNet::MasterNet(Device& dev, CommandContext& context, const ema::point
 	);
 
     // Load weights
-    auto weight_map = loadWeights("../network/MasterNet4x4/nn_weights_200.bin");
-    if(upsample_factor == 2)
-        weight_map = loadWeights("../network/MasterNet2x2/nn_weights-200.bin");
+    auto weight_path = "../network/MasterNet4x4/nn_weights_200.bin";
+    
+    if (upsample_factor == 2)
+    {
+        //weight_path = "../network/MasterNet2x2/nn_weights_st2_10.bin";
+        weight_path = "../network/MasterNet2x2/nn_weights_bias4-200.bin";
+    }
+    auto weight_map = loadWeights(weight_path);
 
     // Create layers
     //UINT output_channels = 128;

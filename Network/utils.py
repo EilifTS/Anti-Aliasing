@@ -56,7 +56,7 @@ def TrainEpoch(model, dataloader, optimizer, loss_function):
         # Forward
         res = model.forward(item)
         target = item.target_images
-        loss = loss_function(target, res)
+        loss = loss_function(target, res, item.motion_vectors[-len(item.target_images):], model.factor)
 
         
         # Backward
@@ -294,7 +294,8 @@ def ValidateModel(model, dataloader1, dataloader2, loss_function):
             # Forward
             res = model.forward(item)
             target = item.target_images
-            loss = torch.mean(loss_function(target, res))
+            loss = torch.mean(loss_function(target, res, item.motion_vectors[-len(item.target_images):], model.factor))
+            #loss = torch.mean(loss_function(target, res))
             current_loss = loss.item()
             losses[i] = current_loss
 
@@ -534,6 +535,79 @@ def TestMasterModel(model, dataloader):
     plt.plot(range(1, len(time_list) + 1), time_list)
     plt.show()
 
+def TestTemporal(model, dataloader, is_fb=False):
+    loss0 = metrics.SpatioTemporalLoss2(0.0)
+    loss1 = metrics.SpatioTemporalLoss2(1.0)
+    loss0_list = []
+    loss1_list = []
+    with torch.no_grad(): 
+        dli = iter(dataloader)
+        if(is_fb):
+            item = GetZeroItem(5, model.factor)
+            res_prev = None
+            res_current = None
+            target_prev = None
+            for i in range(len(dli)):
+                x = next(dli)
+                if(i%60 == 0):
+                    item = GetZeroItem(5, model.factor)
+            
+                item.input_images = item.input_images[1:]
+                item.motion_vectors = item.motion_vectors[1:]
+                item.depth_buffers = item.depth_buffers[1:]
+                item.jitters = item.jitters[1:]
+                item.input_images.append(x.input_images[0])
+                item.motion_vectors.append(x.motion_vectors[0])
+                item.depth_buffers.append(x.depth_buffers[0])
+                item.jitters.append(x.jitters[0])
+                 
+                res_current = model.forward(item)
+
+                if(i%60 != 0):
+                    loss0_list.append(loss0([target_prev, x.target_images[0]], [res_prev, res_current], [None, x.motion_vectors[0]], model.factor).item())
+                    loss1_list.append(loss1([target_prev, x.target_images[0]], [res_prev, res_current], [None, x.motion_vectors[0]], model.factor).item())
+                res_prev = res_current
+                target_prev = x.target_images[0]
+
+                test_str = '{0} / {1} \t Loss0: {2:.5f} \t Loss1: {3:.5f}   '
+                if(i != 0):
+                    print(test_str.format(i, len(dli), loss0_list[-1], loss1_list[-1]), end="\r")
+        else:
+            history = None
+            res_prev = None
+            res_current = None
+            target_prev = None
+            for i, item in enumerate(dli):
+                if(i%60 == 0):
+                    history = None
+                res_current, history = model.sub_forward(item.input_images[0].cuda(), item.depth_buffers[0].cuda(), item.motion_vectors[0].cuda(), item.jitters[0].cuda(), history)
+                if(i%60 != 0):
+                    loss0_list.append(loss0([target_prev, item.target_images[0]], [res_prev, res_current], [None, item.motion_vectors[0]], model.factor).item())
+                    loss1_list.append(loss1([target_prev, item.target_images[0]], [res_prev, res_current], [None, item.motion_vectors[0]], model.factor).item())
+                res_prev = res_current
+                target_prev = item.target_images[0]
+
+                test_str = '{0} / {1} \t Loss0: {2:.5f} \t Loss1: {3:.5f}   '
+                if(i != 0):
+                    print(test_str.format(i, len(dli), loss0_list[-1], loss1_list[-1]), end="\r")
+    loss0_list = np.array(loss0_list)
+    loss1_list = np.array(loss1_list)
+    # Print averages
+    print("")
+    print("Loss0 average:", np.average(loss0_list))
+    print("Loss1 average:", np.average(loss1_list))
+    # Plot results
+    plt.figure()
+    plt.xlabel("Frame")
+    plt.ylabel("Loss0")
+    plt.plot(range(1, len(loss0_list) + 1), loss0_list)
+    plt.figure()
+    plt.xlabel("Frame")
+    plt.ylabel("Loss1")
+    plt.plot(range(1, len(loss1_list) + 1), loss1_list)
+    plt.show()
+                
+
 def CheckMasterModelSampleEff(model, dataloader, loss_function):
     max_frames = 32
     model.eval()
@@ -632,16 +706,22 @@ def VisualizeDifference(model, dataloader):
 
 def PlotLosses(train_loss, val_epochs, val_loss, val_psnr, val_ssim):
     plt.figure()
-    plt.plot(range(len(train_loss)), train_loss)
-    plt.plot(val_epochs, val_loss)
+    plt.plot(range(len(train_loss[10:])), train_loss[10:])
+    plt.plot(val_epochs[10:], val_loss[10:])
     plt.grid()
-    min_val = min(min(train_loss), min(val_loss))
-    max_val = max(max(train_loss), max(val_loss))
+    min_val = min(min(train_loss[10:]), min(val_loss[10:]))
+    max_val = max(max(train_loss[10:]), max(val_loss[10:]))
     plt.yticks(np.arange(min_val,max_val, (max_val - min_val) * 0.05))
     plt.figure()
-    plt.plot(val_epochs, val_psnr)
+    plt.plot(val_epochs[10:], val_psnr[10:])
     plt.figure()
-    plt.plot(val_epochs, val_ssim)
+    plt.plot(val_epochs[10:], val_ssim[10:])
+
+    np.save("TrainingLoss", train_loss)
+    np.save("ValidationLoss", val_loss)
+    np.save("ValidationPSNR", val_psnr)
+    np.save("ValidationSSIM", val_ssim)
+
     plt.show()
 
 def IllustrateJitterPattern(dataloader, num_jitters, factor):
@@ -740,6 +820,7 @@ def GetCrops(model, loader, name, is_fb=False):
                 if(i in image_nrs):
                     index = image_nrs.index(i)
                     SaveCroppedImages(res, crops[index], index, name)
+                    SaveCroppedAccumulation(history[:,3:,:,:], crops[index], index, name)
                     SaveCroppedImages(item.target_images[0], crops[index], index, "target")
                     SaveCroppedImages(item.input_images[0], crops[index], index, "input", model.factor)
 
@@ -768,6 +849,17 @@ def SaveCroppedImages(img, crops, index, name, f=1):
         img[:,2,cy+crop_size,cx:cx+crop_size] = 1
     img = dataset.ImageTorchToNumpy(img.squeeze().cpu().detach())
     cv2.imwrite(name + "_img" + str(index) + "_outlines.png", img)
+
+def SaveCroppedAccumulation(img, crops, index, name, f=1):
+    crop_size = 100 // f
+    for i, (cx, cy) in enumerate(crops):
+        cx = cx // f
+        cy = cy // f
+        cimg = img[:,:,cy:cy+crop_size,cx:cx+crop_size]
+        cimg = F.interpolate(cimg, scale_factor=4)
+        cimg = dataset.DepthTorchToNumpy(cimg[0,:,:,:].cpu().detach()) * 255
+        cv2.imwrite(name + "_img" + str(index) + "_crop" + str(i) + "_accum.png", cimg)
+
 
 def SaveTestImage(model, loader, image_nr, model_name, epoch):
     with torch.no_grad(): 
@@ -827,6 +919,12 @@ def SaveModelWeights(model):
         f.write(struct.pack('f'*len(param_list), *param_list))
     f.close()
 
+def FilterResults(r, num_frames, frames_to_remove):
+    for i in range(len(r)-1, -1, -1):
+        if(i % num_frames < frames_to_remove):
+            r = np.delete(r, i)
+    return r
+
 def TestMultiple(dataloader):
     file_list = []
     
@@ -849,18 +947,17 @@ def TestMultiple(dataloader):
     #file_list.append(("MasterNet2x2Biased", "DLTUS(2, 2)"))
 
     # Accumulation
-    #file_list.append(("MasterNet4x4", "DLTUS(4,1) with accumulation buffer"))
-    #file_list.append(("MasterNet4x4NA", "DLTUS(4,1) without accumulation buffer"))
-    #file_list.append(("MasterNet2x2Biased", "DLTUS(2,2) with accumulation buffer"))
-    #file_list.append(("MasterNet2x2BiasNoAccum", "DLTUS(2,2) without accumulation buffer"))
+    file_list.append(("MasterNet4x4", "DLTUS(4,1) with accumulation buffer"))
+    file_list.append(("MasterNet4x4NoAccum", "DLTUS(4,1) without accumulation buffer"))
+    file_list.append(("MasterNet2x2Biased", "DLTUS(2,2) with accumulation buffer"))
+    file_list.append(("MasterNet2x2BiasedNoAccum", "DLTUS(2,2) without accumulation buffer"))
 
     # Reprojection
     #file_list.append(("MasterNet2x2Bilinear", "DLTUS(2,1)-bilinear"))
     #file_list.append(("MasterNet2x2Bic5", "DLTUS(2,1)-bicubic5"))
     #file_list.append(("MasterNet2x2", "DLTUS(2,1)-bicubic9"))
     
-    file_list.append(("MasterNet2x2", "DLTUS(2,1)"))
-    file_list.append(("MasterNet2x2-200", "DLTUS(2,1)-200"))
+    
 
     plt.figure()
     for file, name in file_list:
@@ -883,4 +980,60 @@ def TestMultiple(dataloader):
 
     plt.grid(axis="y")
     plt.legend()
+    plt.show()
+
+def PlotLossesMultiple():
+    file_list = []
+    
+    # Loss
+    file_list.append(("MasterNet4x4", "DLTUS(4,1)"))
+    file_list.append(("MasterNet2x2", "DLTUS(2,1)"))
+    file_list.append(("MasterNet2x2Biased", "DLTUS(2,2)"))
+
+    # Loss
+    for file, name in file_list:
+        training_loss_list = np.load("Training/" + file + "TrainingLoss.npy")[10:]
+        validation_loss_list = np.load("Training/" + file + "ValidationLoss.npy")[10:]
+        psnr_list = np.load("Training/" + file + "ValidationPSNR.npy")[10:]
+        ssim_list = np.load("Training/" + file + "ValidationSSIM.npy")[10:]
+        fig = plt.figure(figsize=(8, 8), dpi=100)
+        gs = fig.add_gridspec(3, hspace=0)
+        axs = gs.subplots(sharex=True,sharey=False)
+        axs[0].set(xlabel='Epoch', ylabel='PSNR')
+        axs[1].set(xlabel='Epoch', ylabel='SSIM')
+        axs[2].set(xlabel='Epoch', ylabel='Loss')
+        axs[2].plot(range(1, len(training_loss_list) + 1), training_loss_list, label="Training Loss")
+        axs[2].plot(range(1, len(validation_loss_list) + 1), validation_loss_list, label="Validation Loss")
+        axs[0].plot(range(1, len(psnr_list) + 1), psnr_list)
+        axs[1].plot(range(1, len(ssim_list) + 1), ssim_list)
+
+        axs[0].grid(axis="y")
+        axs[1].grid(axis="y")
+        axs[2].grid(axis="y")
+        axs[2].legend()
+
+    plt.show()
+
+def PlotMVMagnitudes(dataloader):
+    magnitudes = np.zeros(len(dataloader))
+    dli = iter(dataloader)
+    for i, item in enumerate(dli):
+        item.ToCuda()
+        mv = item.motion_vectors[0]
+        mv -= models.IdentityGrid(mv.shape)
+        mv /= 2
+        _, H, W, _ = mv.shape
+        mv = mv * torch.tensor([W*2, H*2], device='cuda')
+        mv_closest_center = torch.round(mv)
+        mv -= mv_closest_center
+        mv_len = torch.sqrt(mv[:,:,:,0]**2 + mv[:,:,:,1]**2)
+        #mv_small = (mv_len < 0.2).float()
+        magnitudes[i] = torch.mean(mv_len).item()
+        if(i % 60 == 0):
+            magnitudes[i] = 0
+        print(i, magnitudes[i])
+    plt.figure()
+    plt.xlabel("Frame")
+    plt.ylabel("Average Distance to Closest Pixel Center")
+    plt.plot(range(len(magnitudes)), magnitudes)
     plt.show()

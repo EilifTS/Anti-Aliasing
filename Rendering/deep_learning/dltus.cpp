@@ -86,7 +86,7 @@ void DLTUS::initializeRenderInit(egx::Device& dev)
 
 	// Create Shaders
 	egx::Shader CS;
-	CS.CompileComputeShader2("../Rendering/shaders/deep_learning/init_network_cs.hlsl", macro_list);
+	CS.CompileComputeShader2("../Rendering/shaders/deep_learning/init_network_cs.hlsl", macro_list, dev.Supports16BitFloat());
 
 	// Empty input layout
 	egx::InputLayout input_layout;
@@ -111,8 +111,8 @@ void DLTUS::initializeRenderFinalize(egx::Device& dev)
 	// Create Shaders
 	egx::Shader VS;
 	egx::Shader PS;
-	VS.CompileVertexShader2("../Rendering/shaders/deep_learning/finalize_network_vs.hlsl", macro_list);
-	PS.CompilePixelShader2("../Rendering/shaders/deep_learning/finalize_network_ps.hlsl", macro_list);
+	VS.CompileVertexShader2("../Rendering/shaders/deep_learning/finalize_network_vs.hlsl", macro_list, dev.Supports16BitFloat());
+	PS.CompilePixelShader2("../Rendering/shaders/deep_learning/finalize_network_ps.hlsl", macro_list, dev.Supports16BitFloat());
 
 	// Empty input layout
 	egx::InputLayout input_layout;

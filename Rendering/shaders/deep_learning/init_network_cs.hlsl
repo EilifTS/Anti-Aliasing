@@ -235,5 +235,6 @@ void CS(uint3 block_id : SV_GroupID, uint3 thread_id : SV_GroupThreadID)
         out_tensor[index5] = history.g;
         out_tensor[index6] = history.b;
         out_tensor[index7] = history.a;
+        //out_tensor[index7] = 0.0; // Disable accumulation buffer (Requires different network)
     }
 }

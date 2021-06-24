@@ -183,6 +183,20 @@ namespace
 		eio::Console::Log("Device supports ray tracing");
 		return true;
 	}
+	bool checkFor16BitFloatSupport(ComPtr<ID3D12Device5> dev)
+	{
+		D3D12_FEATURE_DATA_SHADER_MODEL features = {};
+		features.HighestShaderModel = D3D_SHADER_MODEL_6_5;
+		HRESULT hr = dev->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &features, sizeof(features));
+		if (FAILED(hr) || features.HighestShaderModel < D3D_SHADER_MODEL_6_2)
+		{
+			eio::Console::Log("Device does not native 16bit ops");
+			return false;
+		}
+
+		eio::Console::Log("Device supports native 16bit ops");
+		return true;
+	}
 	bool checkTearingSupport(ComPtr<IDXGIFactory7> factory)
 	{
 		BOOL allowTearing = FALSE;
@@ -285,6 +299,7 @@ egx::Device::Device()
 
 	device = createDevice();
 	supports_rt = checkForRayTracingSupport(device);
+	supports_16bit_float = checkFor16BitFloatSupport(device);
 	command_queue = createCommandQueue(device);
 	command_allocators = createCommandAllocators(device, 1);
 
@@ -313,6 +328,7 @@ egx::Device::Device(const Window& window, const eio::InputManager& im, bool v_sy
 	auto refreshrate = getAdapterRefreshRate(adapter_output, im.Window().WindowSize());
 	device = createDevice(adapter);
 	supports_rt = checkForRayTracingSupport(device);
+	supports_16bit_float = checkFor16BitFloatSupport(device);
 	command_queue = createCommandQueue(device);
 	bool allow_tearing = checkTearingSupport(factory);
 	swap_chain = createSwapChain(window.Handle(), factory, command_queue, im.Window().WindowSize(), refreshrate, frame_count, allow_tearing);

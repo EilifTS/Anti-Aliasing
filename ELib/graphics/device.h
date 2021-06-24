@@ -25,6 +25,7 @@ namespace egx
 		~Device();
 
 		bool SupportsRayTracing() const { return supports_rt; };
+		bool Supports16BitFloat() const { return supports_16bit_float; };
 
 		void WaitForGPU();
 		void PrepareNextFrame();
@@ -48,6 +49,7 @@ namespace egx
 		bool v_sync;
 		bool use_warp;
 		bool supports_rt;
+		bool supports_16bit_float;
 
 		ComPtr<IDXGIAdapter4> adapter;			// Graphics card
 		ComPtr<IDXGIOutput> adapter_output;		// Monitor

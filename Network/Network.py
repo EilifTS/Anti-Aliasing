@@ -17,7 +17,7 @@ if(__name__ == '__main__'):
     torch.seed()
     sequence_length = 30 # Number inputs used in the model
     target_count = 5
-    upsample_factor = 2
+    upsample_factor = 4
     width, height = 1920, 1080
     batch_size = 4
     data_train = dataset.SSDataset(64, upsample_factor, videos[:80], sequence_length, target_count, transform=dataset.RandomCrop(256, width, height, upsample_factor))
@@ -33,7 +33,7 @@ if(__name__ == '__main__'):
 
     # Create model
     model_name = 'modelMaster'
-    load_model = True
+    load_model = False
     start_epoch = 0
     train_losses = []
     val_epochs = []
@@ -108,7 +108,7 @@ if(__name__ == '__main__'):
     #utils.PlotLossesMultiple()
     #utils.IllustrateJitterPattern(loader_test, 16, 2)
     #utils.GetCrops(model, loader_test, "MasterNet2x2BiasTempLoss90", False)
-    utils.PlotMVMagnitudes(loader_test)
+    #utils.PlotMVMagnitudes(loader_test)
 
     for epoch in range(start_epoch, epochs):
         print('Epoch {}'.format(epoch))

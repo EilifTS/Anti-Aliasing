@@ -14,10 +14,10 @@ namespace
 	const static float near_plane = 0.1f;
 	const static float far_plane = 100.0f;
 
-	const static float mipmap_bias = -0.5f * std::log2(4);
+	const static float mipmap_bias = 0.0f; // -0.5f * std::log2(4);
 
 	// Upsampling
-	static const int upsample_numerator = 2;
+	static const int upsample_numerator = 4;
 	static const int upsample_denominator = 1;
 	static const bool use_upsample = upsample_numerator != 1 || upsample_denominator != 1;
 }

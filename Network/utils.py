@@ -8,7 +8,6 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-import skvideo.measure
 
 class Evaluator():
     def __init__(self, metrics):
@@ -1002,10 +1001,10 @@ def PlotLossesMultiple():
         axs[0].set(xlabel='Epoch', ylabel='PSNR')
         axs[1].set(xlabel='Epoch', ylabel='SSIM')
         axs[2].set(xlabel='Epoch', ylabel='Loss')
-        axs[2].plot(range(1, len(training_loss_list) + 1), training_loss_list, label="Training Loss")
-        axs[2].plot(range(1, len(validation_loss_list) + 1), validation_loss_list, label="Validation Loss")
-        axs[0].plot(range(1, len(psnr_list) + 1), psnr_list)
-        axs[1].plot(range(1, len(ssim_list) + 1), ssim_list)
+        axs[2].plot(range(11, len(training_loss_list) + 11), training_loss_list, label="Training Loss")
+        axs[2].plot(range(11, len(validation_loss_list) + 11), validation_loss_list, label="Validation Loss")
+        axs[0].plot(range(11, len(psnr_list) + 11), psnr_list)
+        axs[1].plot(range(11, len(ssim_list) + 11), ssim_list)
 
         axs[0].grid(axis="y")
         axs[1].grid(axis="y")

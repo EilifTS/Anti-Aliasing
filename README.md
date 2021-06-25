@@ -65,10 +65,10 @@ From NVIDIA should a GTX 1060 or newer work.
 
 | Keyboard and Mouse Input | Action |
 |--- | --- |
-| R | Toggle between bilinear interpolation and bicubic interpolation |
+| R | Toggle between bilinear and bicubic interpolation |
 | T | Toggle history rectification |
 | Y | Toggle between YCoCg space and RGB space |
-| U | Toggle between history clipping and history clamping |
+| U | Toggle between history clipping and clamping |
 
 
 Temporal upsampling is used by changing the constants `upsample_numerator` and `upsample_denominator` in `Anti-Aliasing/app.cpp` at lines 19 and 20
